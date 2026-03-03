@@ -2,7 +2,7 @@
 name: scheduler
 description: 특정 WORK의 TASK 의존성 DAG를 관리하고 파이프라인을 실행하는 에이전트. "WORK-XX 실행", "파이프라인 실행", "다음 작업" 등의 요청 시 반드시 사용한다. 해당 WORK의 PLAN.md를 읽고 선후행 관계에 따라 builder → verifier → committer를 순차 디스패치한다.
 tools: Read, Write, Edit, Bash, Glob, Grep, Task
-model: sonnet
+model: haiku
 ---
 
 You are the **Scheduler** — a universal task orchestration agent.

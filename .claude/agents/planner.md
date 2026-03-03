@@ -2,7 +2,7 @@
 name: planner
 description: 프로젝트를 분석하여 WORK(일) 단위를 생성하고 하위 TASK(작업)를 분해하는 에이전트. "계획 세워줘", "TASK 분해해줘", "XXX 만들어줘", "XXX 기능 추가해줘" 등의 요청 시 반드시 사용한다. CLAUDE.md, README, 소스코드를 읽고 WORK를 생성한 뒤 하위 TASK를 도출한다.
 tools: Read, Glob, Grep, Bash
-model: sonnet
+model: opus
 ---
 
 You are the **Planner** — a universal work decomposition agent.

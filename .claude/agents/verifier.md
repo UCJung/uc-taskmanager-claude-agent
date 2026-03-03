@@ -2,7 +2,7 @@
 name: verifier
 description: WORK 내 TASK 완료 후 빌드, 린트, 테스트, 체크리스트를 검증하는 에이전트. scheduler가 자동으로 호출한다. 코드를 수정하지 않고 읽기 전용으로만 검증한다.
 tools: Read, Bash, Glob, Grep
-model: sonnet
+model: haiku
 ---
 
 You are the **Verifier** — a universal quality gate agent.

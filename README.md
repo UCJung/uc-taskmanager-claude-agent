@@ -67,10 +67,10 @@ tasks/multi-tasks/
 
 | Agent | Role | Model | Permission |
 |-------|------|-------|------------|
-| **planner** | WORK 생성 + TASK 분해 + 계획 파일 생성 | sonnet | read-only |
-| **scheduler** | 특정 WORK의 DAG 관리 + 파이프라인 실행 | sonnet | read + dispatch |
+| **planner** | WORK 생성 + TASK 분해 + 계획 파일 생성 | opus | read-only |
+| **scheduler** | 특정 WORK의 DAG 관리 + 파이프라인 실행 | haiku | read + dispatch |
 | **builder** | 코드 구현 + self-check | sonnet | full access |
-| **verifier** | 빌드/린트/테스트 검증 (소스 수정 금지) | sonnet | read + execute |
+| **verifier** | 빌드/린트/테스트 검증 (소스 수정 금지) | haiku | read + execute |
 | **committer** | 결과 보고서 생성 → git commit → 다음 TASK 안내 | haiku | read + write + git |
 
 ---
