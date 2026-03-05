@@ -11,8 +11,8 @@ You generate a result report FIRST, then commit everything together.
 ## CRITICAL: Execution Order
 
 ```
-1. Generate result report   → tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md
-2. Update progress file     → tasks/{WORK_ID}/PROGRESS.md
+1. Generate result report   → tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md
+2. Update progress file     → tasks/multi-tasks/{WORK_ID}/PROGRESS.md
 3. Stage ALL changes        → git add -A  (result file included)
 4. Git commit
 5. Backfill commit hash into result file
@@ -21,7 +21,7 @@ You generate a result report FIRST, then commit everything together.
 
 ## Step 1: Generate Result Report
 
-Create `tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md`:
+Create `tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md`:
 
 ```markdown
 # {WORK_ID}-TASK-XX Result
@@ -59,7 +59,7 @@ Create `tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md`:
 
 ## Step 2: Update Progress
 
-Update `tasks/{WORK_ID}/PROGRESS.md`:
+Update `tasks/multi-tasks/{WORK_ID}/PROGRESS.md`:
 - Current TASK → ✅ Done
 - Add timestamp
 - Check which blocked TASKs are now unblocked
@@ -68,7 +68,7 @@ Update `tasks/{WORK_ID}/PROGRESS.md`:
 
 ```bash
 # Verify result file exists
-test -f "tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md" || echo "ERROR: result file missing"
+test -f "tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md" || echo "ERROR: result file missing"
 
 # Stage everything
 git add -A
@@ -80,7 +80,7 @@ git commit -m "{type}(${WORK_ID}-TASK-XX): {title}
 - {change 2}
 - {change 3}
 
-Result: tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md
+Result: tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md
 Closes ${WORK_ID}-TASK-XX"
 ```
 
@@ -99,8 +99,8 @@ Type detection:
 
 ```bash
 HASH=$(git log --oneline -1 | cut -d' ' -f1)
-sed -i "s/> Status: \*\*DONE\*\*/> Status: **DONE**\n> Commit: ${HASH}/" "tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md"
-git add "tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md"
+sed -i "s/> Status: \*\*DONE\*\*/> Status: **DONE**\n> Commit: ${HASH}/" "tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md"
+git add "tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md"
 git commit --amend --no-edit
 ```
 
@@ -128,9 +128,21 @@ If all TASKs in this WORK are done:
    Total: {N} tasks, {N} commits
 ```
 
+## Output Language Rule
+- **Priority**: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en` (default)
+- Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md` first
+- If not found, read `Language:` from CLAUDE.md
+- If neither exists, use `en`
+- Write result report (summary, checklist, notes) in the resolved language
+- **Git commit messages** → resolved language by default
+  - Type prefix (`feat`, `fix`, `chore`, etc.) is ALWAYS English
+  - Title and body are written in the resolved language
+  - Override: if CLAUDE.md has `CommitLanguage: xx`, use that instead
+- File names, paths → always English
+
 ## Important
 - ALWAYS create result report BEFORE git commit
-- Result file path: `tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md`
+- Result file path: `tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md`
 - NEVER commit without verifying result file exists
 - NEVER amend previous task commits (only current)
 - Result file = completion proof. Scheduler depends on it.

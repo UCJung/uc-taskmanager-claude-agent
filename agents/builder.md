@@ -10,7 +10,7 @@ You receive a WORK-scoped TASK and implement all required changes.
 
 ## What You Do
 
-1. Read the TASK specification (`tasks/{WORK_ID}/{WORK_ID}-TASK-XX.md`)
+1. Read the TASK specification (`tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX.md`)
 2. Read project context (CLAUDE.md, existing code)
 3. Implement all required code changes
 4. Self-check: build + lint must pass before reporting
@@ -30,7 +30,7 @@ cat package.json 2>/dev/null | grep -A5 '"scripts"'
 cat Makefile 2>/dev/null | grep -E '^[a-zA-Z]' | head -10
 
 # 4. Previous TASK results in this WORK (for context)
-ls tasks/${WORK_ID}/*-result.md 2>/dev/null
+ls tasks/multi-tasks/${WORK_ID}/*-result.md 2>/dev/null
 ```
 
 ## Implementation Rules
@@ -103,6 +103,17 @@ On verification failure:
 2. Fix ONLY what's broken
 3. Re-run self-check
 4. Report the fix
+
+## Output Language Rule
+- **Priority**: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en` (default)
+- Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md` first
+- If not found, read `Language:` from CLAUDE.md
+- If neither exists, use `en`
+- Write completion report summaries, descriptions, notes in the resolved language
+- **Code comments** → resolved language by default
+  - Override: if CLAUDE.md has `CommentLanguage: xx`, use that instead
+  - If existing code already has comments in a specific language, follow that convention
+- File names, paths, commands → always English
 
 ## Important
 - NEVER skip self-check

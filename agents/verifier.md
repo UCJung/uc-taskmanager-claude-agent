@@ -2,7 +2,7 @@
 name: verifier
 description: WORK 내 TASK 완료 후 빌드, 린트, 테스트, 체크리스트를 검증하는 에이전트. scheduler가 자동으로 호출한다. 코드를 수정하지 않고 읽기 전용으로만 검증한다.
 tools: Read, Bash, Glob, Grep
-model: sonnet
+model: haiku
 ---
 
 You are the **Verifier** — a universal quality gate agent.
@@ -103,6 +103,14 @@ Only check conventions explicitly in CLAUDE.md or project config.
 - **File**: {path}
 - **Suggested Fix**: {suggestion}
 ```
+
+## Output Language Rule
+- **Priority**: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en` (default)
+- Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md` first
+- If not found, read `Language:` from CLAUDE.md
+- If neither exists, use `en`
+- Write verification report descriptions, failure messages, suggested fixes in the resolved language
+- Command output → keep original (do not translate)
 
 ## Important
 - NEVER modify source code, config, or test files

@@ -6,89 +6,194 @@
 
 # uc-taskmanager
 
-**Universal Claude Task Manager** — Claude Code CLI용 범용 작업 파이프라인 서브에이전트 시스템
+**Universal Claude Task Manager** — A general-purpose task pipeline subagent system for Claude Code CLI.
 
-어떤 프로젝트에서든, 어떤 언어에서든 동작하는 5개의 서브에이전트가 **작업 분해 → 의존성 관리 → 코드 구현 → 검증 → 커밋**을 자동으로 반복합니다.
+Six subagents work across any project and any language, automatically handling **request routing → task decomposition → dependency management → code implementation → verification → commit**.
+
+**[한국어 문서 (Korean)](README_KO.md)**
 
 ```
-"사용자 인증 기능을 만들거야. 계획 세워줘"
-→ WORK-01 생성, TASK 5개 분해, 순서대로 실행
+"[추가기능] Build a user authentication feature"
+→ router decides WORK, planner creates WORK-01 with 5 TASKs, pipeline executes
 ```
 
 ---
 
-## Concept: WORK → TASK
+## Concept: Three Execution Paths
 
-uc-taskmanager는 **2단계 계층 구조**로 작업을 관리합니다.
-
-```
-WORK (일)                 하나의 목표. 사용자가 요청한 단위.
-└── TASK (작업)           WORK를 달성하기 위한 개별 실행 단위.
-    └── result            완료 증빙. 검증 통과 후 자동 생성.
-```
+The **router** analyzes every `[]`-tagged request and routes to one of three paths:
 
 ```
-tasks/
-├── WORK-01/                        ← "사용자 인증 기능"
-│   ├── PLAN.md                     ← 계획 + 의존성 그래프
-│   ├── PROGRESS.md                 ← 진행 상황 (자동 업데이트)
-│   ├── WORK-01-TASK-00.md          ← 프로젝트 초기화
-│   ├── WORK-01-TASK-00-result.md   ← 완료 보고서 (= 완료 증거)
-│   ├── WORK-01-TASK-01.md          ← DB 스키마
-│   ├── WORK-01-TASK-01-result.md
-│   └── ...
-│
-├── WORK-02/                        ← "결제 기능 추가"
-│   ├── PLAN.md
-│   ├── WORK-02-TASK-00.md
-│   └── ...
-│
-└── WORK-03/                        ← "관리자 대시보드"
-    └── ...
+User Request
+     │
+     ▼
+  ┌────────┐
+  │ router │ ── no [] tag ──▶ handle directly (no pipeline)
+  └───┬────┘
+      │ [] tag detected
+      ▼
+  Assess complexity
+      │
+      ├─ Trivial (1 file, ≤10 lines)
+      │   ▼
+      │  S-TASK Direct ── router handles directly
+      │                   (fastest, no subagent overhead)
+      │
+      ├─ Simple (2~3 files, or >10 lines)
+      │   ▼
+      │  S-TASK Pipeline ── builder → verifier → committer
+      │                     (context-isolated, same quality as WORK)
+      │
+      └─ Complex (4+ files, 3+ steps, dependencies)
+          ▼
+         WORK ── planner → scheduler → [builder → verifier → committer] × N
+                 (full planning + multi-task pipeline)
 ```
 
-각 WORK는 독립적입니다. WORK 간 의존성은 없으며, 원하는 WORK만 골라서 실행할 수 있습니다.
+### WORK (Multi-Task)
+
+A two-level hierarchy for complex features:
+
+```
+WORK (unit of work)       A single goal. The unit requested by the user.
+└── TASK (unit of task)   An individual execution unit to achieve the WORK.
+    └── result            Completion proof. Auto-generated after verification.
+```
+
+### S-TASK Pipeline (Single Task, Delegated)
+
+Subagent-delegated path for moderate single tasks. Router stays clean.
+
+```
+router → builder(sonnet) → verifier(haiku) → committer(haiku)
+```
+
+### S-TASK Direct (Trivial)
+
+Router handles everything in its own context. For 1-file, ≤10-line changes only.
+
+```
+router: Analyze → Implement → Self-verify → Commit
+```
 
 ---
 
 ## Pipeline
 
+### WORK Pipeline (Complex)
+
 ```
-  planner          scheduler         builder          verifier         committer
- ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │WORK 생성 │────▶│의존성 DAG │────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
- │TASK 분해 │     │실행 순서  │     │파일 생성  │     │검증 실행  │     │→ git커밋 │
- └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
-                                       │                │                │
-                                       └── 실패 시 재시도 ┘                │
-                                          (최대 3회)                      │
-                                                          다음 TASK로 반복 ◀┘
+  router           planner          scheduler         builder          verifier         committer
+ ┌────────┐      ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │Request  │────▶│Create    │────▶│Dependency │────▶│Code      │────▶│Build/Test│────▶│Result    │
+ │Analysis │     │WORK/TASK │     │DAG + Order│     │Implement │     │Verify    │     │→ git     │
+ └────────┘     └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
+                                                       │                │                │
+                                                       └── Retry on fail┘                │
+                                                          (max 3 times)                  │
+                                                                         Next TASK loop ◀┘
 ```
+
+### S-TASK Pipeline (Simple → Delegated)
+
+```
+  router            builder          verifier         committer
+ ┌────────┐       ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │Request  │─────▶│Code      │────▶│Build/Test│────▶│Result    │
+ │Analysis │      │Implement │     │Verify    │     │→ git     │
+ └────────┘      └──────────┘     └──────────┘     └──────────┘
+  (context clean)  (sonnet)         (haiku)           (haiku)
+```
+
+### S-TASK Direct (Trivial)
+
+```
+  router
+ ┌──────────────────────────────────────┐
+ │ Analyze → Implement → Verify → Commit │
+ └──────────────────────────────────────┘
+  (1 file, ≤10 lines — no subagent overhead)
+```
+
+### Agents
 
 | Agent | Role | Model | Permission |
 |-------|------|-------|------------|
-| **planner** | WORK 생성 + TASK 분해 + 계획 파일 생성 | sonnet | read-only |
-| **scheduler** | 특정 WORK의 DAG 관리 + 파이프라인 실행 | sonnet | read + dispatch |
-| **builder** | 코드 구현 + self-check | sonnet | full access |
-| **verifier** | 빌드/린트/테스트 검증 (소스 수정 금지) | sonnet | read + execute |
-| **committer** | 결과 보고서 생성 → git commit → 다음 TASK 안내 | haiku | read + write + git |
+| **router** | `[]` tag detection, 3-path routing (Direct/Pipeline/WORK), WORK-LIST.md management | **sonnet** | read + dispatch |
+| **planner** | Create WORK + decompose TASKs + generate plan files | **opus** | read-only |
+| **scheduler** | Manage DAG for a specific WORK + run pipeline | **haiku** | read + dispatch |
+| **builder** | Code implementation + self-check (build/lint) | **sonnet** | full access |
+| **verifier** | Build/lint/test verification (read-only, no source modification) | **haiku** | read + execute |
+| **committer** | Generate result report → git commit → report next TASK | **haiku** | read + write + git |
+
+---
+
+## The `[]` Tag System
+
+Prefix your request with a `[]` tag to trigger the pipeline:
+
+| Tag | Meaning |
+|-----|---------|
+| `[추가기능]` | New feature |
+| `[기능개선]` | Enhancement |
+| `[오류수정]` / `[버그수정]` | Bug fix |
+| `[WORK 시작]` | Always create new WORK (skip complexity check) |
+
+No `[]` tag = handled directly without pipeline.
+
+---
+
+## File Structure
+
+```
+tasks/
+├── multi-tasks/
+│   ├── WORK-LIST.md                    ← Master list of all WORKs (managed by router)
+│   ├── WORK-01/                        ← "User Authentication"
+│   │   ├── PLAN.md                     ← Plan + dependency graph
+│   │   ├── PROGRESS.md                 ← Progress tracking (auto-updated)
+│   │   ├── WORK-01-TASK-00.md          ← Task specification
+│   │   ├── WORK-01-TASK-00-result.md   ← Completion report (= proof of done)
+│   │   ├── WORK-01-TASK-01.md
+│   │   └── ...
+│   └── WORK-02/
+│       └── ...
+│
+└── simple-tasks/
+    ├── S-TASK-00001-result.md          ← Single task results
+    └── ...
+```
+
+### WORK-LIST.md
+
+The router maintains `tasks/multi-tasks/WORK-LIST.md` as the master index:
+
+| WORK ID | Title | Status | Created |
+|---------|-------|--------|---------|
+| WORK-01 | User Authentication | COMPLETED | 2026-03-01 |
+| WORK-02 | Payment Integration | IN_PROGRESS | 2026-03-05 |
+
+- **IN_PROGRESS**: router checks this before creating new WORKs
+- **COMPLETED**: updated after git push
 
 ---
 
 ## Installation
 
-### Global (모든 프로젝트에서 사용)
+### Global (available across all projects)
 
 ```bash
-git clone https://github.com/your-username/uc-taskmanager.git
-cp uc-taskmanager/agents/*.md ~/.claude/agents/
+git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git
+cp uc-taskmanager-claude-agent/agents/*.md ~/.claude/agents/
 ```
 
 ### Per-Project
 
 ```bash
+git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
 mkdir -p .claude/agents
-cp uc-taskmanager/agents/*.md .claude/agents/
+cp /tmp/uc-tm/agents/*.md .claude/agents/
+rm -rf /tmp/uc-tm
 git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
 ```
 
@@ -97,80 +202,82 @@ git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
 ```bash
 claude
 > /agents
-# planner, scheduler, builder, verifier, committer → 5개 확인
+# router, planner, scheduler, builder, verifier, committer → confirm all 6
 ```
 
 ---
 
 ## Usage
 
-### 1. WORK 생성 (계획)
+### Trivial Fix (S-TASK Direct)
 
 ```
-> 사용자 인증 기능을 만들거야. 계획 세워줘.
+> [버그수정] Fix typo in login error message
 ```
 
-planner가 프로젝트를 분석하고 WORK-01을 생성합니다:
+Router detects a trivial 1-line fix → handles directly. No subagent overhead.
+
+### Quick Task (S-TASK Pipeline)
 
 ```
-📋 WORK-01: 사용자 인증 기능
-
-  WORK-01-TASK-00: 프로젝트 초기화           ← 선행 없음
-  WORK-01-TASK-01: DB 스키마 설계            ← TASK-00
-  WORK-01-TASK-02: JWT 인증 API             ← TASK-01
-  WORK-01-TASK-03: 사용자 CRUD              ← TASK-02
-  WORK-01-TASK-04: 테스트 + 문서화           ← TASK-03
-
-  이 계획을 승인하시겠습니까?
+> [버그수정] Fix the login button not responding on mobile
 ```
 
-### 2. WORK 실행
+Router detects a moderate fix (multiple lines, 2 files) → delegates to builder → verifier → committer. Router context stays clean.
+
+### Complex Feature (WORK)
+
+#### 1. Create WORK (Planning)
 
 ```
-> WORK-01 파이프라인 실행해줘
+> [추가기능] Build a user authentication feature. Plan it.
 ```
 
-scheduler가 WORK-01의 TASK만 순서대로 실행합니다.
-
-### 3. 다른 WORK 추가
+The planner analyzes the project and creates WORK-01:
 
 ```
-> 결제 기능을 추가할거야. 계획 세워줘.
+WORK-01: User Authentication
+
+  WORK-01-TASK-00: Project initialization        ← no dependencies
+  WORK-01-TASK-01: DB schema design              ← TASK-00
+  WORK-01-TASK-02: JWT auth API                  ← TASK-01
+  WORK-01-TASK-03: User CRUD                     ← TASK-02
+  WORK-01-TASK-04: Tests + documentation         ← TASK-03
+
+  Do you approve this plan?
 ```
 
-planner가 WORK-02를 생성합니다. WORK-01과 완전히 독립적입니다.
-
-### 4. 특정 WORK만 실행
+#### 2. Execute WORK
 
 ```
-> WORK-02 파이프라인 실행해줘
+> Run WORK-01 pipeline
 ```
 
-WORK-01은 건드리지 않고 WORK-02만 실행합니다.
+The scheduler executes WORK-01's TASKs in dependency order.
 
-### 5. 전체 현황 확인
+#### 3. Add to Existing WORK
 
-```
-> WORK 목록
-```
+If WORK-01 is IN_PROGRESS, the router asks:
+> "WORK-01 (User Authentication) is in progress. Add as a new TASK or create a new WORK?"
 
-```
-📋 WORK 현황
-   WORK-01: 사용자 인증 기능    ✅ 5/5 완료
-   WORK-02: 결제 기능 추가      🔄 2/4 진행 중
-   WORK-03: 관리자 대시보드     ⬜ 0/6 대기
-```
-
-### 6. 자동 모드
+#### 4. Check Status
 
 ```
-> WORK-02 자동으로 실행해줘
+> WORK list
 ```
 
-### 7. 중단 후 재개
+```
+WORK Status
+   WORK-01: User Authentication    ✅ 5/5 completed
+   WORK-02: Payment Integration    🔄 2/4 in progress
+   WORK-03: Admin Dashboard        ⬜ 0/6 pending
+```
+
+#### 5. Auto Mode / Resume
 
 ```
-> WORK-02 재개해줘
+> Run WORK-02 automatically
+> Resume WORK-02
 ```
 
 ---
@@ -178,55 +285,37 @@ WORK-01은 건드리지 않고 WORK-02만 실행합니다.
 ## Example Session
 
 ```
-User: 블로그 시스템의 댓글 기능을 만들거야. 계획 세워줘.
+User: [추가기능] Build a comment feature for the blog system.
+
+Claude: [router → WORK path]
+  Complexity: 4+ files, DB schema change, multiple modules
+  → Creating new WORK
 
 Claude: [planner]
-  📋 프로젝트 분석
+  Project analysis
      Tech Stack: Next.js + Prisma + PostgreSQL
-     기존 코드: 게시글 CRUD 완료, 인증 완료
+     Existing code: Post CRUD done, Auth done
 
-  WORK-03: 댓글 기능
+  WORK-03: Comment Feature
 
-  WORK-03-TASK-00: Comment 모델 + 마이그레이션        ← 선행 없음
-  WORK-03-TASK-01: 댓글 CRUD API                     ← TASK-00
-  WORK-03-TASK-02: 대댓글 (self-relation)             ← TASK-01
-  WORK-03-TASK-03: 프론트엔드 댓글 컴포넌트            ← TASK-00 (병렬 가능)
-  WORK-03-TASK-04: 통합 + 알림                        ← TASK-02, TASK-03
+  WORK-03-TASK-00: Comment model + migration          ← no dependencies
+  WORK-03-TASK-01: Comment CRUD API                   ← TASK-00
+  WORK-03-TASK-02: Nested comments (self-relation)    ← TASK-01
+  WORK-03-TASK-03: Frontend comment component         ← TASK-00 (parallelizable)
+  WORK-03-TASK-04: Integration + notifications        ← TASK-02, TASK-03
 
-  승인하시겠습니까?
+  Do you approve?
 
-User: 승인
+User: Approve. Run automatically.
 
-Claude: [planner → 파일 생성 완료]
-  ✅ tasks/WORK-03/ 생성 완료
-  "WORK-03 파이프라인 실행해줘" 로 시작하세요.
+Claude: [scheduler → auto mode]
+  WORK-03-TASK-00 → builder → verifier ✅ → committer [a1b2c3d]
+  WORK-03-TASK-01 → builder → verifier ✅ → committer [d4e5f6g]
+  WORK-03-TASK-02 → builder → verifier ✅ → committer [h7i8j9k]
+  WORK-03-TASK-03 → builder → verifier ✅ → committer [l0m1n2o]
+  WORK-03-TASK-04 → builder → verifier ✅ → committer [p3q4r5s]
 
-User: WORK-03 파이프라인 실행해줘
-
-Claude: [scheduler]
-  📋 WORK-03: 댓글 기능 (0/5)
-     다음: WORK-03-TASK-00 — Comment 모델 + 마이그레이션
-     "승인" 을 입력하면 시작합니다.
-
-User: 승인
-
-Claude: [builder → verifier → committer]
-  🔨 builder: Comment 모델 생성, 마이그레이션 실행
-  🔍 verifier: Build ✅ Lint ✅ Tests ✅
-  📝 committer: feat(WORK-03-TASK-00): Comment 모델 + 마이그레이션 [a1b2c3d]
-
-  📊 WORK-03 진행률: 1/5
-     ██░░░░░░░░ 20%
-
-  🔓 다음:
-     - WORK-03-TASK-01: 댓글 CRUD API
-     - WORK-03-TASK-03: 프론트엔드 댓글 컴포넌트 (병렬 가능)
-
-User: 계속
-
-  ...반복...
-
-  🎉 WORK-03 완료! 5 tasks, 5 commits
+  🎉 WORK-03 completed! 5 tasks, 5 commits
 ```
 
 ---
@@ -235,7 +324,7 @@ User: 계속
 
 ### Context Isolation
 
-각 서브에이전트는 독립 컨텍스트에서 실행됩니다. builder가 50개 파일을 생성하며 20,000 토큰을 썼어도, scheduler에게 돌아오는 건 3줄 요약뿐입니다.
+Each subagent runs in an independent context. Even if the builder creates 50 files using 20,000 tokens, the scheduler only receives a 3-line summary.
 
 ```
 scheduler's context after 5 TASKs:
@@ -260,26 +349,74 @@ scheduler's context after 5 TASKs:
 | Tracking | Scroll chat history | File-based (PLAN.md, result.md) |
 | Verification | Manual | Automated (build/lint/test) |
 
-### WORK Isolation
+### Three-Path Routing
 
-WORK 단위로 분리되므로:
-- WORK-01 실행 중 실패해도 WORK-02에 영향 없음
-- 특정 WORK만 골라서 재실행 가능
-- 여러 기능을 독립적으로 계획하고 원하는 순서로 실행
+The router matches effort to complexity:
+- **S-TASK Direct**: 1-line typo fix — no subagent overhead, instant
+- **S-TASK Pipeline**: Moderate fix — delegated to subagents, router context stays clean
+- **WORK**: Complex features — full planning, decomposition, and tracking
+
+Consecutive S-TASK Pipelines keep the router at ~1,000 tokens regardless of how many tasks are processed, versus ~15K+ tokens if the router handled everything directly.
+
+---
+
+## Output Language
+
+Output language is resolved from **CLAUDE.md** in your project. No manual configuration needed after first setup.
+
+```
+1. Check CLAUDE.md for "Language: xx"
+   ├─ Found → use that language
+   └─ Not found ↓
+
+2. Ask: "Would you like to set the output language? (e.g., ko, en, ja)"
+   ├─ User specifies → write to CLAUDE.md + use it
+   └─ User declines ↓
+
+3. Auto-detect system locale → write to CLAUDE.md as default
+```
+
+Once set, stored in CLAUDE.md and never asked again. Priority: `PLAN.md > CLAUDE.md > en`
+
+By default, **all output** including git commit messages and code comments uses the configured language:
+
+| Item | Default | Override |
+|------|---------|----------|
+| PLAN.md / TASK descriptions | Language | — |
+| Result reports | Language | — |
+| Git commit messages (title/body) | Language | `CommitLanguage: en` |
+| Code comments | Language | `CommentLanguage: en` |
+| Commit type prefix (`feat`, `fix`...) | Always English | — |
+| File names, paths, commands | Always English | — |
+
+### Per-Category Override
+
+Add to CLAUDE.md to override specific categories:
+
+```markdown
+## Language
+ko
+CommitLanguage: en
+CommentLanguage: en
+```
+
+This gives you `ko` for plans/reports but `en` for commits and code comments — useful for open-source projects or global teams.
 
 ---
 
 ## Customization
 
-`.claude/agents/`에 동일 이름 파일을 두면 오버라이드됩니다.
+Place a file with the same name in `.claude/agents/` to override.
 
 | What | File | Section |
 |------|------|---------|
+| Routing criteria | `router.md` | Three-Path Routing |
 | Approval policy | `scheduler.md` | Phase 1: User Approval |
 | Commit message format | `committer.md` | Step 3: Stage + Commit |
 | Verification steps | `verifier.md` | Verification Pipeline |
 | Task granularity | `planner.md` | Task Decomposition Rules |
 | Build/lint commands | `builder.md` + `verifier.md` | Self-Check / Step 1-2 |
+| Output language | `planner.md` | Output Language Rule |
 
 ---
 
@@ -299,27 +436,35 @@ Auto-detected from project files. No configuration needed.
 
 ---
 
-## Requirements
-
-- [Claude Code CLI](https://docs.claude.com/en/docs/claude-code)
-- Git initialized (`git init`)
-- No other dependencies.
-
----
-
 ## Repository Structure
 
 ```
 uc-taskmanager/
-├── README.md
+├── README.md                ← English (default)
+├── README_KO.md             ← Korean
 ├── LICENSE
-└── agents/
-    ├── planner.md        ← WORK 생성 + TASK 분해
-    ├── scheduler.md      ← WORK별 파이프라인 실행
-    ├── builder.md        ← 코드 구현
-    ├── verifier.md       ← 검증 (read-only)
-    └── committer.md      ← 결과 보고서 → git commit
+├── agents/                  ← Distribution: copy these to install
+│   ├── router.md            ← Request routing (WORK vs S-TASK)
+│   ├── planner.md           ← Create WORK + decompose TASKs
+│   ├── scheduler.md         ← Run pipeline per WORK
+│   ├── builder.md           ← Code implementation
+│   ├── verifier.md          ← Verification (read-only)
+│   └── committer.md         ← Result report → git commit
+└── tasks/
+    ├── multi-tasks/         ← WORK directories (auto-generated)
+    │   ├── WORK-LIST.md     ← Master index
+    │   ├── WORK-01/
+    │   └── ...
+    └── simple-tasks/        ← S-TASK results (auto-generated)
 ```
+
+---
+
+## Requirements
+
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
+- Git initialized (`git init`)
+- No other dependencies.
 
 ---
 
