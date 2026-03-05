@@ -6,48 +6,50 @@
 
 # uc-taskmanager
 
-**Universal Claude Task Manager** — Claude Code CLI용 범용 작업 파이프라인 서브에이전트 시스템
+**Universal Claude Task Manager** — A general-purpose task pipeline subagent system for Claude Code CLI.
 
-어떤 프로젝트에서든, 어떤 언어에서든 동작하는 5개의 서브에이전트가 **작업 분해 → 의존성 관리 → 코드 구현 → 검증 → 커밋**을 자동으로 반복합니다.
+Five subagents work across any project and any language, automatically repeating the cycle of **task decomposition → dependency management → code implementation → verification → commit**.
+
+**[한국어 문서 (Korean)](README_KO.md)**
 
 ```
-"사용자 인증 기능을 만들거야. 계획 세워줘"
-→ WORK-01 생성, TASK 5개 분해, 순서대로 실행
+"Build a user authentication feature. Plan it."
+→ Creates WORK-01, decomposes into 5 TASKs, executes in order
 ```
 
 ---
 
 ## Concept: WORK → TASK
 
-uc-taskmanager는 **2단계 계층 구조**로 작업을 관리합니다.
+uc-taskmanager manages work in a **two-level hierarchy**.
 
 ```
-WORK (일)                 하나의 목표. 사용자가 요청한 단위.
-└── TASK (작업)           WORK를 달성하기 위한 개별 실행 단위.
-    └── result            완료 증빙. 검증 통과 후 자동 생성.
+WORK (unit of work)       A single goal. The unit requested by the user.
+└── TASK (unit of task)   An individual execution unit to achieve the WORK.
+    └── result            Completion proof. Auto-generated after verification passes.
 ```
 
 ```
 tasks/multi-tasks/
-├── WORK-01/                        ← "사용자 인증 기능"
-│   ├── PLAN.md                     ← 계획 + 의존성 그래프
-│   ├── PROGRESS.md                 ← 진행 상황 (자동 업데이트)
-│   ├── WORK-01-TASK-00.md          ← 프로젝트 초기화
-│   ├── WORK-01-TASK-00-result.md   ← 완료 보고서 (= 완료 증거)
-│   ├── WORK-01-TASK-01.md          ← DB 스키마
+├── WORK-01/                        ← "User Authentication"
+│   ├── PLAN.md                     ← Plan + dependency graph
+│   ├── PROGRESS.md                 ← Progress tracking (auto-updated)
+│   ├── WORK-01-TASK-00.md          ← Project initialization
+│   ├── WORK-01-TASK-00-result.md   ← Completion report (= proof of completion)
+│   ├── WORK-01-TASK-01.md          ← DB schema
 │   ├── WORK-01-TASK-01-result.md
 │   └── ...
 │
-├── WORK-02/                        ← "결제 기능 추가"
+├── WORK-02/                        ← "Payment Integration"
 │   ├── PLAN.md
 │   ├── WORK-02-TASK-00.md
 │   └── ...
 │
-└── WORK-03/                        ← "관리자 대시보드"
+└── WORK-03/                        ← "Admin Dashboard"
     └── ...
 ```
 
-각 WORK는 독립적입니다. WORK 간 의존성은 없으며, 원하는 WORK만 골라서 실행할 수 있습니다.
+Each WORK is independent. There are no cross-WORK dependencies, and you can selectively execute any WORK.
 
 ---
 
@@ -56,28 +58,29 @@ tasks/multi-tasks/
 ```
   planner          scheduler         builder          verifier         committer
  ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │WORK 생성 │────▶│의존성 DAG │────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
- │TASK 분해 │     │실행 순서  │     │파일 생성  │     │검증 실행  │     │→ git커밋 │
+ │Create    │────▶│Dependency │────▶│Code      │────▶│Build/Test│────▶│Result    │
+ │WORK/TASK │     │DAG + Order│     │Implement │     │Verify    │     │→ git     │
  └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
                                        │                │                │
-                                       └── 실패 시 재시도 ┘                │
-                                          (최대 3회)                      │
-                                                          다음 TASK로 반복 ◀┘
+                                       └── Retry on fail┘                │
+                                          (max 3 times)                  │
+                                                         Next TASK loop ◀┘
 ```
 
 | Agent | Role | Model | Permission |
 |-------|------|-------|------------|
-| **planner** | WORK 생성 + TASK 분해 + 계획 파일 생성 | opus | read-only |
-| **scheduler** | 특정 WORK의 DAG 관리 + 파이프라인 실행 | haiku | read + dispatch |
-| **builder** | 코드 구현 + self-check | sonnet | full access |
-| **verifier** | 빌드/린트/테스트 검증 (소스 수정 금지) | haiku | read + execute |
-| **committer** | 결과 보고서 생성 → git commit → 다음 TASK 안내 | haiku | read + write + git |
+| **router** | Route requests → WORK (multi-TASK) or S-TASK (single) | **sonnet** | read + dispatch |
+| **planner** | Create WORK + decompose TASKs + generate plan files | **opus** | read-only |
+| **scheduler** | Manage DAG for a specific WORK + run pipeline | **haiku** | read + dispatch |
+| **builder** | Code implementation + self-check | **sonnet** | full access |
+| **verifier** | Build/lint/test verification (no source modification) | **haiku** | read + execute |
+| **committer** | Generate result report → git commit → guide next TASK | **haiku** | read + write + git |
 
 ---
 
 ## Installation
 
-### Global (모든 프로젝트에서 사용)
+### Global (available across all projects)
 
 ```bash
 git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git
@@ -87,8 +90,10 @@ cp uc-taskmanager-claude-agent/agents/*.md ~/.claude/agents/
 ### Per-Project
 
 ```bash
+git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
 mkdir -p .claude/agents
-cp uc-taskmanager-claude-agent/agents/*.md .claude/agents/
+cp /tmp/uc-tm/agents/*.md .claude/agents/
+rm -rf /tmp/uc-tm
 git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
 ```
 
@@ -97,80 +102,80 @@ git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
 ```bash
 claude
 > /agents
-# planner, scheduler, builder, verifier, committer → 5개 확인
+# router, planner, scheduler, builder, verifier, committer → confirm all 6
 ```
 
 ---
 
 ## Usage
 
-### 1. WORK 생성 (계획)
+### 1. Create WORK (Planning)
 
 ```
-> 사용자 인증 기능을 만들거야. 계획 세워줘.
+> Build a user authentication feature. Plan it.
 ```
 
-planner가 프로젝트를 분석하고 WORK-01을 생성합니다:
+The planner analyzes the project and creates WORK-01:
 
 ```
-WORK-01: 사용자 인증 기능
+WORK-01: User Authentication
 
-  WORK-01-TASK-00: 프로젝트 초기화           ← 선행 없음
-  WORK-01-TASK-01: DB 스키마 설계            ← TASK-00
-  WORK-01-TASK-02: JWT 인증 API             ← TASK-01
-  WORK-01-TASK-03: 사용자 CRUD              ← TASK-02
-  WORK-01-TASK-04: 테스트 + 문서화           ← TASK-03
+  WORK-01-TASK-00: Project initialization        ← no dependencies
+  WORK-01-TASK-01: DB schema design              ← TASK-00
+  WORK-01-TASK-02: JWT auth API                  ← TASK-01
+  WORK-01-TASK-03: User CRUD                     ← TASK-02
+  WORK-01-TASK-04: Tests + documentation         ← TASK-03
 
-  이 계획을 승인하시겠습니까?
+  Do you approve this plan?
 ```
 
-### 2. WORK 실행
+### 2. Execute WORK
 
 ```
-> WORK-01 파이프라인 실행해줘
+> Run WORK-01 pipeline
 ```
 
-scheduler가 WORK-01의 TASK만 순서대로 실행합니다.
+The scheduler executes only WORK-01's TASKs in order.
 
-### 3. 다른 WORK 추가
-
-```
-> 결제 기능을 추가할거야. 계획 세워줘.
-```
-
-planner가 WORK-02를 생성합니다. WORK-01과 완전히 독립적입니다.
-
-### 4. 특정 WORK만 실행
+### 3. Add Another WORK
 
 ```
-> WORK-02 파이프라인 실행해줘
+> Add a payment feature. Plan it.
 ```
 
-WORK-01은 건드리지 않고 WORK-02만 실행합니다.
+The planner creates WORK-02. It is completely independent from WORK-01.
 
-### 5. 전체 현황 확인
-
-```
-> WORK 목록
-```
+### 4. Execute a Specific WORK
 
 ```
-WORK 현황
-   WORK-01: 사용자 인증 기능    ✅ 5/5 완료
-   WORK-02: 결제 기능 추가      🔄 2/4 진행 중
-   WORK-03: 관리자 대시보드     ⬜ 0/6 대기
+> Run WORK-02 pipeline
 ```
 
-### 6. 자동 모드
+Executes only WORK-02 without touching WORK-01.
+
+### 5. Check Overall Status
 
 ```
-> WORK-02 자동으로 실행해줘
+> WORK list
 ```
 
-### 7. 중단 후 재개
+```
+WORK Status
+   WORK-01: User Authentication    ✅ 5/5 completed
+   WORK-02: Payment Integration    🔄 2/4 in progress
+   WORK-03: Admin Dashboard        ⬜ 0/6 pending
+```
+
+### 6. Auto Mode
 
 ```
-> WORK-02 재개해줘
+> Run WORK-02 automatically
+```
+
+### 7. Resume After Interruption
+
+```
+> Resume WORK-02
 ```
 
 ---
@@ -178,55 +183,55 @@ WORK 현황
 ## Example Session
 
 ```
-User: 블로그 시스템의 댓글 기능을 만들거야. 계획 세워줘.
+User: Build a comment feature for the blog system. Plan it.
 
 Claude: [planner]
-  프로젝트 분석
+  Project analysis
      Tech Stack: Next.js + Prisma + PostgreSQL
-     기존 코드: 게시글 CRUD 완료, 인증 완료
+     Existing code: Post CRUD done, Auth done
 
-  WORK-03: 댓글 기능
+  WORK-03: Comment Feature
 
-  WORK-03-TASK-00: Comment 모델 + 마이그레이션        ← 선행 없음
-  WORK-03-TASK-01: 댓글 CRUD API                     ← TASK-00
-  WORK-03-TASK-02: 대댓글 (self-relation)             ← TASK-01
-  WORK-03-TASK-03: 프론트엔드 댓글 컴포넌트            ← TASK-00 (병렬 가능)
-  WORK-03-TASK-04: 통합 + 알림                        ← TASK-02, TASK-03
+  WORK-03-TASK-00: Comment model + migration          ← no dependencies
+  WORK-03-TASK-01: Comment CRUD API                   ← TASK-00
+  WORK-03-TASK-02: Nested comments (self-relation)    ← TASK-01
+  WORK-03-TASK-03: Frontend comment component         ← TASK-00 (parallelizable)
+  WORK-03-TASK-04: Integration + notifications        ← TASK-02, TASK-03
 
-  승인하시겠습니까?
+  Do you approve?
 
-User: 승인
+User: Approve
 
-Claude: [planner → 파일 생성 완료]
-  ✅ tasks/multi-tasks/WORK-03/ 생성 완료
-  "WORK-03 파이프라인 실행해줘" 로 시작하세요.
+Claude: [planner → files created]
+  ✅ tasks/multi-tasks/WORK-03/ created
+  Start with "Run WORK-03 pipeline"
 
-User: WORK-03 파이프라인 실행해줘
+User: Run WORK-03 pipeline
 
 Claude: [scheduler]
-  WORK-03: 댓글 기능 (0/5)
-     다음: WORK-03-TASK-00 — Comment 모델 + 마이그레이션
-     "승인" 을 입력하면 시작합니다.
+  WORK-03: Comment Feature (0/5)
+     Next: WORK-03-TASK-00 — Comment model + migration
+     Type "approve" to start.
 
-User: 승인
+User: Approve
 
 Claude: [builder → verifier → committer]
-  builder: Comment 모델 생성, 마이그레이션 실행
+  builder: Created Comment model, ran migration
   verifier: Build ✅ Lint ✅ Tests ✅
-  committer: feat(WORK-03-TASK-00): Comment 모델 + 마이그레이션 [a1b2c3d]
+  committer: feat(WORK-03-TASK-00): Comment model + migration [a1b2c3d]
 
-  WORK-03 진행률: 1/5
+  WORK-03 progress: 1/5
      ██░░░░░░░░ 20%
 
-  다음:
-     - WORK-03-TASK-01: 댓글 CRUD API
-     - WORK-03-TASK-03: 프론트엔드 댓글 컴포넌트 (병렬 가능)
+  Next:
+     - WORK-03-TASK-01: Comment CRUD API
+     - WORK-03-TASK-03: Frontend comment component (parallelizable)
 
-User: 계속
+User: Continue
 
-  ...반복...
+  ...repeats...
 
-  WORK-03 완료! 5 tasks, 5 commits
+  WORK-03 completed! 5 tasks, 5 commits
 ```
 
 ---
@@ -235,7 +240,7 @@ User: 계속
 
 ### Context Isolation
 
-각 서브에이전트는 독립 컨텍스트에서 실행됩니다. builder가 50개 파일을 생성하며 20,000 토큰을 썼어도, scheduler에게 돌아오는 건 3줄 요약뿐입니다.
+Each subagent runs in an independent context. Even if the builder creates 50 files using 20,000 tokens, the scheduler only receives a 3-line summary.
 
 ```
 scheduler's context after 5 TASKs:
@@ -262,16 +267,42 @@ scheduler's context after 5 TASKs:
 
 ### WORK Isolation
 
-WORK 단위로 분리되므로:
-- WORK-01 실행 중 실패해도 WORK-02에 영향 없음
-- 특정 WORK만 골라서 재실행 가능
-- 여러 기능을 독립적으로 계획하고 원하는 순서로 실행
+Since WORKs are isolated:
+- Failure in WORK-01 does not affect WORK-02
+- You can selectively re-run a specific WORK
+- Plan multiple features independently and execute in any order
+
+---
+
+## Output Language (Auto-Detect)
+
+Output language is **automatically determined by detecting the system locale**. No configuration needed.
+
+```
+Windows: PowerShell → [CultureInfo]::CurrentCulture.TwoLetterISOLanguageName
+Linux/Mac: locale → LANG=ko_KR.UTF-8 → ko
+```
+
+The detected language code is recorded in PLAN.md, and all agents reference it:
+
+```markdown
+> Language: ko   ← auto-detected (can be manually changed)
+```
+
+| Item | Detected Language | Always English |
+|------|:-:|:-:|
+| PLAN.md titles/descriptions | ✅ | |
+| TASK file titles/descriptions | ✅ | |
+| Result reports | ✅ | |
+| File names, paths, commands | | ✅ |
+| Git commit messages | | ✅ |
+| Code comments | | ✅ (project convention) |
 
 ---
 
 ## Customization
 
-`.claude/agents/`에 동일 이름 파일을 두면 오버라이드됩니다.
+Place a file with the same name in `.claude/agents/` to override.
 
 | What | File | Section |
 |------|------|---------|
@@ -280,6 +311,7 @@ WORK 단위로 분리되므로:
 | Verification steps | `verifier.md` | Verification Pipeline |
 | Task granularity | `planner.md` | Task Decomposition Rules |
 | Build/lint commands | `builder.md` + `verifier.md` | Self-Check / Step 1-2 |
+| Output language | `planner.md` | Output Language Rule |
 
 ---
 
@@ -303,20 +335,24 @@ Auto-detected from project files. No configuration needed.
 
 ```
 uc-taskmanager/
-├── README.md
+├── README.md                ← English (default)
+├── README_KO.md             ← Korean
+├── LICENSE
+├── agents/                  ← Distribution: copy these to install
+│   ├── router.md            ← Route requests (WORK vs S-TASK)
+│   ├── planner.md           ← Create WORK + decompose TASKs
+│   ├── scheduler.md         ← Run pipeline per WORK
+│   ├── builder.md           ← Code implementation
+│   ├── verifier.md          ← Verification (read-only)
+│   └── committer.md         ← Result report → git commit
 ├── .claude/
-│   └── agents/
-│       ├── planner.md        ← WORK 생성 + TASK 분해
-│       ├── scheduler.md      ← WORK별 파이프라인 실행
-│       ├── builder.md        ← 코드 구현
-│       ├── verifier.md       ← 검증 (read-only)
-│       └── committer.md      ← 결과 보고서 → git commit
-├── tasks/
-│   └── multi-tasks/          ← WORK 디렉토리 (자동 생성)
-│       ├── WORK-01/
-│       ├── WORK-02/
-│       └── ...
-└── uc-taskmanager-claude-agent/  ← 원본 에이전트 소스 (submodule)
+│   └── agents/              ← Active agents (used by this project)
+│       └── (same as above)
+└── tasks/
+    └── multi-tasks/         ← WORK directories (auto-generated)
+        ├── WORK-01/
+        ├── WORK-02/
+        └── ...
 ```
 
 ---
