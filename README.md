@@ -19,9 +19,9 @@ Six subagents work across any project and any language, automatically handling *
 
 ---
 
-## Concept: Two Execution Paths
+## Concept: Three Execution Paths
 
-The **router** analyzes every `[]`-tagged request and decides the execution path:
+The **router** analyzes every `[]`-tagged request and routes to one of three paths:
 
 ```
 User Request
@@ -34,15 +34,20 @@ User Request
       ▼
   Assess complexity
       │
-      ├─ Simple (1~3 files, 1~2 steps)
+      ├─ Trivial (1 file, ≤10 lines)
       │   ▼
-      │  S-TASK ── build → verify → commit
-      │            (single task, no planning phase)
+      │  S-TASK Direct ── router handles directly
+      │                   (fastest, no subagent overhead)
+      │
+      ├─ Simple (2~3 files, or >10 lines)
+      │   ▼
+      │  S-TASK Pipeline ── builder → verifier → committer
+      │                     (context-isolated, same quality as WORK)
       │
       └─ Complex (4+ files, 3+ steps, dependencies)
           ▼
          WORK ── planner → scheduler → [builder → verifier → committer] × N
-                 (multi-task pipeline)
+                 (full planning + multi-task pipeline)
 ```
 
 ### WORK (Multi-Task)
@@ -55,13 +60,20 @@ WORK (unit of work)       A single goal. The unit requested by the user.
     └── result            Completion proof. Auto-generated after verification.
 ```
 
-### S-TASK (Single Task)
+### S-TASK Pipeline (Single Task, Delegated)
 
-A lightweight path for small changes (bug fixes, minor features):
+Subagent-delegated path for moderate single tasks. Router stays clean.
 
 ```
-S-TASK-NNNNN ── Analyze → Implement → Verify → Result → Commit
-                (no planner/scheduler, direct execution)
+router → builder(sonnet) → verifier(haiku) → committer(haiku)
+```
+
+### S-TASK Direct (Trivial)
+
+Router handles everything in its own context. For 1-file, ≤10-line changes only.
+
+```
+router: Analyze → Implement → Self-verify → Commit
 ```
 
 ---
@@ -82,21 +94,32 @@ S-TASK-NNNNN ── Analyze → Implement → Verify → Result → Commit
                                                                          Next TASK loop ◀┘
 ```
 
-### S-TASK Pipeline (Simple)
+### S-TASK Pipeline (Simple → Delegated)
+
+```
+  router            builder          verifier         committer
+ ┌────────┐       ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │Request  │─────▶│Code      │────▶│Build/Test│────▶│Result    │
+ │Analysis │      │Implement │     │Verify    │     │→ git     │
+ └────────┘      └──────────┘     └──────────┘     └──────────┘
+  (context clean)  (sonnet)         (haiku)           (haiku)
+```
+
+### S-TASK Direct (Trivial)
 
 ```
   router
- ┌────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │Request  │────▶│Code      │────▶│Build/Test│────▶│Result    │
- │Analysis │     │Implement │     │Verify    │     │→ git     │
- └────────┘     └──────────┘     └──────────┘     └──────────┘
+ ┌──────────────────────────────────────┐
+ │ Analyze → Implement → Verify → Commit │
+ └──────────────────────────────────────┘
+  (1 file, ≤10 lines — no subagent overhead)
 ```
 
 ### Agents
 
 | Agent | Role | Model | Permission |
 |-------|------|-------|------------|
-| **router** | `[]` tag detection, WORK vs S-TASK routing, WORK-LIST.md management | **sonnet** | read + dispatch |
+| **router** | `[]` tag detection, 3-path routing (Direct/Pipeline/WORK), WORK-LIST.md management | **sonnet** | read + dispatch |
 | **planner** | Create WORK + decompose TASKs + generate plan files | **opus** | read-only |
 | **scheduler** | Manage DAG for a specific WORK + run pipeline | **haiku** | read + dispatch |
 | **builder** | Code implementation + self-check (build/lint) | **sonnet** | full access |
@@ -186,13 +209,21 @@ claude
 
 ## Usage
 
-### Quick Task (S-TASK)
+### Trivial Fix (S-TASK Direct)
+
+```
+> [버그수정] Fix typo in login error message
+```
+
+Router detects a trivial 1-line fix → handles directly. No subagent overhead.
+
+### Quick Task (S-TASK Pipeline)
 
 ```
 > [버그수정] Fix the login button not responding on mobile
 ```
 
-Router detects a simple fix → S-TASK path → implement → verify → commit. Done.
+Router detects a moderate fix (multiple lines, 2 files) → delegates to builder → verifier → committer. Router context stays clean.
 
 ### Complex Feature (WORK)
 
@@ -318,11 +349,14 @@ scheduler's context after 5 TASKs:
 | Tracking | Scroll chat history | File-based (PLAN.md, result.md) |
 | Verification | Manual | Automated (build/lint/test) |
 
-### Two-Path Routing
+### Three-Path Routing
 
-The router prevents over-engineering simple tasks:
-- **S-TASK**: 1-minute bug fix doesn't need a 5-TASK WORK plan
-- **WORK**: Complex features get proper decomposition and tracking
+The router matches effort to complexity:
+- **S-TASK Direct**: 1-line typo fix — no subagent overhead, instant
+- **S-TASK Pipeline**: Moderate fix — delegated to subagents, router context stays clean
+- **WORK**: Complex features — full planning, decomposition, and tracking
+
+Consecutive S-TASK Pipelines keep the router at ~1,000 tokens regardless of how many tasks are processed, versus ~15K+ tokens if the router handled everything directly.
 
 ---
 
@@ -360,7 +394,7 @@ Place a file with the same name in `.claude/agents/` to override.
 
 | What | File | Section |
 |------|------|---------|
-| Routing criteria | `router.md` | WORK vs S-TASK Decision |
+| Routing criteria | `router.md` | Three-Path Routing |
 | Approval policy | `scheduler.md` | Phase 1: User Approval |
 | Commit message format | `committer.md` | Step 3: Stage + Commit |
 | Verification steps | `verifier.md` | Verification Pipeline |
