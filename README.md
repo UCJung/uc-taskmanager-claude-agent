@@ -378,13 +378,29 @@ Output language is resolved from **CLAUDE.md** in your project. No manual config
 
 Once set, stored in CLAUDE.md and never asked again. Priority: `PLAN.md > CLAUDE.md > en`
 
-| Item | Output Language | Always English |
-|------|:-:|:-:|
-| PLAN.md / TASK descriptions | ✅ | |
-| Result reports | ✅ | |
-| File names, paths, commands | | ✅ |
-| Git commit messages | | ✅ |
-| Code comments | | ✅ (project convention) |
+By default, **all output** including git commit messages and code comments uses the configured language:
+
+| Item | Default | Override |
+|------|---------|----------|
+| PLAN.md / TASK descriptions | Language | — |
+| Result reports | Language | — |
+| Git commit messages (title/body) | Language | `CommitLanguage: en` |
+| Code comments | Language | `CommentLanguage: en` |
+| Commit type prefix (`feat`, `fix`...) | Always English | — |
+| File names, paths, commands | Always English | — |
+
+### Per-Category Override
+
+Add to CLAUDE.md to override specific categories:
+
+```markdown
+## Language
+ko
+CommitLanguage: en
+CommentLanguage: en
+```
+
+This gives you `ko` for plans/reports but `en` for commits and code comments — useful for open-source projects or global teams.
 
 ---
 

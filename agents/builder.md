@@ -110,7 +110,9 @@ On verification failure:
 - If not found, read `Language:` from CLAUDE.md
 - If neither exists, use `en`
 - Write completion report summaries, descriptions, notes in the resolved language
-- Code comments → follow project convention (not affected by this setting)
+- **Code comments** → resolved language by default
+  - Override: if CLAUDE.md has `CommentLanguage: xx`, use that instead
+  - If existing code already has comments in a specific language, follow that convention
 - File names, paths, commands → always English
 
 ## Important

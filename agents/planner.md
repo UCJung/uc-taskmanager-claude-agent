@@ -207,9 +207,26 @@ When adding language setting, append to CLAUDE.md:
 {lang_code}
 ```
 
+### Per-Category Language Override
+Users can override language for specific categories in CLAUDE.md:
+```markdown
+## Language
+ko
+CommitLanguage: en
+CommentLanguage: en
+```
+
+| Key | Affects | Default |
+|-----|---------|---------|
+| `Language` | All output (PLAN, TASK, result, commit, comments) | `en` |
+| `CommitLanguage` | Git commit message title/body (type prefix always English) | = Language |
+| `CommentLanguage` | Code comments written by builder | = Language |
+
 ### Rules
 - Record the resolved language in PLAN.md `> Language:` field
 - Write ALL output (PLAN.md titles, descriptions, TASK files) in the resolved language
+- Git commit messages and code comments also use the resolved language by default
+- Category-specific overrides (`CommitLanguage`, `CommentLanguage`) take precedence
 - File names, paths, commands → always English
 - If the user explicitly requests a different language mid-session, override and update CLAUDE.md
 

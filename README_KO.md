@@ -378,13 +378,29 @@ router가 복잡도에 맞는 최적의 경로를 선택합니다:
 
 한 번 설정되면 CLAUDE.md에 저장되어 다시 질문하지 않습니다. 우선순위: `PLAN.md > CLAUDE.md > en`
 
-| 항목 | 설정 언어 적용 | 항상 English |
-|------|:-:|:-:|
-| PLAN.md / TASK 설명 | ✅ | |
-| result 보고서 | ✅ | |
-| 파일명, 경로, 명령어 | | ✅ |
-| Git commit 메시지 | | ✅ |
-| 코드 주석 | | ✅ (프로젝트 관례) |
+기본적으로 git commit 메시지와 코드 주석을 포함한 **모든 산출물**이 설정된 언어로 작성됩니다:
+
+| 항목 | 기본값 | 오버라이드 |
+|------|--------|-----------|
+| PLAN.md / TASK 설명 | Language | — |
+| result 보고서 | Language | — |
+| Git commit 메시지 (제목/본문) | Language | `CommitLanguage: en` |
+| 코드 주석 | Language | `CommentLanguage: en` |
+| 커밋 타입 접두사 (`feat`, `fix`...) | 항상 English | — |
+| 파일명, 경로, 명령어 | 항상 English | — |
+
+### 카테고리별 언어 오버라이드
+
+CLAUDE.md에 추가하여 특정 카테고리만 언어를 변경할 수 있습니다:
+
+```markdown
+## Language
+ko
+CommitLanguage: en
+CommentLanguage: en
+```
+
+이렇게 하면 계획/보고서는 `ko`로, 커밋과 코드 주석은 `en`으로 작성됩니다 — 오픈소스 프로젝트나 글로벌 팀에 유용합니다.
 
 ---
 

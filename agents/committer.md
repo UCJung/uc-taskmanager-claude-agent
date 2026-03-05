@@ -134,7 +134,10 @@ If all TASKs in this WORK are done:
 - If not found, read `Language:` from CLAUDE.md
 - If neither exists, use `en`
 - Write result report (summary, checklist, notes) in the resolved language
-- Git commit messages → always English
+- **Git commit messages** → resolved language by default
+  - Type prefix (`feat`, `fix`, `chore`, etc.) is ALWAYS English
+  - Title and body are written in the resolved language
+  - Override: if CLAUDE.md has `CommitLanguage: xx`, use that instead
 - File names, paths → always English
 
 ## Important
