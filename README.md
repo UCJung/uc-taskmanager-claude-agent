@@ -8,73 +8,150 @@
 
 **Universal Claude Task Manager** — A general-purpose task pipeline subagent system for Claude Code CLI.
 
-Five subagents work across any project and any language, automatically repeating the cycle of **task decomposition → dependency management → code implementation → verification → commit**.
+Six subagents work across any project and any language, automatically handling **request routing → task decomposition → dependency management → code implementation → verification → commit**.
 
 **[한국어 문서 (Korean)](README_KO.md)**
 
 ```
-"Build a user authentication feature. Plan it."
-→ Creates WORK-01, decomposes into 5 TASKs, executes in order
+"[추가기능] Build a user authentication feature"
+→ router decides WORK, planner creates WORK-01 with 5 TASKs, pipeline executes
 ```
 
 ---
 
-## Concept: WORK → TASK
+## Concept: Two Execution Paths
 
-uc-taskmanager manages work in a **two-level hierarchy**.
+The **router** analyzes every `[]`-tagged request and decides the execution path:
+
+```
+User Request
+     │
+     ▼
+  ┌────────┐
+  │ router │ ── no [] tag ──▶ handle directly (no pipeline)
+  └───┬────┘
+      │ [] tag detected
+      ▼
+  Assess complexity
+      │
+      ├─ Simple (1~3 files, 1~2 steps)
+      │   ▼
+      │  S-TASK ── build → verify → commit
+      │            (single task, no planning phase)
+      │
+      └─ Complex (4+ files, 3+ steps, dependencies)
+          ▼
+         WORK ── planner → scheduler → [builder → verifier → committer] × N
+                 (multi-task pipeline)
+```
+
+### WORK (Multi-Task)
+
+A two-level hierarchy for complex features:
 
 ```
 WORK (unit of work)       A single goal. The unit requested by the user.
 └── TASK (unit of task)   An individual execution unit to achieve the WORK.
-    └── result            Completion proof. Auto-generated after verification passes.
+    └── result            Completion proof. Auto-generated after verification.
 ```
 
-```
-tasks/multi-tasks/
-├── WORK-01/                        ← "User Authentication"
-│   ├── PLAN.md                     ← Plan + dependency graph
-│   ├── PROGRESS.md                 ← Progress tracking (auto-updated)
-│   ├── WORK-01-TASK-00.md          ← Project initialization
-│   ├── WORK-01-TASK-00-result.md   ← Completion report (= proof of completion)
-│   ├── WORK-01-TASK-01.md          ← DB schema
-│   ├── WORK-01-TASK-01-result.md
-│   └── ...
-│
-├── WORK-02/                        ← "Payment Integration"
-│   ├── PLAN.md
-│   ├── WORK-02-TASK-00.md
-│   └── ...
-│
-└── WORK-03/                        ← "Admin Dashboard"
-    └── ...
-```
+### S-TASK (Single Task)
 
-Each WORK is independent. There are no cross-WORK dependencies, and you can selectively execute any WORK.
+A lightweight path for small changes (bug fixes, minor features):
+
+```
+S-TASK-NNNNN ── Analyze → Implement → Verify → Result → Commit
+                (no planner/scheduler, direct execution)
+```
 
 ---
 
 ## Pipeline
 
+### WORK Pipeline (Complex)
+
 ```
-  planner          scheduler         builder          verifier         committer
- ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │Create    │────▶│Dependency │────▶│Code      │────▶│Build/Test│────▶│Result    │
- │WORK/TASK │     │DAG + Order│     │Implement │     │Verify    │     │→ git     │
- └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
-                                       │                │                │
-                                       └── Retry on fail┘                │
-                                          (max 3 times)                  │
-                                                         Next TASK loop ◀┘
+  router           planner          scheduler         builder          verifier         committer
+ ┌────────┐      ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │Request  │────▶│Create    │────▶│Dependency │────▶│Code      │────▶│Build/Test│────▶│Result    │
+ │Analysis │     │WORK/TASK │     │DAG + Order│     │Implement │     │Verify    │     │→ git     │
+ └────────┘     └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
+                                                       │                │                │
+                                                       └── Retry on fail┘                │
+                                                          (max 3 times)                  │
+                                                                         Next TASK loop ◀┘
 ```
+
+### S-TASK Pipeline (Simple)
+
+```
+  router
+ ┌────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │Request  │────▶│Code      │────▶│Build/Test│────▶│Result    │
+ │Analysis │     │Implement │     │Verify    │     │→ git     │
+ └────────┘     └──────────┘     └──────────┘     └──────────┘
+```
+
+### Agents
 
 | Agent | Role | Model | Permission |
 |-------|------|-------|------------|
-| **router** | Route requests → WORK (multi-TASK) or S-TASK (single) | **sonnet** | read + dispatch |
+| **router** | `[]` tag detection, WORK vs S-TASK routing, WORK-LIST.md management | **sonnet** | read + dispatch |
 | **planner** | Create WORK + decompose TASKs + generate plan files | **opus** | read-only |
 | **scheduler** | Manage DAG for a specific WORK + run pipeline | **haiku** | read + dispatch |
-| **builder** | Code implementation + self-check | **sonnet** | full access |
-| **verifier** | Build/lint/test verification (no source modification) | **haiku** | read + execute |
-| **committer** | Generate result report → git commit → guide next TASK | **haiku** | read + write + git |
+| **builder** | Code implementation + self-check (build/lint) | **sonnet** | full access |
+| **verifier** | Build/lint/test verification (read-only, no source modification) | **haiku** | read + execute |
+| **committer** | Generate result report → git commit → report next TASK | **haiku** | read + write + git |
+
+---
+
+## The `[]` Tag System
+
+Prefix your request with a `[]` tag to trigger the pipeline:
+
+| Tag | Meaning |
+|-----|---------|
+| `[추가기능]` | New feature |
+| `[기능개선]` | Enhancement |
+| `[오류수정]` / `[버그수정]` | Bug fix |
+| `[WORK 시작]` | Always create new WORK (skip complexity check) |
+
+No `[]` tag = handled directly without pipeline.
+
+---
+
+## File Structure
+
+```
+tasks/
+├── multi-tasks/
+│   ├── WORK-LIST.md                    ← Master list of all WORKs (managed by router)
+│   ├── WORK-01/                        ← "User Authentication"
+│   │   ├── PLAN.md                     ← Plan + dependency graph
+│   │   ├── PROGRESS.md                 ← Progress tracking (auto-updated)
+│   │   ├── WORK-01-TASK-00.md          ← Task specification
+│   │   ├── WORK-01-TASK-00-result.md   ← Completion report (= proof of done)
+│   │   ├── WORK-01-TASK-01.md
+│   │   └── ...
+│   └── WORK-02/
+│       └── ...
+│
+└── simple-tasks/
+    ├── S-TASK-00001-result.md          ← Single task results
+    └── ...
+```
+
+### WORK-LIST.md
+
+The router maintains `tasks/multi-tasks/WORK-LIST.md` as the master index:
+
+| WORK ID | Title | Status | Created |
+|---------|-------|--------|---------|
+| WORK-01 | User Authentication | COMPLETED | 2026-03-01 |
+| WORK-02 | Payment Integration | IN_PROGRESS | 2026-03-05 |
+
+- **IN_PROGRESS**: router checks this before creating new WORKs
+- **COMPLETED**: updated after git push
 
 ---
 
@@ -109,10 +186,20 @@ claude
 
 ## Usage
 
-### 1. Create WORK (Planning)
+### Quick Task (S-TASK)
 
 ```
-> Build a user authentication feature. Plan it.
+> [버그수정] Fix the login button not responding on mobile
+```
+
+Router detects a simple fix → S-TASK path → implement → verify → commit. Done.
+
+### Complex Feature (WORK)
+
+#### 1. Create WORK (Planning)
+
+```
+> [추가기능] Build a user authentication feature. Plan it.
 ```
 
 The planner analyzes the project and creates WORK-01:
@@ -129,31 +216,20 @@ WORK-01: User Authentication
   Do you approve this plan?
 ```
 
-### 2. Execute WORK
+#### 2. Execute WORK
 
 ```
 > Run WORK-01 pipeline
 ```
 
-The scheduler executes only WORK-01's TASKs in order.
+The scheduler executes WORK-01's TASKs in dependency order.
 
-### 3. Add Another WORK
+#### 3. Add to Existing WORK
 
-```
-> Add a payment feature. Plan it.
-```
+If WORK-01 is IN_PROGRESS, the router asks:
+> "WORK-01 (User Authentication) is in progress. Add as a new TASK or create a new WORK?"
 
-The planner creates WORK-02. It is completely independent from WORK-01.
-
-### 4. Execute a Specific WORK
-
-```
-> Run WORK-02 pipeline
-```
-
-Executes only WORK-02 without touching WORK-01.
-
-### 5. Check Overall Status
+#### 4. Check Status
 
 ```
 > WORK list
@@ -166,15 +242,10 @@ WORK Status
    WORK-03: Admin Dashboard        ⬜ 0/6 pending
 ```
 
-### 6. Auto Mode
+#### 5. Auto Mode / Resume
 
 ```
 > Run WORK-02 automatically
-```
-
-### 7. Resume After Interruption
-
-```
 > Resume WORK-02
 ```
 
@@ -183,7 +254,11 @@ WORK Status
 ## Example Session
 
 ```
-User: Build a comment feature for the blog system. Plan it.
+User: [추가기능] Build a comment feature for the blog system.
+
+Claude: [router → WORK path]
+  Complexity: 4+ files, DB schema change, multiple modules
+  → Creating new WORK
 
 Claude: [planner]
   Project analysis
@@ -200,38 +275,16 @@ Claude: [planner]
 
   Do you approve?
 
-User: Approve
+User: Approve. Run automatically.
 
-Claude: [planner → files created]
-  ✅ tasks/multi-tasks/WORK-03/ created
-  Start with "Run WORK-03 pipeline"
+Claude: [scheduler → auto mode]
+  WORK-03-TASK-00 → builder → verifier ✅ → committer [a1b2c3d]
+  WORK-03-TASK-01 → builder → verifier ✅ → committer [d4e5f6g]
+  WORK-03-TASK-02 → builder → verifier ✅ → committer [h7i8j9k]
+  WORK-03-TASK-03 → builder → verifier ✅ → committer [l0m1n2o]
+  WORK-03-TASK-04 → builder → verifier ✅ → committer [p3q4r5s]
 
-User: Run WORK-03 pipeline
-
-Claude: [scheduler]
-  WORK-03: Comment Feature (0/5)
-     Next: WORK-03-TASK-00 — Comment model + migration
-     Type "approve" to start.
-
-User: Approve
-
-Claude: [builder → verifier → committer]
-  builder: Created Comment model, ran migration
-  verifier: Build ✅ Lint ✅ Tests ✅
-  committer: feat(WORK-03-TASK-00): Comment model + migration [a1b2c3d]
-
-  WORK-03 progress: 1/5
-     ██░░░░░░░░ 20%
-
-  Next:
-     - WORK-03-TASK-01: Comment CRUD API
-     - WORK-03-TASK-03: Frontend comment component (parallelizable)
-
-User: Continue
-
-  ...repeats...
-
-  WORK-03 completed! 5 tasks, 5 commits
+  🎉 WORK-03 completed! 5 tasks, 5 commits
 ```
 
 ---
@@ -265,18 +318,17 @@ scheduler's context after 5 TASKs:
 | Tracking | Scroll chat history | File-based (PLAN.md, result.md) |
 | Verification | Manual | Automated (build/lint/test) |
 
-### WORK Isolation
+### Two-Path Routing
 
-Since WORKs are isolated:
-- Failure in WORK-01 does not affect WORK-02
-- You can selectively re-run a specific WORK
-- Plan multiple features independently and execute in any order
+The router prevents over-engineering simple tasks:
+- **S-TASK**: 1-minute bug fix doesn't need a 5-TASK WORK plan
+- **WORK**: Complex features get proper decomposition and tracking
 
 ---
 
 ## Output Language
 
-Output language is resolved from **CLAUDE.md** in your project. No manual configuration is needed after first setup.
+Output language is resolved from **CLAUDE.md** in your project. No manual configuration needed after first setup.
 
 ```
 1. Check CLAUDE.md for "Language: xx"
@@ -287,29 +339,14 @@ Output language is resolved from **CLAUDE.md** in your project. No manual config
    ├─ User specifies → write to CLAUDE.md + use it
    └─ User declines ↓
 
-3. Auto-detect system locale
-   - Windows: PowerShell → [CultureInfo]::CurrentCulture.TwoLetterISOLanguageName
-   - Linux/Mac: locale → LANG=ko_KR.UTF-8 → ko
-   → Write detected language to CLAUDE.md as default
+3. Auto-detect system locale → write to CLAUDE.md as default
 ```
 
-Once set, the language is stored in CLAUDE.md and never asked again:
+Once set, stored in CLAUDE.md and never asked again. Priority: `PLAN.md > CLAUDE.md > en`
 
-```markdown
-## Language
-ko
-```
-
-All agents read from PLAN.md first, then CLAUDE.md, then fall back to `en`:
-
-```
-Priority: PLAN.md > Language: → CLAUDE.md ## Language → en (default)
-```
-
-| Item | Detected Language | Always English |
+| Item | Output Language | Always English |
 |------|:-:|:-:|
-| PLAN.md titles/descriptions | ✅ | |
-| TASK file titles/descriptions | ✅ | |
+| PLAN.md / TASK descriptions | ✅ | |
 | Result reports | ✅ | |
 | File names, paths, commands | | ✅ |
 | Git commit messages | | ✅ |
@@ -323,6 +360,7 @@ Place a file with the same name in `.claude/agents/` to override.
 
 | What | File | Section |
 |------|------|---------|
+| Routing criteria | `router.md` | WORK vs S-TASK Decision |
 | Approval policy | `scheduler.md` | Phase 1: User Approval |
 | Commit message format | `committer.md` | Step 3: Stage + Commit |
 | Verification steps | `verifier.md` | Verification Pipeline |
@@ -356,20 +394,18 @@ uc-taskmanager/
 ├── README_KO.md             ← Korean
 ├── LICENSE
 ├── agents/                  ← Distribution: copy these to install
-│   ├── router.md            ← Route requests (WORK vs S-TASK)
+│   ├── router.md            ← Request routing (WORK vs S-TASK)
 │   ├── planner.md           ← Create WORK + decompose TASKs
 │   ├── scheduler.md         ← Run pipeline per WORK
 │   ├── builder.md           ← Code implementation
 │   ├── verifier.md          ← Verification (read-only)
 │   └── committer.md         ← Result report → git commit
-├── .claude/
-│   └── agents/              ← Active agents (used by this project)
-│       └── (same as above)
 └── tasks/
-    └── multi-tasks/         ← WORK directories (auto-generated)
-        ├── WORK-01/
-        ├── WORK-02/
-        └── ...
+    ├── multi-tasks/         ← WORK directories (auto-generated)
+    │   ├── WORK-LIST.md     ← Master index
+    │   ├── WORK-01/
+    │   └── ...
+    └── simple-tasks/        ← S-TASK results (auto-generated)
 ```
 
 ---
