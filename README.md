@@ -274,19 +274,36 @@ Since WORKs are isolated:
 
 ---
 
-## Output Language (Auto-Detect)
+## Output Language
 
-Output language is **automatically determined by detecting the system locale**. No configuration needed.
+Output language is resolved from **CLAUDE.md** in your project. No manual configuration is needed after first setup.
 
 ```
-Windows: PowerShell → [CultureInfo]::CurrentCulture.TwoLetterISOLanguageName
-Linux/Mac: locale → LANG=ko_KR.UTF-8 → ko
+1. Check CLAUDE.md for "Language: xx"
+   ├─ Found → use that language
+   └─ Not found ↓
+
+2. Ask: "Would you like to set the output language? (e.g., ko, en, ja)"
+   ├─ User specifies → write to CLAUDE.md + use it
+   └─ User declines ↓
+
+3. Auto-detect system locale
+   - Windows: PowerShell → [CultureInfo]::CurrentCulture.TwoLetterISOLanguageName
+   - Linux/Mac: locale → LANG=ko_KR.UTF-8 → ko
+   → Write detected language to CLAUDE.md as default
 ```
 
-The detected language code is recorded in PLAN.md, and all agents reference it:
+Once set, the language is stored in CLAUDE.md and never asked again:
 
 ```markdown
-> Language: ko   ← auto-detected (can be manually changed)
+## Language
+ko
+```
+
+All agents read from PLAN.md first, then CLAUDE.md, then fall back to `en`:
+
+```
+Priority: PLAN.md > Language: → CLAUDE.md ## Language → en (default)
 ```
 
 | Item | Detected Language | Always English |

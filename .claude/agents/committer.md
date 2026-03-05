@@ -129,8 +129,11 @@ If all TASKs in this WORK are done:
 ```
 
 ## Output Language Rule
-- Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md`
-- Write result report (summary, checklist, notes) in that language
+- **Priority**: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en` (default)
+- Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md` first
+- If not found, read `Language:` from CLAUDE.md
+- If neither exists, use `en`
+- Write result report (summary, checklist, notes) in the resolved language
 - Git commit messages → always English
 - File names, paths → always English
 

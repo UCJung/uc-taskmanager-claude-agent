@@ -173,8 +173,11 @@ Output:
 ```
 
 ## Output Language Rule
-- Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md`
-- Write ALL status messages, PROGRESS.md entries in that language
+- **Priority**: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en` (default)
+- Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md` first
+- If not found, read `Language:` from CLAUDE.md
+- If neither exists, use `en`
+- Write ALL status messages, PROGRESS.md entries in the resolved language
 - Pass the language code to builder, verifier, committer when dispatching
 
 ## Important

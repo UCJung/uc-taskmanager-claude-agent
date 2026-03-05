@@ -40,11 +40,8 @@ Examples:
 # 1. Find existing WORKs to determine next ID
 ls -d tasks/multi-tasks/WORK-* 2>/dev/null | sort -V | tail -1
 
-# 2. Detect system language (auto)
-LANG_CODE=$(powershell -c "[System.Globalization.CultureInfo]::CurrentCulture.TwoLetterISOLanguageName" 2>/dev/null \
-  || locale 2>/dev/null | grep -oP 'LANG=\K[a-z]{2}' \
-  || echo "en")
-echo "Detected language: $LANG_CODE"
+# 2. Check Language setting in CLAUDE.md
+LANG_CODE=$(grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null || echo "")
 
 # 3. Project identity
 cat CLAUDE.md 2>/dev/null || cat README.md 2>/dev/null || echo "No project docs found"
@@ -111,7 +108,7 @@ tasks/multi-tasks/
 > Created: {date}
 > Project: {detected project name}
 > Tech Stack: {detected stack}
-> Language: {LANG_CODE}
+> Language: {resolved language code}
 > Status: PLANNED
 
 ## Goal
@@ -184,11 +181,37 @@ WORK-01: {WORK title}
 - **Partial completion**: Detect existing result files and skip completed TASKs
 
 ## Output Language Rule
-- Detect system locale automatically during Discovery (step 2)
-- Record the detected language code in PLAN.md `> Language:` field
-- Write ALL output (PLAN.md titles, descriptions, TASK files) in the detected language
+
+### Language Resolution (executed during Discovery step 2)
+
+```
+1. Read CLAUDE.md → look for "Language: xx"
+   ├─ Found → use that language code
+   └─ Not found → proceed to step 2
+
+2. Ask user: "산출물 언어를 설정하시겠습니까? (예: ko, en, ja)"
+   ├─ User specifies language → write to CLAUDE.md, use that language
+   └─ User declines/skips → proceed to step 3
+
+3. Auto-detect system locale:
+   - Windows: powershell -c "[CultureInfo]::CurrentCulture.TwoLetterISOLanguageName"
+   - Linux/Mac: locale | grep LANG | grep -oP '[a-z]{2}' | head -1
+   - Fallback: "en"
+   → Write detected language to CLAUDE.md as default
+```
+
+### Writing to CLAUDE.md
+When adding language setting, append to CLAUDE.md:
+```markdown
+## Language
+{lang_code}
+```
+
+### Rules
+- Record the resolved language in PLAN.md `> Language:` field
+- Write ALL output (PLAN.md titles, descriptions, TASK files) in the resolved language
 - File names, paths, commands → always English
-- If the user explicitly requests a different language, override the auto-detected value
+- If the user explicitly requests a different language mid-session, override and update CLAUDE.md
 
 ## Important
 - NEVER implement code. You only plan.

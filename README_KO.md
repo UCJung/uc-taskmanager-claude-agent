@@ -274,19 +274,36 @@ WORK 단위로 분리되므로:
 
 ---
 
-## 산출물 언어 (자동 감지)
+## 산출물 언어
 
-산출물 언어는 **시스템 로케일을 자동 감지**하여 결정됩니다. 별도 설정이 필요 없습니다.
+산출물 언어는 **CLAUDE.md**에서 관리됩니다. 최초 설정 이후에는 별도 설정이 필요 없습니다.
 
 ```
-Windows: PowerShell → [CultureInfo]::CurrentCulture.TwoLetterISOLanguageName
-Linux/Mac: locale → LANG=ko_KR.UTF-8 → ko
+1. CLAUDE.md에서 "Language: xx" 확인
+   ├─ 있음 → 해당 언어 사용
+   └─ 없음 ↓
+
+2. 사용자에게 질문: "산출물 언어를 설정하시겠습니까? (예: ko, en, ja)"
+   ├─ 사용자가 언어 지정 → CLAUDE.md에 기록 + 해당 언어 사용
+   └─ 거부/스킵 ↓
+
+3. 시스템 로케일 자동 감지
+   - Windows: PowerShell → [CultureInfo]::CurrentCulture.TwoLetterISOLanguageName
+   - Linux/Mac: locale → LANG=ko_KR.UTF-8 → ko
+   → 감지된 언어를 CLAUDE.md에 기본값으로 기록
 ```
 
-감지된 언어코드는 PLAN.md에 기록되며, 모든 에이전트가 이를 참조합니다:
+한 번 설정되면 CLAUDE.md에 저장되어 이후에는 다시 질문하지 않습니다:
 
 ```markdown
-> Language: ko   ← 자동 감지 (수동 변경 가능)
+## Language
+ko
+```
+
+모든 에이전트는 PLAN.md → CLAUDE.md → `en` 순서로 참조합니다:
+
+```
+우선순위: PLAN.md > Language: → CLAUDE.md ## Language → en (기본값)
 ```
 
 | 항목 | 감지 언어 적용 | 항상 English |
