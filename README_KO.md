@@ -322,6 +322,19 @@ Claude: [scheduler → 자동 모드]
 
 ## 왜 이 방식인가?
 
+### WORK ID 할당 전략
+
+WORK ID는 **파일시스템 우선 원칙**을 따릅니다:
+
+1. **파일시스템 소스**: planner가 `tasks/multi-tasks/` 디렉토리를 스캔하여 기존 WORK 디렉토리를 찾고, 가장 최신 디렉토리를 기반으로 다음 WORK ID를 결정합니다.
+2. **MEMORY.md 미참조**: 프로젝트 메모리(MEMORY.md)는 WORK 번호 결정에 절대 참조되지 않습니다. 오직 파일시스템만이 유일한 정보원입니다.
+3. **일관성 검증**: router는 planner 전에 파일시스템과 WORK-LIST.md를 모두 확인하여 WORK ID 일관성을 검증합니다.
+
+이를 통해:
+- MEMORY.md가 오래되거나 손상되어도 WORK ID 중복 할당 방지
+- 세션 간 신뢰성 있는 재개 보장
+- 명확한 추적성: WORK-NN은 직접 `tasks/multi-tasks/WORK-NN/` 폴더에 대응
+
 ### 컨텍스트 격리
 
 각 서브에이전트는 독립 컨텍스트에서 실행됩니다. builder가 50개 파일을 생성하며 20,000 토큰을 썼어도, scheduler에게 돌아오는 건 3줄 요약뿐입니다.

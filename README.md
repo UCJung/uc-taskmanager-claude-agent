@@ -322,6 +322,19 @@ Claude: [scheduler → auto mode]
 
 ## Why This Approach?
 
+### WORK ID Assignment Strategy
+
+WORK IDs are assigned based on a **filesystem-first approach**:
+
+1. **Filesystem Source**: The planner scans `tasks/multi-tasks/` directory to find existing WORK directories and determines the next WORK ID based on the latest directory found.
+2. **MEMORY.md NOT used**: Project memory (MEMORY.md) is never referenced for WORK numbering. Only the filesystem is the authoritative source.
+3. **Consistency Check**: The router validates WORK ID consistency by checking both the filesystem and WORK-LIST.md before dispatching to the planner.
+
+This ensures:
+- No duplicate WORK IDs even if MEMORY.md is stale or corrupted
+- Reliable resumption across sessions
+- Clear traceability: WORK-NN directly corresponds to `tasks/multi-tasks/WORK-NN/`
+
 ### Context Isolation
 
 Each subagent runs in an independent context. Even if the builder creates 50 files using 20,000 tokens, the scheduler only receives a 3-line summary.
