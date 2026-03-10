@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Claude_Code-Subagents-6b5ce7?style=for-the-badge&logo=anthropic&logoColor=white" />
   <img src="https://img.shields.io/badge/Language_Agnostic-Any_Stack-27ae60?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/License-MIT-f5a623?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/License-GPLv3-f5a623?style=for-the-badge" />
 </p>
 
 # uc-taskmanager
@@ -632,4 +632,4 @@ uc-taskmanager/
 
 ## 라이선스
 
-MIT
+GPL-3.0
