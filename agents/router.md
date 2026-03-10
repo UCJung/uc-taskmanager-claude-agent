@@ -59,17 +59,65 @@ router: Analyze → Implement → Self-verify → Commit
 - Report: `tasks/simple-tasks/S-TASK-NNNNN-result.md`
 
 ### S-TASK Pipeline Flow
+
+Router delegates to builder, verifier, committer using structured XML dispatch format (see `agents/xml-schema.md`):
+
 ```
 router → builder(sonnet) → verifier(haiku) → committer(haiku)
 ```
+
+**Builder dispatch**:
+```xml
+<dispatch to="builder" stask="{S-TASK-NNNNN}">
+  <context>
+    <project>{detected project name}</project>
+    <language>{resolved lang_code}</language>
+  </context>
+  <task-spec>
+    <title>{task title from user request}</title>
+    <action>implement</action>
+    <description>{parsed requirement}</description>
+  </task-spec>
+  <cache-hint sections="output-language-rule,build-commands"/>
+</dispatch>
+```
+
 - Router delegates to subagents, keeping its context clean
 - Commit: `S-TASK-NNNNN: {summary}`
 - Report: `tasks/simple-tasks/S-TASK-NNNNN-result.md`
 
 ### WORK Flow
+
+Router dispatches to planner for new WORK creation, or directly to scheduler for existing WORK execution.
+
+**Planner dispatch** (new WORK):
+```xml
+<dispatch to="planner" mode="new-work">
+  <context>
+    <project>{detected project name}</project>
+    <language>{resolved lang_code}</language>
+    <next-work-id>{validated WORK-XX}</next-work-id>
+  </context>
+  <request>
+    <original>{사용자 원문 요청}</original>
+    <tag>{detected [] tag}</tag>
+    <complexity>complex</complexity>
+  </request>
+  <cache-hint sections="output-language-rule"/>
+</dispatch>
 ```
-router → planner → scheduler → [builder → verifier → committer] × N
+
+**Scheduler dispatch** (existing WORK):
+```xml
+<dispatch to="scheduler" work="{WORK_ID}" mode="{manual|auto}">
+  <context>
+    <language>{resolved lang_code}</language>
+    <plan-file>tasks/multi-tasks/{WORK_ID}/PLAN.md</plan-file>
+  </context>
+  <cache-hint sections="output-language-rule"/>
+</dispatch>
 ```
+
 - Full planning + multi-task pipeline
 - Commit: `WORK-XX-TASK-YY: {summary}`
 
@@ -149,3 +197,24 @@ fi
 - **Auto mode**: Only when user explicitly says "자동으로 진행", "auto", etc.
 - Auto mode is valid only within current WORK scope. New WORK resets to default mode.
 - S-TASK (both Direct and Pipeline) does NOT require approval — executes immediately.
+
+## 7. Output Language Rule
+
+See `agents/shared-prompt-sections.md` § 1 for full specification with cache_control markers.
+
+<!-- CACHE_CONTROL_EPHEMERAL: shared-prompt-sections.md § 1 -->
+
+- **Priority**: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en` (default)
+- Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md` first
+- If not found, read `Language:` from CLAUDE.md
+- If neither exists, use `en`
+- Pass the language code to planner/scheduler/builder/verifier/committer in dispatch `<context><language>` field
+
+## 8. XML Schema Reference
+
+This agent dispatches to builder, verifier, committer, planner, and scheduler using the XML format defined in `agents/xml-schema.md`. Key elements:
+- `<dispatch>` attributes: `to`, `stask`/`work`, `mode`
+- `<dispatch>` children: `<context>`, `<task-spec>`/`<request>`, `<cache-hint>`
+- Receivers parse these and return `<task-result>` XML elements
+
+See `agents/xml-schema.md` Sections 1-3 for complete format and examples.
