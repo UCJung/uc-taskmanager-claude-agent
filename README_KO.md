@@ -452,6 +452,47 @@ router가 복잡도에 맞는 최적의 경로를 선택합니다:
 
 연속 S-TASK Pipeline 처리 시 router는 처리 건수와 무관하게 ~1,000 tokens만 사용합니다. 직접 처리하면 ~15K+ tokens이 누적됩니다.
 
+### 구조화된 에이전트 통신
+
+모호한 자연어 프롬프트 대신 구조화된 XML 포맷으로 에이전트 간 통신합니다:
+
+**디스패치 포맷** (호출자 → 수신자):
+```xml
+<dispatch to="builder" work="WORK-03" task="WORK-03-TASK-00">
+  <context>
+    <project>uc-taskmanager</project>
+    <language>ko</language>
+  </context>
+  <task-spec>
+    <file>tasks/multi-tasks/WORK-03/WORK-03-TASK-00.md</file>
+    <title>공통 시스템 프롬프트 섹션 식별 및 XML 스키마 설계</title>
+    <action>implement</action>
+  </task-spec>
+  <cache-hint sections="output-language-rule,build-commands"/>
+</dispatch>
+```
+
+**결과 포맷** (수신자 → 호출자):
+```xml
+<task-result work="WORK-03" task="WORK-03-TASK-00" agent="builder" status="PASS">
+  <summary>shared-prompt-sections.md와 xml-schema.md 생성</summary>
+  <files-changed>
+    <file action="created" path="agents/shared-prompt-sections.md">cache_control이 포함된 공통 섹션</file>
+  </files-changed>
+  <verification>
+    <check name="file_existence" status="PASS">두 파일 모두 생성됨</check>
+  </verification>
+</task-result>
+```
+
+**장점**:
+- **명확성**: 명시적인 XML 구조가 모호한 자연어를 제거합니다 ("컨텍스트를 전달해줘" ← 혼동 vs `<context>` ← 명확)
+- **출력 토큰 감소**: 에이전트가 명확화 질문을 생성하지 않음, 수신자가 XML을 직접 파싱합니다
+- **Prompt Caching**: Output Language Rule, Build Commands 같은 공통 섹션을 Anthropic API의 `cache_control`로 마킹하여 **90% 이상 토큰 절감**
+- **확장성**: 캐시 히트율이 WORK 개수에 따라 향상 (5 TASK 시 ~0.03 tokens/token vs 캐시 없이 2K+ tokens)
+
+전체 포맷은 `agents/xml-schema.md`를, 캐시 가능한 섹션은 `agents/shared-prompt-sections.md`를 참고하세요.
+
 ---
 
 ## 산출물 언어

@@ -452,6 +452,47 @@ The router matches effort to complexity:
 
 Consecutive S-TASK Pipelines keep the router at ~1,000 tokens regardless of how many tasks are processed, versus ~15K+ tokens if the router handled everything directly.
 
+### Structured Agent Communication
+
+Instead of ambiguous natural language prompts, agents communicate using structured XML format:
+
+**Dispatch Format** (Caller → Receiver):
+```xml
+<dispatch to="builder" work="WORK-03" task="WORK-03-TASK-00">
+  <context>
+    <project>uc-taskmanager</project>
+    <language>ko</language>
+  </context>
+  <task-spec>
+    <file>tasks/multi-tasks/WORK-03/WORK-03-TASK-00.md</file>
+    <title>공통 시스템 프롬프트 섹션 식별 및 XML 스키마 설계</title>
+    <action>implement</action>
+  </task-spec>
+  <cache-hint sections="output-language-rule,build-commands"/>
+</dispatch>
+```
+
+**Result Format** (Receiver → Caller):
+```xml
+<task-result work="WORK-03" task="WORK-03-TASK-00" agent="builder" status="PASS">
+  <summary>Created shared-prompt-sections.md and xml-schema.md</summary>
+  <files-changed>
+    <file action="created" path="agents/shared-prompt-sections.md">Common sections with cache_control</file>
+  </files-changed>
+  <verification>
+    <check name="file_existence" status="PASS">Both files created</check>
+  </verification>
+</task-result>
+```
+
+**Benefits**:
+- **Clarity**: Explicit XML structure eliminates ambiguous natural language ("Pass the context" ← confusing vs. `<context>` ← explicit)
+- **Lower Output Tokens**: Agents don't generate clarification questions; receivers parse XML directly
+- **Prompt Caching**: Common sections (Output Language Rule, Build Commands) are marked with Anthropic API `cache_control`, saving up to **90% on repeated tokens**
+- **Scalability**: Cache hit rates improve with WORK count (5 TASKs at ~0.03 tokens/token vs 2K+ tokens without cache)
+
+See `agents/xml-schema.md` for complete format, and `agents/shared-prompt-sections.md` for cacheable sections.
+
 ---
 
 ## Output Language
