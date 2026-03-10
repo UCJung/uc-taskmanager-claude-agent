@@ -280,6 +280,87 @@ WORK 현황
 > WORK-02 재개해줘
 ```
 
+#### 6. 특정 TASK만 실행
+
+WORK 내 특정 TASK를 지정하여 실행 (실패 후 재시도 등):
+
+```
+> WORK-02-TASK-02 실행해줘
+```
+
+scheduler가 TASK 파일을 직접 읽어 builder → verifier → committer를 디스패치합니다.
+
+#### 7. WORK 강제 생성 (복잡도 검사 스킵)
+
+`[WORK 시작]` 태그를 사용하면 복잡도 판단 없이 항상 새 WORK를 생성합니다:
+
+```
+> [WORK 시작] 인증 모듈 리팩토링
+```
+
+#### 8. 실패 처리 / 재시도
+
+파이프라인 도중 TASK가 실패하면 scheduler가 최대 3회 자동 재시도합니다.
+그래도 실패하면 result 파일을 확인한 후 수동으로 재시도할 수 있습니다:
+
+```
+> WORK-02-TASK-01 실패했어. 다시 실행해줘.
+```
+
+또는 문제를 수정한 후 재실행:
+
+```
+> src/auth.ts 문제 수정하고, WORK-02-TASK-01 다시 실행해줘
+```
+
+#### 9. 진행 중인 WORK에 TASK 추가
+
+```
+> [기능개선] 인증 API에 rate limiting 추가해줘
+```
+
+WORK-02가 `IN_PROGRESS`이면 router가 질문합니다:
+> "WORK-02 (인증 모듈)이 진행 중입니다. 추가 TASK로 진행할까요, 새 WORK를 생성할까요?"
+
+#### 10. 개별 TASK 상태 확인
+
+```
+> WORK-02 진행 현황 보여줘
+> WORK-03-TASK-02 상태가 어떻게 돼?
+```
+
+scheduler가 `PROGRESS.md`와 `result.md` 파일을 읽어 현재 상태를 보고합니다.
+
+---
+
+## 팁
+
+### CLAUDE.md를 최신 상태로 유지
+
+언어 설정과 프로젝트 컨텍스트는 `CLAUDE.md`에 저장됩니다. 에이전트가 매 실행 시 이 파일을 읽으므로 최신 상태를 유지하면 불필요한 질문이 줄어듭니다.
+
+### `[]` 태그 일관되게 사용
+
+`[]` 태그 없는 요청은 라우팅 없이 Claude가 직접 처리합니다. 파이프라인을 보장하려면 항상 태그를 붙이세요.
+
+### 병렬 TASK
+
+planner는 의존성 그래프를 기반으로 TASK를 생성합니다. 동일한 선행 조건을 가진 독립 TASK는 scheduler가 동시에 실행할 수 있습니다 — 승인 시 명시하세요:
+
+```
+> 승인. 독립 TASK는 병렬로 실행해줘.
+```
+
+### 컨텍스트 초기화 후 재개
+
+파이프라인 도중 Claude가 컨텍스트를 잃어도 언제든 재개할 수 있습니다:
+
+```
+> WORK-02 멈춘 곳부터 재개해줘
+```
+
+scheduler가 `PROGRESS.md`를 읽어 마지막으로 완료된 TASK를 파악하고 이어서 실행합니다.
+
 ---
 
 ## 예제 세션
@@ -478,6 +559,33 @@ uc-taskmanager/
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
 - Git 초기화 (`git init`)
 - 그 외 의존성 없음.
+
+---
+
+## 선택 사항: MCP 설정
+
+### Serena MCP — 브라우저 자동 실행 비활성화
+
+[Serena MCP](https://github.com/oraios/serena)를 사용 중이라면, 매 시작 시 웹 대시보드가 브라우저에서 열립니다. 이를 비활성화하려면 `~/.claude.json`에 `--open-web-dashboard False`를 추가하세요:
+
+```json
+{
+  "mcpServers": {
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from", "git+https://github.com/oraios/serena",
+        "serena", "start-mcp-server",
+        "--context", "ide-assistant",
+        "--project", ".",
+        "--open-web-dashboard", "False"
+      ]
+    }
+  }
+}
+```
+
+대시보드는 `http://localhost:PORT`에서 계속 사용 가능합니다 — 시작 시 자동으로 열리지 않을 뿐입니다.
 
 ---
 

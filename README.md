@@ -280,6 +280,87 @@ WORK Status
 > Resume WORK-02
 ```
 
+#### 6. Run a Specific TASK
+
+Skip to a specific TASK within a WORK (e.g., retry after a failure):
+
+```
+> Run WORK-02-TASK-02
+```
+
+The scheduler reads the TASK file directly and dispatches builder → verifier → committer.
+
+#### 7. Force WORK Creation (Skip Complexity Check)
+
+Use the `[WORK 시작]` tag to always create a new WORK regardless of complexity:
+
+```
+> [WORK 시작] Refactor the auth module
+```
+
+#### 8. Handle Failure / Retry
+
+If a TASK fails during the pipeline, the scheduler retries up to 3 times automatically.
+If it still fails, you can inspect the result file and retry manually:
+
+```
+> WORK-02-TASK-01 failed. Retry it.
+```
+
+Or fix the issue and re-run:
+
+```
+> Fix the issue in src/auth.ts, then retry WORK-02-TASK-01
+```
+
+#### 9. Add a TASK to an In-Progress WORK
+
+```
+> [기능개선] Add rate limiting to the auth API
+```
+
+If WORK-02 is `IN_PROGRESS`, the router asks:
+> "WORK-02 (Auth Module) is in progress. Add as a new TASK, or create a new WORK?"
+
+#### 10. Check Individual TASK Status
+
+```
+> Show WORK-02 progress
+> What's the status of WORK-03-TASK-02?
+```
+
+The scheduler reads `PROGRESS.md` and `result.md` files to report current state.
+
+---
+
+## Tips
+
+### Keep CLAUDE.md Up to Date
+
+The language setting and project context live in `CLAUDE.md`. Agents read this on every invocation — keeping it accurate reduces back-and-forth.
+
+### Use `[]` Tags Consistently
+
+Requests without `[]` tags are handled directly by Claude without routing. If you want guaranteed pipeline behavior, always use a tag.
+
+### Parallel TASKs
+
+The planner creates dependency-aware TASK graphs. Independent TASKs (same `blockedBy` set) can be dispatched concurrently by the scheduler — mention it when approving:
+
+```
+> Approve. Run independent tasks in parallel.
+```
+
+### Resume After Context Reset
+
+If Claude loses context mid-pipeline, you can always resume:
+
+```
+> Resume WORK-02 from where it stopped
+```
+
+The scheduler reads `PROGRESS.md` to determine the last completed TASK and continues.
+
 ---
 
 ## Example Session
@@ -478,6 +559,33 @@ uc-taskmanager/
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
 - Git initialized (`git init`)
 - No other dependencies.
+
+---
+
+## Optional: MCP Configuration
+
+### Serena MCP — Disable Auto Browser Launch
+
+If you use [Serena MCP](https://github.com/oraios/serena), it opens a web dashboard in your browser on every startup. To disable this, add `--open-web-dashboard False` to your `~/.claude.json`:
+
+```json
+{
+  "mcpServers": {
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from", "git+https://github.com/oraios/serena",
+        "serena", "start-mcp-server",
+        "--context", "ide-assistant",
+        "--project", ".",
+        "--open-web-dashboard", "False"
+      ]
+    }
+  }
+}
+```
+
+The dashboard is still available at `http://localhost:PORT` — it just won't auto-open on startup.
 
 ---
 
