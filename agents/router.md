@@ -84,11 +84,44 @@ echo "S-TASK-${NEXT}"
 
 ## 4. WORK Assignment Process (Required)
 
+### 4.1 WORK ID Assignment with Validation
+
+**Two-Source Validation Rule:**
+
+Router performs validation before dispatcher planner or scheduler.
+
+```bash
+# Step 1: Scan filesystem for existing WORK directories
+WORK_FS=$(ls -d tasks/multi-tasks/WORK-* 2>/dev/null | grep -oP 'WORK-\K\d+' | sort -n | tail -1)
+WORK_FS=${WORK_FS:-0}
+
+# Step 2: Check WORK-LIST.md for max WORK number
+WORK_LIST=$(grep -oP '^WORK-\K\d+' tasks/multi-tasks/WORK-LIST.md 2>/dev/null | sort -n | tail -1)
+WORK_LIST=${WORK_LIST:-0}
+
+# Step 3: Use maximum of the two sources + 1
+WORK_MAX=$(( WORK_FS > WORK_LIST ? WORK_FS : WORK_LIST ))
+NEXT_WORK_ID=$((WORK_MAX + 1))
+echo "WORK-$(printf "%02d" $NEXT_WORK_ID)"
+
+# Step 4: Warning on mismatch
+if [ "$WORK_FS" != "$WORK_LIST" ]; then
+  echo "WARNING: Filesystem (WORK-$WORK_FS) and WORK-LIST.md (WORK-$WORK_LIST) mismatch. Using max value: WORK-$((WORK_MAX+1))"
+fi
+```
+
+**Important**:
+- Planner MUST use filesystem-only source (as per WORK-02-TASK-00), so router's two-source validation serves as a consistency check before dispatching.
+- If mismatch detected, router should inform user but continue with max(FS, LIST) + 1 strategy.
+
+### 4.2 Standard WORK Assignment Flow
+
 1. **Read `tasks/multi-tasks/WORK-LIST.md`** — check for IN_PROGRESS WORKs
-2. If IN_PROGRESS exists → ask user:
+2. Perform WORK ID validation (as per 4.1) to ensure consistency
+3. If IN_PROGRESS exists → ask user:
    > "현재 진행 중인 WORK-XX ({title})가 있습니다. 이 WORK에 추가 TASK로 진행할까요, 아니면 새 WORK를 생성할까요?"
-3. If no IN_PROGRESS → auto-create new WORK
-4. Based on user response:
+4. If no IN_PROGRESS → auto-create new WORK
+5. Based on user response:
    - **Add to existing WORK** → create TASK MD → builder → verifier → committer (skip planner/scheduler)
    - **New WORK** → full pipeline (planner → scheduler → builder → verifier → committer)
 
