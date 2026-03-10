@@ -87,20 +87,74 @@ Execute READY tasks in order (lowest number first)
 ```
 
 ### Phase 2: Build
-Delegate to **builder**:
-- Pass: WORK_ID, TASK file content, project context (CLAUDE.md)
-- Builder implements all changes
+Delegate to **builder** using structured XML dispatch format (see `agents/xml-schema.md`):
+
+```xml
+<dispatch to="builder" work="{WORK_ID}" task="{TASK_ID}">
+  <context>
+    <project>{detected project name}</project>
+    <language>{resolved lang_code}</language>
+    <plan-file>tasks/multi-tasks/{WORK_ID}/PLAN.md</plan-file>
+  </context>
+  <task-spec>
+    <file>tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX.md</file>
+    <title>{task title}</title>
+    <action>implement</action>
+  </task-spec>
+  <previous-results>
+    <!-- Results from preceding TASK dependencies if any -->
+  </previous-results>
+  <cache-hint sections="output-language-rule,build-commands"/>
+</dispatch>
+```
+
+Builder implements all changes and returns `<task-result>` XML (see `agents/xml-schema.md` Section 2).
 
 ### Phase 3: Verify
-Delegate to **verifier**:
-- Pass: WORK_ID, TASK acceptance criteria, verification commands
+Delegate to **verifier** using structured XML dispatch format:
+
+```xml
+<dispatch to="verifier" work="{WORK_ID}" task="{TASK_ID}">
+  <context>
+    <language>{resolved lang_code}</language>
+    <plan-file>tasks/multi-tasks/{WORK_ID}/PLAN.md</plan-file>
+  </context>
+  <task-spec>
+    <file>tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX.md</file>
+    <title>{task title}</title>
+    <action>verify</action>
+  </task-spec>
+  <builder-report>{builder's task-result XML}</builder-report>
+  <cache-hint sections="output-language-rule,build-commands"/>
+</dispatch>
+```
+
+- Verifier validates implementation against acceptance criteria
 - FAIL → return to builder (max 3 retries)
 - 3x FAIL → halt pipeline, report to user
+- Returns `<task-result>` XML with verification status
 
 ### Phase 4: Commit
-Delegate to **committer**:
-- Pass: WORK_ID, TASK ID, title, changed files, verification results
-- Committer generates result report → git commit
+Delegate to **committer** using structured XML dispatch format:
+
+```xml
+<dispatch to="committer" work="{WORK_ID}" task="{TASK_ID}">
+  <context>
+    <language>{resolved lang_code}</language>
+    <plan-file>tasks/multi-tasks/{WORK_ID}/PLAN.md</plan-file>
+  </context>
+  <task-spec>
+    <file>tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX.md</file>
+    <title>{task title}</title>
+    <action>commit</action>
+  </task-spec>
+  <builder-report>{builder's task-result XML}</builder-report>
+  <verification-report>{verifier's task-result XML}</verification-report>
+  <cache-hint sections="output-language-rule"/>
+</dispatch>
+```
+
+Committer generates result report and git commit, returns `<task-result>` XML with commit hash.
 
 ### Phase 5: Advance
 ```
@@ -173,12 +227,26 @@ Output:
 ```
 
 ## Output Language Rule
+
+See `agents/shared-prompt-sections.md` § 1 for full specification with cache_control markers.
+
+<!-- CACHE_CONTROL_EPHEMERAL: shared-prompt-sections.md § 1 -->
+
 - **Priority**: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en` (default)
 - Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md` first
 - If not found, read `Language:` from CLAUDE.md
 - If neither exists, use `en`
 - Write ALL status messages, PROGRESS.md entries in the resolved language
 - Pass the language code to builder, verifier, committer when dispatching
+
+## XML Schema Reference
+
+This agent dispatches to builder/verifier/committer using the XML format defined in `agents/xml-schema.md`. Key elements:
+- `<dispatch>` attributes: `to`, `work`, `task`
+- `<dispatch>` children: `<context>`, `<task-spec>`, `<previous-results>`, `<cache-hint>`
+- Receivers parse these and return `<task-result>` XML elements
+
+See `agents/xml-schema.md` Sections 1-3 for complete format and examples.
 
 ## Important
 - ONLY execute TASKs within the specified WORK
