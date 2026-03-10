@@ -60,10 +60,31 @@ find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \
 
 ## WORK ID Assignment
 
-- Read `tasks/multi-tasks/` directory for existing `WORK-NN` folders
-- If none exist: assign `WORK-01`
-- If `WORK-03` is the latest: assign `WORK-04`
-- NEVER reuse an existing WORK ID
+**파일시스템 우선 원칙**: WORK ID는 `tasks/multi-tasks/` 디렉토리 스캔 결과를 유일한 소스로 사용한다.
+
+```bash
+# WORK ID 결정 방식
+LATEST=$(ls -d tasks/multi-tasks/WORK-* 2>/dev/null | sort -V | tail -1)
+if [ -z "$LATEST" ]; then
+  NEXT_ID="WORK-01"
+else
+  LATEST_NUM=$(basename $LATEST | sed 's/WORK-//')
+  NEXT_ID="WORK-$((LATEST_NUM + 1))"
+fi
+```
+
+**중요한 규칙:**
+- MEMORY.md의 WORK 번호는 **절대 참조하지 않는다**. MEMORY.md는 플래너의 WORK ID 결정에 영향을 주지 않는다.
+- 파일시스템에서 구한 번호가 유일한 소스다.
+
+**안전장치 (Safety Check):**
+- 할당하려는 WORK ID 디렉토리(예: `tasks/multi-tasks/WORK-05/`)가 이미 존재하면 즉시 **중단(abort)**하고 사용자에게 보고한다.
+  ```bash
+  if [ -d "tasks/multi-tasks/$NEXT_ID" ]; then
+    echo "ERROR: $NEXT_ID already exists. Aborting."
+    exit 1
+  fi
+  ```
 
 ## Task Decomposition Rules
 
