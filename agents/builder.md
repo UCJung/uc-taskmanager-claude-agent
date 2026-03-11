@@ -126,6 +126,161 @@ fi
 
 If build or lint fails, FIX before reporting.
 
+## Progress Checkpoint Recording
+
+Builder MUST record execution progress in real-time to enable safe resumption on retry. This is critical for scheduler's retry logic (see `agents/scheduler.md` Phase 4.3).
+
+### Progress.md Checkpoint File
+
+Create/update `tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-progress.md` during execution:
+
+```markdown
+# {WORK_ID}-TASK-XX Progress
+
+- Status: {STARTED|IN_PROGRESS|COMPLETED}
+- Started: {ISO 8601 timestamp}
+- Updated: {ISO 8601 timestamp}
+- Files changed:
+  - `path/to/file` — {action: CREATE|MODIFY|DELETE}
+  - `path/to/another/file` — CREATE
+```
+
+### Recording Rules
+
+**1. At task start** (before any file operations):
+```markdown
+- Status: STARTED
+- Started: 2026-03-12T10:15:00Z
+- Updated: 2026-03-12T10:15:00Z
+- Files changed: (empty at first)
+```
+
+**2. After each major file operation** (create/modify/delete):
+- Update the "Files changed" list with the new file and action
+- Update "Updated" timestamp
+- Status remains IN_PROGRESS (if mid-task)
+
+Example progression:
+```markdown
+# WORK-07-TASK-02 Progress
+
+- Status: IN_PROGRESS
+- Started: 2026-03-12T10:15:00Z
+- Updated: 2026-03-12T10:16:30Z
+- Files changed:
+  - `agents/builder.md` — MODIFY    # First major change
+```
+
+Then after next batch of changes:
+```markdown
+- Status: IN_PROGRESS
+- Started: 2026-03-12T10:15:00Z
+- Updated: 2026-03-12T10:17:45Z
+- Files changed:
+  - `agents/builder.md` — MODIFY
+  - `agents/verifier.md` — MODIFY   # Added more
+  - `agents/committer.md` — MODIFY  # Added more
+```
+
+**3. At task completion** (after all files modified, before returning):
+```markdown
+- Status: COMPLETED
+- Updated: 2026-03-12T10:18:00Z
+```
+
+### Resumption on Retry
+
+If scheduler re-dispatches due to committer FAIL:
+
+1. **Read existing progress.md**: Identify which files were already changed
+2. **Resume from last checkpoint**: Don't repeat completed operations
+3. **Continue with pending operations**: Complete any remaining file changes
+4. **Update progress.md**: Append newly-completed files, update timestamp
+
+Example:
+- Initial attempt: modified `builder.md`
+- Failed at committer gate (progress.md had status STARTED)
+- Retry: Read progress.md, see builder.md was modified
+- Resume: Continue with remaining files (verifier.md, committer.md)
+- Update progress.md: Status = COMPLETED once all files done
+
+### Integration with Context-Handoff
+
+The progress.md checkpoint is referenced by:
+- **Committer** (gate role): Checks progress.md Status=COMPLETED before writing result.md
+- **Scheduler retry logic**: Passes existing progress.md to re-dispatched builder
+- **Builder resumption**: Reads progress.md to know what's already been done
+
+## Context-Handoff Output
+
+Builder MUST output context-handoff in its XML task-result (see `agents/xml-schema.md` Section 4.5.1):
+
+```xml
+<task-result status="PASS">
+  <summary>{1-2 line summary of implementation}</summary>
+  <files-changed>
+    <file action="created" path="agents/context-policy.md">Policy document</file>
+    <file action="modified" path="agents/xml-schema.md">Added context-handoff element</file>
+  </files-changed>
+  <context-handoff from="builder" detail-level="FULL">
+    <what>{Concrete summary of changes: what files/sections were created/modified/deleted}</what>
+    <why>{Decision rationale: why implement this way, alternatives considered}</why>
+    <caution>{Edge cases, conditional completion, things next agent should verify}</caution>
+    <incomplete>{Any unfinished items, postponed work, known limitations}</incomplete>
+  </context-handoff>
+  <notes>{Things verifier should check}</notes>
+</task-result>
+```
+
+### Context-Handoff Field Guidelines
+
+**`what` field**:
+- What concrete changes were made
+- Which files created/modified/deleted
+- New functions, sections, configuration changes
+- Length: 2-5 lines for detail, concise listing
+
+**`why` field**:
+- Technical reasoning for implementation approach
+- Why chosen over alternatives
+- Design decisions and tradeoffs
+- Length: 2-4 lines
+
+**`caution` field**:
+- Edge cases not fully handled
+- Conditional completion (what's missing)
+- Assumptions made
+- Things verifier should pay special attention to
+- Length: 1-3 lines
+
+**`incomplete` field**:
+- Unfinished items from TASK spec
+- Known limitations
+- Postponed work
+- "None" if fully complete
+- Length: 1-2 lines
+
+### Task-Result XML Format
+
+When returning task-result, include the context-handoff element:
+
+```xml
+<task-result work="{WORK_ID}" task="{TASK_ID}" agent="builder" status="{PASS|FAIL}">
+  <summary>{1-2 line executive summary}</summary>
+  <files-changed>
+    <file action="created" path="path/to/file">{description}</file>
+    <file action="modified" path="path/to/file">{description}</file>
+  </files-changed>
+  <context-handoff from="builder" detail-level="FULL">
+    <what>{change summary}</what>
+    <why>{decision rationale}</why>
+    <caution>{cautions for next agent}</caution>
+    <incomplete>{unfinished items or None}</incomplete>
+  </context-handoff>
+  <notes>{verifier guidance}</notes>
+</task-result>
+```
+
 ## Completion Report
 
 Return structured XML result format (see `agents/xml-schema.md` Section 2):
@@ -198,6 +353,16 @@ See `agents/xml-schema.md` for:
 - Section 1: `<dispatch>` format received from scheduler
 - Section 2: `<task-result>` format to return (with files-changed, self-check, notes)
 - Section 4.5-4.6: files-changed and verification elements
+- Section 4.5.1: `<context-handoff>` element format with detail-level attribute
+
+## Context Policy Reference
+
+See `agents/context-policy.md` for:
+- 4-field context-handoff structure (what/why/caution/incomplete)
+- Builder input/processing/output matrix
+- Field guidelines for context-handoff generation
+
+Builder MUST generate context-handoff output in `<task-result>` with detail-level="FULL" per xml-schema.md and context-policy.md specifications.
 
 ## Important
 - NEVER skip self-check
