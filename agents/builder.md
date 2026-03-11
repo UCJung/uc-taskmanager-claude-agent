@@ -211,6 +211,81 @@ The progress.md checkpoint is referenced by:
 - **Scheduler retry logic**: Passes existing progress.md to re-dispatched builder
 - **Builder resumption**: Reads progress.md to know what's already been done
 
+## ProgressCallback (External System Integration)
+
+After progress.md checkpoint updates, optionally send task progress to external system.
+
+### Configuration
+
+Read callback URL and token from CLAUDE.md:
+
+```bash
+# Extract ProgressCallback URL from CLAUDE.md
+PROGRESS_CALLBACK=$(grep "^ProgressCallback:" CLAUDE.md 2>/dev/null | sed 's/^ProgressCallback: //' | tr -d '\r')
+
+# Extract CallbackToken from CLAUDE.md
+CALLBACK_TOKEN=$(grep "^CallbackToken:" CLAUDE.md 2>/dev/null | sed 's/^CallbackToken: //' | tr -d '\r')
+```
+
+### Conditional Execution
+
+Only invoke curl if ProgressCallback URL is configured:
+
+```bash
+if [ -n "$PROGRESS_CALLBACK" ] && [ "$PROGRESS_CALLBACK" != "ProgressCallback:" ]; then
+  # ProgressCallback URL is configured, proceed with curl call
+  TIMESTAMP=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+  # Build checklist from progress.md files changed
+  # Example: {"item": "agents/builder.md modified", "done": true}
+  CHECKLIST=$(grep "^  - \`" "tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-progress.md" 2>/dev/null | \
+    sed 's/^  - `//; s/` .*//' | \
+    sed 's/^/{"item": "/' | sed 's/$/" , "done": true}/' | \
+    paste -sd, -)
+
+  # Build JSON payload
+  PAYLOAD=$(cat <<EOF
+{
+  "workId": "${WORK_ID}",
+  "taskId": "${TASK_ID}",
+  "status": "IN_PROGRESS",
+  "checklist": [$CHECKLIST],
+  "currentReasoning": "Current progress: $(grep "^- Updated:" "tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-progress.md" 2>/dev/null | sed 's/^- Updated: //')",
+  "timestamp": "${TIMESTAMP}"
+}
+EOF
+  )
+
+  # Prepare authorization header
+  CURL_HEADER_AUTH=""
+  if [ -n "$CALLBACK_TOKEN" ] && [ "$CALLBACK_TOKEN" != "CallbackToken:" ]; then
+    CURL_HEADER_AUTH="-H \"Authorization: Bearer ${CALLBACK_TOKEN}\""
+  fi
+
+  # Execute curl POST request
+  curl -s -X POST "$PROGRESS_CALLBACK" \
+    -H "Content-Type: application/json" \
+    $CURL_HEADER_AUTH \
+    -d "$PAYLOAD" 2>/dev/null || echo "WARNING: ProgressCallback request failed (${PROGRESS_CALLBACK}), continuing..."
+else
+  echo "INFO: ProgressCallback not configured in CLAUDE.md, skipping progress notification"
+fi
+```
+
+### Error Handling
+
+- If curl fails: Print warning message and continue (implementation continues regardless)
+- Never block task implementation on callback failure
+- Network issues are transient; don't retry
+- Always log the attempt (warning or success) for audit trail
+- Multiple checkpoint updates may trigger multiple callback calls
+
+### Callback Timing
+
+- Call ProgressCallback **after each major checkpoint update** (after files are modified and progress.md is updated)
+- Called multiple times during a single TASK execution (once per checkpoint)
+- Example: file 1 created → callback, file 2 modified → callback, final status → callback
+
 ## Context-Handoff Output
 
 Builder MUST output context-handoff in its XML task-result (see `agents/xml-schema.md` Section 4.5.1):
