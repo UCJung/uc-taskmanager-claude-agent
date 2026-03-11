@@ -122,7 +122,7 @@ router: Analyze → Implement → Self-verify → Commit
 | **router** | `[]` tag detection, 3-path routing (Direct/Pipeline/WORK), WORK-LIST.md management | **sonnet** | read + dispatch |
 | **planner** | Create WORK + decompose TASKs + generate plan files | **opus** | read-only |
 | **scheduler** | Manage DAG for a specific WORK + run pipeline | **haiku** | read + dispatch |
-| **builder** | Code implementation + self-check (build/lint) | **sonnet** | full access |
+| **builder** | Code implementation + self-check (build/lint). Uses Serena MCP for symbol-level code navigation when available | **sonnet** | full access |
 | **verifier** | Build/lint/test verification (read-only, no source modification) | **haiku** | read + execute |
 | **committer** | Generate result report → git commit → report next TASK | **haiku** | read + write + git |
 
@@ -626,9 +626,24 @@ uc-taskmanager/
 
 ## Optional: MCP Configuration
 
-### Serena MCP — Disable Auto Browser Launch
+### Serena MCP — Symbol-Level Code Navigation
 
-If you use [Serena MCP](https://github.com/oraios/serena), it opens a web dashboard in your browser on every startup. To disable this, add `--open-web-dashboard False` to your `~/.claude.json`:
+The **builder** agent integrates with [Serena MCP](https://github.com/oraios/serena) for symbol-level code exploration. When Serena is available, builder follows this exploration hierarchy instead of reading entire files:
+
+| Step | Tool | Purpose |
+|------|------|---------|
+| 1 | `list_dir` | Directory structure (replaces `find`) |
+| 2 | `get_symbols_overview` | File symbol map before any file read |
+| 3 | `find_symbol(depth=1)` | Class/module method list |
+| 4 | `find_symbol(include_body=true)` | Precise body read for target symbol only |
+| 5 | `find_referencing_symbols` | Impact analysis before editing |
+| 6 | `Read` | Last resort when above tools are insufficient |
+
+This reduces read tokens by 30–50% on large codebases by reading only the symbols needed, not entire files.
+
+#### Disable Auto Browser Launch
+
+Serena opens a web dashboard in your browser on every startup. To disable this, add `--open-web-dashboard False` to your `~/.claude.json`:
 
 ```json
 {

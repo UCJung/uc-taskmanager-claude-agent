@@ -122,7 +122,7 @@ router: 분석 → 구현 → 자체 검증 → 커밋
 | **router** | `[]` 태그 감지, 3경로 라우팅 (Direct/Pipeline/WORK), WORK-LIST.md 관리 | **sonnet** | read + dispatch |
 | **planner** | WORK 생성 + TASK 분해 + 계획 파일 생성 | **opus** | read-only |
 | **scheduler** | 특정 WORK의 DAG 관리 + 파이프라인 실행 | **haiku** | read + dispatch |
-| **builder** | 코드 구현 + self-check (빌드/린트) | **sonnet** | full access |
+| **builder** | 코드 구현 + self-check (빌드/린트). Serena MCP 사용 시 심볼 단위 탐색으로 토큰 절감 | **sonnet** | full access |
 | **verifier** | 빌드/린트/테스트 검증 (읽기 전용, 소스 수정 금지) | **haiku** | read + execute |
 | **committer** | 결과 보고서 생성 → git commit → 다음 TASK 안내 | **haiku** | read + write + git |
 
@@ -626,9 +626,24 @@ uc-taskmanager/
 
 ## 선택 사항: MCP 설정
 
-### Serena MCP — 브라우저 자동 실행 비활성화
+### Serena MCP — 심볼 단위 코드 탐색
 
-[Serena MCP](https://github.com/oraios/serena)를 사용 중이라면, 매 시작 시 웹 대시보드가 브라우저에서 열립니다. 이를 비활성화하려면 `~/.claude.json`에 `--open-web-dashboard False`를 추가하세요:
+**builder** 에이전트는 [Serena MCP](https://github.com/oraios/serena)와 통합되어 심볼 단위 코드 탐색을 수행합니다. Serena 사용 시 파일 전체를 읽는 대신 아래 탐색 계층을 따릅니다:
+
+| 단계 | 도구 | 용도 |
+|------|------|------|
+| 1 | `list_dir` | 디렉토리 구조 파악 (`find` 대체) |
+| 2 | `get_symbols_overview` | 파일 읽기 전 심볼 맵 확인 |
+| 3 | `find_symbol(depth=1)` | 클래스/모듈 메서드 목록 |
+| 4 | `find_symbol(include_body=true)` | 수정 대상 심볼만 정밀 읽기 |
+| 5 | `find_referencing_symbols` | 편집 전 영향 범위 분석 |
+| 6 | `Read` | 위 도구로 불충분할 때만 (최후 수단) |
+
+대형 코드베이스에서 파일 전체 읽기 대신 필요한 심볼만 읽어 읽기 토큰을 30~50% 절감합니다.
+
+#### 브라우저 자동 실행 비활성화
+
+Serena는 매 시작 시 웹 대시보드를 브라우저에서 엽니다. 이를 비활성화하려면 `~/.claude.json`에 `--open-web-dashboard False`를 추가하세요:
 
 ```json
 {
