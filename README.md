@@ -544,6 +544,24 @@ Each agent outputs a **context-handoff** — a structured reasoning document, no
 
 See `docs/spec_sliding-window-context.md` for full design details.
 
+### External System Callback (Optional)
+
+uc-taskmanager is generic by default. To integrate with an external system (e.g., a CI/CD backend), add callback URLs to `CLAUDE.md`:
+
+```markdown
+## Task Callbacks
+TaskCallback: http://localhost:3000/api/v1/runner/{{executionId}}/task-result
+ProgressCallback: http://localhost:3000/api/v1/runner/{{executionId}}/task-progress
+CallbackToken: <your-token>
+```
+
+- **No config** → works as-is, no external calls made
+- **TaskCallback** → committer POSTs result after each TASK commit
+- **ProgressCallback** → builder POSTs checkpoint after each progress.md update
+- Callback failures are non-fatal — a warning is printed and the pipeline continues
+
+See `docs/spec_callback-integration.md` for payload schema and implementation guide.
+
 ---
 
 ## Output Language
@@ -641,7 +659,8 @@ uc-taskmanager/
 │   └── xml-schema.md        ← Agent communication XML schema
 ├── docs/                    ← Design specifications
 │   ├── spec_pipeline-architecture.md   ← Pipeline structure & agent roles
-│   └── spec_sliding-window-context.md  ← Sliding window context design
+│   ├── spec_sliding-window-context.md  ← Sliding window context design
+│   └── spec_callback-integration.md    ← External system callback integration
 └── tasks/
     ├── multi-tasks/         ← WORK directories (auto-generated)
     │   ├── WORK-LIST.md     ← Master index
