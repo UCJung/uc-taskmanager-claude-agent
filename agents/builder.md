@@ -1,7 +1,7 @@
 ---
 name: builder
 description: WORK 내 특정 TASK를 받아 실제 코드를 구현하는 에이전트. scheduler가 자동으로 호출한다. 파일 생성, 수정, 설정 변경 등 모든 구현 작업을 수행한다.
-tools: Read, Write, Edit, Bash, Glob, Grep
+tools: Read, Write, Edit, Bash, Glob, Grep, mcp__serena__*
 model: sonnet
 ---
 
@@ -39,20 +39,43 @@ This agent receives dispatch instructions in structured XML format (see `agents/
 
 ## Before ANY Implementation
 
+### 1. 프로젝트 컨텍스트
+
 ```bash
-# 1. Project conventions
+# 프로젝트 컨벤션 확인
 cat CLAUDE.md 2>/dev/null || cat README.md 2>/dev/null
 
-# 2. Project structure
-ls -la
-find . -maxdepth 2 -type f | grep -v node_modules | head -40
-
-# 3. Build/lint commands
-cat package.json 2>/dev/null | grep -A5 '"scripts"'
-cat Makefile 2>/dev/null | grep -E '^[a-zA-Z]' | head -10
-
-# 4. Previous TASK results in this WORK (for context)
+# 이전 TASK 결과 확인 (컨텍스트용)
 ls tasks/multi-tasks/${WORK_ID}/*-result.md 2>/dev/null
+```
+
+### 2. 코드 탐색 — Serena 우선순위 (반드시 준수)
+
+코드를 읽거나 수정하기 전에 아래 순서를 따른다:
+
+| 단계 | 도구 | 용도 |
+|------|------|------|
+| 1 | `mcp__serena__list_dir` | 디렉토리 구조 파악 (find 대신) |
+| 2 | `mcp__serena__get_symbols_overview` | 파일의 심볼 전체 구조 파악 (파일 전체 읽기 전 항상 먼저) |
+| 3 | `mcp__serena__find_symbol(depth=1)` | 클래스/모듈의 메서드 목록 파악 |
+| 4 | `mcp__serena__find_symbol(include_body=true)` | 수정할 심볼의 body만 정밀 읽기 |
+| 5 | `mcp__serena__find_referencing_symbols` | 변경 시 영향 받는 참조 심볼 사전 파악 |
+| 6 | `Read` 도구 | 위 5단계로 불충분할 때만 (최후 수단) |
+
+**규칙**:
+- 파일 전체를 `Read`로 읽기 전에 반드시 `get_symbols_overview` 먼저 실행
+- 심볼 수정 시 `replace_symbol_body` 우선 (Edit 도구는 심볼 단위 편집 불가 시만)
+- 변경 전 `find_referencing_symbols`로 영향 범위 파악 후 필요 시 연관 파일도 수정
+
+### 탐색 → 편집 흐름
+
+```
+1. list_dir → 프로젝트 구조 파악
+2. get_symbols_overview(파일) → 해당 파일 심볼 구조 파악
+3. find_symbol(클래스, depth=1) → 메서드 목록 확인
+4. find_symbol(클래스/메서드, include_body=true) → 수정 대상 정밀 읽기
+5. find_referencing_symbols → 영향 범위 확인
+6. replace_symbol_body 또는 Edit → 최소 범위 편집
 ```
 
 ## Implementation Rules
