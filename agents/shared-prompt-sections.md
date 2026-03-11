@@ -311,8 +311,139 @@ By marking common sections with `cache_control`, agents achieve:
 
 ---
 
+---
+
+## 6. Task Callbacks (External System Integration)
+
+**Applies to**: builder, committer (2 agents)
+
+**Description**: Optional HTTP callback mechanism for external system integration. Allows the uc-taskmanager pipeline to notify external systems (e.g., uc-teamspace) about task progress and completion.
+
+**Content**:
+
+```
+## Task Callbacks
+
+The agents support optional HTTP callbacks to external systems for real-time progress and result reporting. This feature is **opt-in** — if callback URLs are not configured, the agents operate in standalone mode without any external notifications.
+
+### Configuration (CLAUDE.md)
+
+Add these optional fields to your project's CLAUDE.md:
+
+```markdown
+## Task Callbacks
+
+TaskCallback: http://your-system.com/api/v1/task-result
+ProgressCallback: http://your-system.com/api/v1/task-progress
+CallbackToken: <bearer-token>
+```
+
+**Fields**:
+- `TaskCallback`: Endpoint URL for final task result (invoked by committer after git commit)
+- `ProgressCallback`: Endpoint URL for progress updates (invoked by builder at checkpoints)
+- `CallbackToken`: Bearer token for Authorization header in curl requests
+
+If any field is missing, callbacks are disabled for that type.
+
+### Reading Callback Configuration
+
+Use these bash commands to extract callback URLs and token from CLAUDE.md:
+
+```bash
+# Read TaskCallback URL
+TASK_CALLBACK=$(grep "^TaskCallback:" CLAUDE.md | sed 's/^TaskCallback: //' | tr -d '\r')
+
+# Read ProgressCallback URL
+PROGRESS_CALLBACK=$(grep "^ProgressCallback:" CLAUDE.md | sed 's/^ProgressCallback: //' | tr -d '\r')
+
+# Read Callback Token
+CALLBACK_TOKEN=$(grep "^CallbackToken:" CLAUDE.md | sed 's/^CallbackToken: //' | tr -d '\r')
+```
+
+### Conditional Execution Pattern
+
+Always check if the URL is set before attempting a curl call:
+
+```bash
+# Only call TaskCallback if URL is configured
+if [ -n "$TASK_CALLBACK" ] && [ "$TASK_CALLBACK" != "TaskCallback:" ]; then
+  # curl call here
+fi
+
+# Only call ProgressCallback if URL is configured
+if [ -n "$PROGRESS_CALLBACK" ] && [ "$PROGRESS_CALLBACK" != "ProgressCallback:" ]; then
+  # curl call here
+fi
+```
+
+### TaskCallback Payload Format (Committer)
+
+Invoked by committer after result.md is created and git commit is completed:
+
+```bash
+curl -s -X POST "$TASK_CALLBACK" \
+  -H "Authorization: Bearer $CALLBACK_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workId": "{WORK_ID}",
+    "taskId": "{TASK_ID}",
+    "status": "completed",
+    "commitHash": "{git-commit-hash}",
+    "resultFile": "tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md",
+    "timestamp": "{ISO-8601-timestamp}"
+  }' 2>/dev/null || echo "WARNING: TaskCallback request failed, continuing..."
+```
+
+### ProgressCallback Payload Format (Builder)
+
+Invoked by builder at key checkpoints (e.g., after files are created, before verification):
+
+```bash
+curl -s -X POST "$PROGRESS_CALLBACK" \
+  -H "Authorization: Bearer $CALLBACK_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workId": "{WORK_ID}",
+    "taskId": "{TASK_ID}",
+    "stage": "implementation",
+    "checkpoint": "files_created",
+    "details": "{brief description of what completed}",
+    "timestamp": "{ISO-8601-timestamp}"
+  }' 2>/dev/null || echo "WARNING: ProgressCallback request failed, continuing..."
+```
+
+### Error Handling Principles
+
+1. **Never block on callback failure**: If curl fails, print a warning and continue with the main task
+2. **Network transience tolerance**: Assume temporary network issues are normal; don't retry
+3. **Log all attempts**: Always print a message (warning or success) so external monitoring can audit callback activity
+4. **Graceful degradation**: The pipeline should complete successfully even if all callbacks fail
+
+### Common Use Cases
+
+- **Status Dashboard**: ProgressCallback updates a real-time dashboard as tasks execute
+- **Notification Service**: TaskCallback triggers email/Slack notifications on task completion
+- **Result Archival**: TaskCallback stores committed results in an external database
+- **Audit Trail**: Both callbacks enable audit logging of all pipeline activity
+```
+
+**Cache Control Marker**:
+
+```json
+{
+  "type": "text",
+  "text": "[content of Task Callbacks section]",
+  "cache_control": {
+    "type": "ephemeral"
+  }
+}
+```
+
+---
+
 ## Version
 
 - **Created**: 2026-03-10
 - **Purpose**: WORK-03 — Agent간 프롬프트 전달 시 데이터 구조화로 토큰 절감
 - **Referenced by**: scheduler.md, router.md, builder.md, verifier.md, committer.md
+- **Updated**: 2026-03-12 (WORK-09-TASK-00) — Added Section 6: Task Callbacks for external system integration
