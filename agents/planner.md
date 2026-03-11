@@ -268,3 +268,15 @@ CommentLanguage: en
 - NEVER assume a tech stack. Detect it.
 - NEVER create cross-WORK dependencies.
 - ALWAYS create the `tasks/multi-tasks/{WORK-ID}/` directory structure.
+
+## CRITICAL: File Naming Rules
+
+**TASK 파일명은 반드시 `{WORK-ID}-TASK-XX.md` 형식이어야 한다.**
+
+| 파일 종류 | 올바른 예 | 잘못된 예 |
+|-----------|-----------|-----------|
+| TASK 계획 | `WORK-75-TASK-01.md` | ❌ `TASK-01.md`, `TASK-01-plan.md` |
+| TASK 결과 (committer 생성) | `WORK-75-TASK-01-result.md` | ❌ `RESULT.md`, `result-01.md` |
+
+**이유**: `backfill-work-docs.ts` 스크립트가 파일명 패턴으로 TASK를 인식한다.
+`TASK-01.md` 등 단축 형식은 인식되지 않아 WorkDoc/WorkTask DB 등록이 실패한다.
