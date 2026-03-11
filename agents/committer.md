@@ -176,6 +176,11 @@ If all TASKs in this WORK are done:
    Total: {N} tasks, {N} commits
 ```
 
+> **IMPORTANT**: Do NOT update WORK-LIST.md to COMPLETED.
+> WORK-LIST status is updated to COMPLETED only when the user performs `git push`.
+> This agent's responsibility ends at commit. Push and WORK-LIST finalization are the user's action.
+> When the user asks Claude to push, Claude will update WORK-LIST first, then commit and push.
+
 ## Output Language Rule
 
 See `agents/shared-prompt-sections.md` § 1 for full specification with cache_control markers.

@@ -173,8 +173,29 @@ The router maintains `tasks/multi-tasks/WORK-LIST.md` as the master index:
 | WORK-01 | User Authentication | COMPLETED | 2026-03-01 |
 | WORK-02 | Payment Integration | IN_PROGRESS | 2026-03-05 |
 
+| Status | Meaning |
+|--------|---------|
+| `IN_PROGRESS` | TASKs in progress — not yet pushed |
+| `COMPLETED` | All TASKs committed + git push done |
+
 - **IN_PROGRESS**: router checks this before creating new WORKs
-- **COMPLETED**: updated after git push
+- **COMPLETED**: updated at `git push` time — **not by agents**
+
+#### git push Procedure
+
+When you ask Claude to push (`"push this"`, `"git push"`), Claude handles the full sequence automatically:
+
+```
+1. Open tasks/multi-tasks/WORK-LIST.md
+2. Find all IN_PROGRESS WORKs
+3. Change status → COMPLETED, update date
+4. git add tasks/multi-tasks/WORK-LIST.md
+5. git commit -m "chore: update WORK-LIST — WORK-XX COMPLETED"
+6. git push
+```
+
+> **Agents (builder / committer / scheduler) never update WORK-LIST to COMPLETED.**
+> COMPLETED is only set at push time. If an agent outputs `🎉 WORK complete!`, that is a status message — not a WORK-LIST update.
 
 ---
 

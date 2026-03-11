@@ -86,6 +86,35 @@ Execute READY tasks in order (lowest number first)
    "자동" → 이후 모든 작업 자동 승인
 ```
 
+### Pipeline Stage Callbacks
+
+Before and after each phase, call the callback API to report stage transitions.
+`CALLBACK_URL` and `CALLBACK_TOKEN` are available as environment variables.
+
+```bash
+# Stage START example (run before dispatching sub-agent)
+curl -s -X POST "$CALLBACK_URL" \
+  -H "Authorization: Bearer $CALLBACK_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"stage": "BUILDER", "event": "START"}'
+
+# Stage DONE example (run after sub-agent returns)
+curl -s -X POST "$CALLBACK_URL" \
+  -H "Authorization: Bearer $CALLBACK_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"stage": "BUILDER", "event": "DONE"}'
+```
+
+**Required callbacks per task cycle:**
+- Before builder dispatch: `{"stage": "BUILDER", "event": "START"}`
+- After builder returns: `{"stage": "BUILDER", "event": "DONE"}`
+- Before verifier dispatch: `{"stage": "VERIFIER", "event": "START"}`
+- After verifier returns: `{"stage": "VERIFIER", "event": "DONE"}`
+- Before committer dispatch: `{"stage": "COMMITTER", "event": "START"}`
+- After committer returns: `{"stage": "COMMITTER", "event": "DONE"}`
+
+On failure: `{"stage": "{STAGE}", "event": "FAILED"}`
+
 ### Phase 2: Build
 Delegate to **builder** using structured XML dispatch format (see `agents/xml-schema.md`):
 
@@ -204,6 +233,11 @@ When all TASKs in the WORK are done:
 
 다른 WORK를 확인하려면 "WORK 목록" 을 입력하세요.
 ```
+
+> **IMPORTANT**: Do NOT update WORK-LIST.md to COMPLETED.
+> WORK-LIST status is updated to COMPLETED only when the user performs `git push`.
+> Scheduler's responsibility ends when all TASKs are committed. Push and WORK-LIST finalization are the user's action.
+> When the user asks Claude to push, Claude will update WORK-LIST first, then commit and push.
 
 ## Multi-WORK Status
 

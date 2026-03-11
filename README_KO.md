@@ -173,8 +173,29 @@ router가 `tasks/multi-tasks/WORK-LIST.md`를 마스터 인덱스로 관리합�
 | WORK-01 | 사용자 인증 기능 | COMPLETED | 2026-03-01 |
 | WORK-02 | 결제 기능 추가 | IN_PROGRESS | 2026-03-05 |
 
+| 상태 | 의미 |
+|------|------|
+| `IN_PROGRESS` | TASK 진행 중 — 아직 push 안 됨 |
+| `COMPLETED` | 모든 TASK 커밋 완료 + git push 완료 |
+
 - **IN_PROGRESS**: 새 WORK 생성 전 router가 확인
-- **COMPLETED**: git push 후 업데이트
+- **COMPLETED**: `git push` 시점에 갱신 — **Agent가 갱신하지 않음**
+
+#### git push 절차
+
+Claude에게 push를 요청하면 (`"push 해줘"`, `"git push"`), Claude가 아래 순서를 자동으로 처리합니다:
+
+```
+1. tasks/multi-tasks/WORK-LIST.md 열기
+2. IN_PROGRESS 상태인 WORK 전체 확인
+3. 해당 WORK 상태 → COMPLETED, 날짜 업데이트
+4. git add tasks/multi-tasks/WORK-LIST.md
+5. git commit -m "chore: WORK-LIST 갱신 — WORK-XX COMPLETED"
+6. git push
+```
+
+> **Agent(builder / committer / scheduler)는 WORK-LIST를 COMPLETED로 갱신하지 않습니다.**
+> COMPLETED 갱신은 오직 push 시점에만 수행합니다. Agent가 `🎉 WORK 완료!` 메시지를 출력하더라도 WORK-LIST 갱신은 하지 않습니다.
 
 ---
 
