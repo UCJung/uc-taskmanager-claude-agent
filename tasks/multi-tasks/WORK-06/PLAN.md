@@ -3,7 +3,7 @@
 > REQ: REQ-049
 > Language: ko
 > Created: 2026-03-11
-> Status: IN_PROGRESS
+> Status: COMPLETED
 > 요구사항: REQ-049
 
 ## 목표
