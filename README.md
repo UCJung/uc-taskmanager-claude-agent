@@ -121,10 +121,10 @@ router: Analyze → Implement → Self-verify → Commit
 |-------|------|-------|------------|
 | **router** | `[]` tag detection, 3-path routing (Direct/Pipeline/WORK), WORK-LIST.md management | **sonnet** | read + dispatch |
 | **planner** | Create WORK + decompose TASKs + generate plan files | **opus** | read-only |
-| **scheduler** | Manage DAG for a specific WORK + run pipeline | **haiku** | read + dispatch |
-| **builder** | Code implementation + self-check (build/lint). Uses Serena MCP for symbol-level code navigation when available | **sonnet** | full access |
-| **verifier** | Build/lint/test verification (read-only, no source modification) | **haiku** | read + execute |
-| **committer** | Generate result report → git commit → report next TASK | **haiku** | read + write + git |
+| **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch |
+| **builder** | Code implementation + progress.md checkpoint recording. Uses Serena MCP for symbol-level code navigation when available | **sonnet** | full access |
+| **verifier** | Build/lint/test verification based on builder's context-handoff (read-only) | **haiku** | read + execute |
+| **committer** | Gate check (progress.md) → write result.md → git commit | **haiku** | read + write + git |
 
 ---
 
@@ -148,19 +148,20 @@ No `[]` tag = handled directly without pipeline.
 ```
 tasks/
 ├── multi-tasks/
-│   ├── WORK-LIST.md                    ← Master list of all WORKs (managed by router)
-│   ├── WORK-01/                        ← "User Authentication"
-│   │   ├── PLAN.md                     ← Plan + dependency graph
-│   │   ├── PROGRESS.md                 ← Progress tracking (auto-updated)
-│   │   ├── WORK-01-TASK-00.md          ← Task specification
-│   │   ├── WORK-01-TASK-00-result.md   ← Completion report (= proof of done)
+│   ├── WORK-LIST.md                      ← Master list of all WORKs (managed by router)
+│   ├── WORK-01/                          ← "User Authentication"
+│   │   ├── PLAN.md                       ← Plan + dependency graph
+│   │   ├── PROGRESS.md                   ← Progress tracking (auto-updated)
+│   │   ├── WORK-01-TASK-00.md            ← Task specification
+│   │   ├── WORK-01-TASK-00-progress.md   ← Real-time checkpoint (builder writes)
+│   │   ├── WORK-01-TASK-00-result.md     ← Completion report (committer writes)
 │   │   ├── WORK-01-TASK-01.md
 │   │   └── ...
 │   └── WORK-02/
 │       └── ...
 │
 └── simple-tasks/
-    ├── S-TASK-00001-result.md          ← Single task results
+    ├── S-TASK-00001-result.md            ← Single task results
     └── ...
 ```
 
@@ -514,6 +515,35 @@ Instead of ambiguous natural language prompts, agents communicate using structur
 
 See `agents/xml-schema.md` for complete format, and `agents/shared-prompt-sections.md` for cacheable sections.
 
+### Sliding Window Context Transfer
+
+Each subagent starts with an empty context — the cost of isolation. The **sliding window** system minimizes token waste when passing context between agents and across dependent TASKs.
+
+**Rule**: the further back, the less detail:
+
+| Distance | Detail Level | Content |
+|----------|-------------|---------|
+| Immediate predecessor | `FULL` | what + why + caution + incomplete |
+| 2 steps back | `SUMMARY` | what only (1–3 lines) |
+| 3+ steps back | `DROP` | not transmitted |
+
+Each agent outputs a **context-handoff** — a structured reasoning document, not just a result log:
+
+```xml
+<context-handoff from="builder" detail-level="FULL">
+  <what>auth.ts modified — added JWT silent refresh logic</what>
+  <why>Previous code returned 401 immediately on expiry. Silent refresh improves UX.</why>
+  <caution>Coupled to session.ts setSession(). Changes there may cause side effects.</caution>
+  <incomplete>Unit tests not written. Verifier should check.</incomplete>
+</context-handoff>
+```
+
+**Result responsibility shift**: builder focuses on implementation only, writing a `progress.md` checkpoint. The **committer** synthesizes builder + verifier context-handoffs into the final `result.md`. This prevents result files from being skipped when builder is context-pressured.
+
+**Estimated token savings**: ~48% on a 3-TASK dependency chain vs. the naive approach of passing full results forward.
+
+See `docs/spec_sliding-window-context.md` for full design details.
+
 ---
 
 ## Output Language
@@ -598,14 +628,20 @@ Auto-detected from project files. No configuration needed.
 uc-taskmanager/
 ├── README.md                ← English (default)
 ├── README_KO.md             ← Korean
+├── CLAUDE.md                ← Project-level Claude instructions (push procedure, language)
 ├── LICENSE
 ├── agents/                  ← Distribution: copy these to install
 │   ├── router.md            ← Request routing (WORK vs S-TASK)
 │   ├── planner.md           ← Create WORK + decompose TASKs
-│   ├── scheduler.md         ← Run pipeline per WORK
-│   ├── builder.md           ← Code implementation
-│   ├── verifier.md          ← Verification (read-only)
-│   └── committer.md         ← Result report → git commit
+│   ├── scheduler.md         ← Run pipeline per WORK (sliding window dispatch)
+│   ├── builder.md           ← Code implementation + progress.md checkpoint
+│   ├── verifier.md          ← Verification based on context-handoff (read-only)
+│   ├── committer.md         ← Gate check → result.md → git commit
+│   ├── context-policy.md    ← Sliding window context transfer policy
+│   └── xml-schema.md        ← Agent communication XML schema
+├── docs/                    ← Design specifications
+│   ├── spec_pipeline-architecture.md   ← Pipeline structure & agent roles
+│   └── spec_sliding-window-context.md  ← Sliding window context design
 └── tasks/
     ├── multi-tasks/         ← WORK directories (auto-generated)
     │   ├── WORK-LIST.md     ← Master index

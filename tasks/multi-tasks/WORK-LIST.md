@@ -8,3 +8,5 @@
 | WORK-04 | builder.md에 Serena MCP 도구 우선 탐색 지침 추가 | COMPLETED | 2026-03-11 | 2026-03-11 |
 | WORK-05 | planner.md PLAN.md에 요구사항 코드(REQ) 필드 추가 | COMPLETED | 2026-03-11 | 2026-03-11 |
 | WORK-06 | committer result 파일 섹션 헤더 다국어 대응 (REQ-049) | COMPLETED | 2026-03-11 | 2026-03-11 |
+| WORK-07 | 슬라이딩 윈도우 컨텍스트 전달 — result.md 재설계 및 파이프라인 안정성 강화 | COMPLETED | 2026-03-12 | 2026-03-12 |
+| WORK-08 | 슬라이딩 윈도우 컨텍스트 전달 시스템 동작 검증 테스트 | COMPLETED | 2026-03-12 | 2026-03-12 |
