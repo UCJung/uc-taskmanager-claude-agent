@@ -185,6 +185,115 @@ Delegate to **committer** using structured XML dispatch format:
 
 Committer generates result report and git commit, returns `<task-result>` XML with commit hash.
 
+### Phase 4.1: Sliding Window Context-Handoff in Pipeline
+
+When dispatching within the single TASK's pipeline (builder → verifier → committer), apply sliding window compression to previous-stage context-handoff:
+
+**Verifier dispatch** (receives builder output):
+```xml
+<dispatch to="verifier" work="{WORK_ID}" task="{TASK_ID}">
+  <!-- Builder's context-handoff is passed with detail-level="FULL" (direct predecessor) -->
+  <context-handoff from="builder" detail-level="FULL">{builder's FULL output}</context-handoff>
+</dispatch>
+```
+
+**Committer dispatch** (receives builder AND verifier output):
+```xml
+<dispatch to="committer" work="{WORK_ID}" task="{TASK_ID}">
+  <!-- Verifier is direct predecessor: FULL detail level -->
+  <context-handoff from="verifier" detail-level="FULL">{verifier's output}</context-handoff>
+
+  <!-- Builder is 2 steps back: SUMMARY detail level (what field only, 1-2 lines) -->
+  <context-handoff from="builder" detail-level="SUMMARY">{builder's what field only}</context-handoff>
+</dispatch>
+```
+
+**Detail-Level Application Rules** (see `agents/context-policy.md`):
+- **FULL**: Include all 4 fields (what, why, caution, incomplete)
+- **SUMMARY**: Include only `what` field, 1-3 lines
+- **DROP**: Omit context-handoff element entirely (not used in pipeline since max 2 steps)
+
+### Phase 4.2: TASK-to-TASK Context-Handoff Dependency Passing
+
+When subsequent TASK's builder execution depends on previous TASK results, extract context-handoff from result.md and apply sliding window rules based on dependency distance:
+
+**Dependency distance rules** (from `agents/context-policy.md`):
+- **Direct dependency (1 step back)**: Pass result.md's context-handoff with detail-level="`FULL`"
+  - Example: TASK-02 depends on TASK-01 → include TASK-01's context-handoff FULL
+- **2-step back dependency**: Pass result.md's context-handoff with detail-level="`SUMMARY`" (what field only)
+  - Example: TASK-03 depends on TASK-01 (through TASK-02) → include TASK-01's what field only
+- **3+ steps back**: `DROP` (omit entirely)
+  - Example: TASK-04 depends indirectly on TASK-00 (3+ steps) → omit TASK-00's context-handoff
+
+**Implementation in builder dispatch**:
+```xml
+<dispatch to="builder" work="{WORK_ID}" task="{NEXT_TASK_ID}">
+  <context>...</context>
+  <task-spec>...</task-spec>
+
+  <!-- Include context-handoff from all direct and 2-step dependencies -->
+  <previous-results>
+    <!-- Direct dependency: TASK-N result (FULL) -->
+    <context-handoff from="prev-task" task="{PREV_TASK_ID}" detail-level="FULL">
+      <what>...</what>
+      <why>...</why>
+      <caution>...</caution>
+      <incomplete>...</incomplete>
+    </context-handoff>
+
+    <!-- 2-step dependency: TASK-N-1 result (SUMMARY — what only) -->
+    <context-handoff from="prev-prev-task" task="{PREV_PREV_TASK_ID}" detail-level="SUMMARY">
+      <what>...</what>
+    </context-handoff>
+
+    <!-- 3+ steps back: DROPPED (no context-handoff element) -->
+  </previous-results>
+
+  <cache-hint sections="output-language-rule,build-commands"/>
+</dispatch>
+```
+
+**Extracting context-handoff from result.md**:
+1. Open `tasks/multi-tasks/{WORK_ID}/{PREV_TASK_ID}-result.md`
+2. Find the `## Context Handoff` section (created by committer per `agents/committer.md`)
+3. Extract the Builder Context (SUMMARY) and Verifier Context (FULL)
+4. Apply sliding window detail-level when passing to next TASK's builder
+
+### Phase 4.3: Committer FAIL Retry Logic
+
+If committer returns `status="FAIL"` (progress.md check failed):
+
+**Failure detection**:
+- Check committer's `<task-result status="FAIL">` response
+- Read the `<reason>` element to understand why:
+  - "progress.md not found" — builder did not record checkpoint
+  - "status not COMPLETED" — builder work in progress
+  - "no files changed" — no actual changes recorded
+
+**Retry strategy**:
+1. **Re-dispatch builder** with existing progress.md
+   ```xml
+   <dispatch to="builder" work="{WORK_ID}" task="{TASK_ID}">
+     <previous-progress>{existing TASK-XX-progress.md content}</previous-progress>
+     <!-- Builder reads this to resume from last checkpoint -->
+   </dispatch>
+   ```
+
+2. **Maximum retries**: 2 additional attempts (total 3 tries)
+   - Try 1: Initial build
+   - Try 2: First retry (progress.md resume)
+   - Try 3: Second retry (progress.md resume)
+
+3. **After 3 retries fail**:
+   - Mark TASK as `FAILED` in PROGRESS.md
+   - Halt pipeline execution
+   - Report error to user with committer's reason
+   - Do NOT proceed to next TASK
+
+4. **Log retry attempts**:
+   - Record in PROGRESS.md: "TASK-XX: retry 1/2 — progress.md recovered"
+   - Track timing: when did builder recover vs. fresh build
+
 ### Phase 5: Advance
 ```
 ✅ {WORK_ID}-TASK-XX 완료 — commit: {hash}
@@ -277,9 +386,21 @@ See `agents/shared-prompt-sections.md` § 1 for full specification with cache_co
 This agent dispatches to builder/verifier/committer using the XML format defined in `agents/xml-schema.md`. Key elements:
 - `<dispatch>` attributes: `to`, `work`, `task`
 - `<dispatch>` children: `<context>`, `<task-spec>`, `<previous-results>`, `<cache-hint>`
-- Receivers parse these and return `<task-result>` XML elements
+- Receivers parse these and return `<task-result>` XML elements with `<context-handoff>` child
 
 See `agents/xml-schema.md` Sections 1-3 for complete format and examples.
+
+## Context-Handoff Policy Reference
+
+For sliding window context-handoff rules, see `agents/context-policy.md`:
+- Sliding window principles (FULL/SUMMARY/DROP by dependency distance)
+- Context-handoff 4-field structure (what/why/caution/incomplete)
+- Pipeline stage I/O matrix (Builder/Verifier/Committer inputs and outputs)
+- TASK-to-TASK dependency transmission rules
+- Scheduler sliding window dispatch logic
+- Committer retry mechanism
+
+All agents (builder, verifier, committer) MUST follow context-policy.md rules for consistent context-handoff generation and consumption.
 
 ## Important
 - ONLY execute TASKs within the specified WORK
