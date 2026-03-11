@@ -44,6 +44,59 @@ This agent receives dispatch instructions in structured XML format (see `agents/
 6. Report next available tasks
 ```
 
+## Step 0: Gate Role — Progress.md Validation
+
+CRITICAL: Before generating any result.md file, committer MUST validate that builder successfully completed the work via progress.md checkpoint.
+
+### Gate Check Procedure
+
+1. **Check progress.md existence**:
+   ```bash
+   PROGRESS_FILE="tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-progress.md"
+   if [ ! -f "$PROGRESS_FILE" ]; then
+     # FAIL: builder did not create progress.md
+     return FAIL with reason: "progress.md not found"
+   fi
+   ```
+
+2. **Check progress.md Status field**:
+   ```bash
+   if grep -q "Status: COMPLETED" "$PROGRESS_FILE"; then
+     # PASS: builder marked work complete
+   else
+     # FAIL: builder status is STARTED or IN_PROGRESS
+     return FAIL with reason: "status not COMPLETED"
+   fi
+   ```
+
+3. **Check Files changed list is not empty**:
+   ```bash
+   if grep -q "- \`" "$PROGRESS_FILE"; then
+     # PASS: builder recorded file changes
+   else
+     # FAIL: no files changed recorded
+     return FAIL with reason: "no files changed"
+   fi
+   ```
+
+### Gate Failure Response
+
+If any gate check fails, committer MUST:
+
+1. **Return FAIL status** in task-result XML:
+   ```xml
+   <task-result work="{WORK_ID}" task="{TASK_ID}" agent="committer" status="FAIL">
+     <reason>progress.md not found | status not COMPLETED | no files changed</reason>
+     <remediation>scheduler will retry builder with existing progress.md</remediation>
+   </task-result>
+   ```
+
+2. **DO NOT generate result.md** — this failure signals to scheduler to retry builder
+
+3. **DO NOT commit** — no git changes
+
+This gate ensures that result.md is only written when builder has successfully completed all work, preventing incomplete result documentation.
+
 ## Step 1: Generate Result Report
 
 ### 언어별 섹션 헤더 매핑 (Section Header Mapping by Language)
@@ -93,7 +146,34 @@ Create `tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md`:
 
 {## Notes for Subsequent Tasks | ## 후속 TASK 참고사항 | ## 後続タスクへの注記}
 {notes, or "None"}
+
+{## Context Handoff | ## 컨텍스트 핸드오프}
+
+### Builder Context (SUMMARY)
+{Extracted builder context-handoff what field, 1-3 lines}
+
+### Verifier Context (FULL)
+{Extracted verifier context-handoff all 4 fields}
 ```
+
+### Context-Handoff Integration
+
+**Result.md sections will now include context-handoff information extracted from:**
+1. **Builder context-handoff** (SUMMARY detail-level from builder-result XML)
+   - Extract the `what` field only (1-3 lines)
+   - Include in "Context Handoff → Builder Context" section
+
+2. **Verifier context-handoff** (FULL detail-level from verification-report XML)
+   - Extract all 4 fields (what, why, caution, incomplete)
+   - Include in "Context Handoff → Verifier Context" section
+
+**Synthesis for result.md main sections:**
+- `## What`: Combine builder context-handoff what (SUMMARY) + verifier context-handoff what (FULL)
+- `## Why`: Take from verifier context-handoff why (FULL)
+- `## Caution`: Take from verifier context-handoff caution (FULL)
+- `## Incomplete`: Take from verifier context-handoff incomplete (FULL)
+
+This ensures that result.md reflects both implementation and verification perspectives, with full context for downstream TASKs.
 
 ## Step 2: Update Progress
 
@@ -225,6 +305,13 @@ See `agents/xml-schema.md` for:
 - Section 1: `<dispatch>` format received from scheduler (includes builder-result, verification-report)
 - Section 2: `<task-result>` format to return (with commit, result-file, progress, next-tasks)
 - Section 4.1-4.6: Element specifications (context, commit details, progress tracking)
+- Section 4.5.1: `<context-handoff>` element format with detail-level attribute
+
+See `agents/context-policy.md` for:
+- Context-handoff 4-field structure (what/why/caution/incomplete)
+- Sliding window rules for detail-level (FULL/SUMMARY/DROP)
+- Pipeline stage I/O matrix showing committer role in context synthesis
+- Result.md structure and context-handoff integration guidelines
 
 ## Important
 - ALWAYS create result report BEFORE git commit
