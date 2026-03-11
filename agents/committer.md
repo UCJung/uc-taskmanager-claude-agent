@@ -105,8 +105,13 @@ Update `tasks/multi-tasks/{WORK_ID}/PROGRESS.md`:
 ## Step 3: Stage + Commit
 
 ```bash
-# Verify result file exists
-test -f "tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md" || echo "ERROR: result file missing"
+# result.md 존재 가드 — 없으면 ABORT (커밋 차단)
+RESULT_FILE="tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md"
+if [ ! -f "$RESULT_FILE" ]; then
+  echo "ABORT: result file not found: $RESULT_FILE"
+  echo "Step 1(결과 보고서 생성)을 먼저 완료하세요."
+  exit 1
+fi
 
 # Stage everything
 git add -A

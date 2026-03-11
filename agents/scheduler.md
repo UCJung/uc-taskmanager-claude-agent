@@ -237,7 +237,6 @@ When all TASKs in the WORK are done:
 > **IMPORTANT**: Do NOT update WORK-LIST.md to COMPLETED.
 > WORK-LIST status is updated to COMPLETED only when the user performs `git push`.
 > Scheduler's responsibility ends when all TASKs are committed. Push and WORK-LIST finalization are the user's action.
-> When the user asks Claude to push, Claude will update WORK-LIST first, then commit and push.
 
 ## Multi-WORK Status
 
@@ -287,3 +286,5 @@ See `agents/xml-schema.md` Sections 1-3 for complete format and examples.
 - NEVER mix TASKs from different WORKs in one pipeline run
 - NEVER create cross-WORK dependencies
 - ALWAYS scope file paths to `tasks/multi-tasks/{WORK_ID}/`
+- **TASK가 1개뿐인 단순 WORK도 직접 구현 금지** — 반드시 builder → verifier → committer 파이프라인을 실행해야 한다
+- 파이프라인을 우회하면 result.md가 생성되지 않아 WORK 완료로 인식되지 않고 WorkDoc/WorkTask DB 등록도 실패한다

@@ -280,3 +280,45 @@ CommentLanguage: en
 
 **이유**: `backfill-work-docs.ts` 스크립트가 파일명 패턴으로 TASK를 인식한다.
 `TASK-01.md` 등 단축 형식은 인식되지 않아 WorkDoc/WorkTask DB 등록이 실패한다.
+
+## CRITICAL: TASK 파일 분리 규칙 (PLAN.md 임베딩 절대 금지)
+
+**PLAN.md 내부에 TASK 상세 내용을 임베딩하는 것은 절대 금지한다.**
+
+### 금지 사항
+- PLAN.md의 `## Tasks` 섹션에 TASK 전체 내용(Files, Acceptance Criteria, Verify 등)을 포함하지 않는다
+- 모든 TASK 상세는 반드시 별도 `{WORK-ID}-TASK-XX.md` 파일에 작성해야 한다
+
+### PLAN.md 제목 포맷 규칙
+
+```
+# WORK-NN: 제목      ← 올바른 형식 (PLAN 키워드 금지)
+```
+
+| 올바른 예 | 잘못된 예 |
+|-----------|-----------|
+| `# WORK-80: REQ-050 구현` | ❌ `# WORK-80 PLAN: REQ-050 구현` |
+| `# WORK-80: REQ-050 구현` | ❌ `# WORK-80 PLAN — REQ-050 구현` |
+
+**이유**: `parsePlanMd()` 함수가 `# WORK-NN: 제목` 패턴을 파싱한다. "PLAN" 키워드가 포함되면 파싱 오류가 발생할 수 있다.
+
+### PLAN.md의 Tasks 섹션 허용 형식
+
+PLAN.md의 `## Tasks` 섹션은 **요약 링크와 핵심 정보만** 포함해야 한다:
+
+```markdown
+## Tasks
+
+### WORK-01-TASK-00: {title}
+- **Depends on**: (none)
+- **Scope**: {1-2줄 요약}
+- **Files**: (주요 파일 목록)
+- **Acceptance Criteria**: (핵심 기준만)
+```
+
+**상세 내용(Verify 명령, 전체 파일 목록 등)은 반드시 개별 TASK 파일에 작성한다.**
+
+### 이유
+- `runner.ts`의 `collectWorkTasks()`가 파일명 패턴(`WORK-NN-TASK-XX.md`)으로 TASK 파일을 인식
+- TASK 파일이 없으면 WorkDoc/WorkTask DB 등록 실패
+- scheduler가 TASK 파일을 기반으로 파이프라인 실행 여부를 결정
