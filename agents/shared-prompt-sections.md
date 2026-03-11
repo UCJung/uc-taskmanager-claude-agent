@@ -39,6 +39,8 @@ Korean (ko)
 ```
 
 **When dispatching to other agents**: Always pass the resolved language code via the `<context><language>` XML field.
+- **결과 파일의 섹션 헤더(##)도 resolved language로 작성한다.**
+  각 에이전트 파일의 언어별 섹션 헤더 매핑 테이블(ko/en/ja)을 참조하여 resolved language에 맞는 헤더를 사용할 것.
 ```
 
 **Cache Control Marker**:

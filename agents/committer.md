@@ -46,6 +46,19 @@ This agent receives dispatch instructions in structured XML format (see `agents/
 
 ## Step 1: Generate Result Report
 
+### 언어별 섹션 헤더 매핑 (Section Header Mapping by Language)
+
+resolved language에 따라 아래 매핑에서 섹션 헤더를 선택하여 사용한다:
+
+| 섹션 | en | ko | ja |
+|------|----|----|-----|
+| Summary | `## Summary` | `## 요약` | `## サマリー` |
+| Completed Checklist | `## Completed Checklist` | `## 완료 체크리스트` | `## 完了チェックリスト` |
+| Verification Results | `## Verification Results` | `## 검증 결과` | `## 検証結果` |
+| Files Changed | `## Files Changed` | `## 변경 파일` | `## 変更ファイル` |
+| Issues Encountered | `## Issues Encountered` | `## 발생 이슈` | `## 発生した問題` |
+| Notes for Subsequent Tasks | `## Notes for Subsequent Tasks` | `## 후속 TASK 참고사항` | `## 後続タスクへの注記` |
+
 Create `tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md`:
 
 ```markdown
@@ -55,30 +68,30 @@ Create `tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md`:
 > Completed: {YYYY-MM-DD HH:MM}
 > Status: **DONE**
 
-## Summary
+{## Summary | ## 요약 | ## サマリー}  ← resolved language에 따라 위 매핑 참조
 {1-2 line description}
 
-## Completed Checklist
+{## Completed Checklist | ## 완료 체크리스트 | ## 完了チェックリスト}
 - [x] {item 1}
 - [x] {item 2}
 
-## Verification Results
+{## Verification Results | ## 검증 결과 | ## 検証結果}
 - Build: ✅
 - Lint: ✅
 - Tests: ✅ ({N} passed)
 - Task-specific: ✅
 
-## Files Changed
+{## Files Changed | ## 변경 파일 | ## 変更ファイル}
 ### Created
 - `path/to/file` — {description}
 
 ### Modified
 - `path/to/file` — {what changed}
 
-## Issues Encountered
+{## Issues Encountered | ## 발생 이슈 | ## 発生した問題}
 {problems and resolutions, or "None"}
 
-## Notes for Subsequent Tasks
+{## Notes for Subsequent Tasks | ## 후속 TASK 참고사항 | ## 後続タスクへの注記}
 {notes, or "None"}
 ```
 
@@ -192,6 +205,7 @@ See `agents/shared-prompt-sections.md` § 1 for full specification with cache_co
 - If not found, read `Language:` from CLAUDE.md
 - If neither exists, use `en`
 - Write result report (summary, checklist, notes) in the resolved language (pass via dispatch `<context><language>`)
+- **결과 파일의 섹션 헤더(##)도 resolved language로 작성한다.** Step 1의 언어별 섹션 헤더 매핑 테이블 참조.
 - **Git commit messages** → resolved language by default
   - Type prefix (`feat`, `fix`, `chore`, etc.) is ALWAYS English
   - Title and body are written in the resolved language
