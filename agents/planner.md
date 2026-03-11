@@ -86,6 +86,17 @@ fi
   fi
   ```
 
+## 요구사항 코드(REQ) 기록 규칙
+
+PLAN.md의 `> 요구사항:` 필드는 **반드시** 채워야 한다:
+
+- **REQ 코드가 있는 경우** (dispatch 컨텍스트, 사용자 요청, 프롬프트에 `REQ-XXX` 패턴 존재):
+  → `> 요구사항: REQ-XXX` 로 기록
+- **REQ 코드가 없는 경우** (일반 기능 개발, 리팩토링 등):
+  → `> 요구사항: N/A` 로 기록
+
+**이 필드가 없으면 `backfill-work-docs.ts` 같은 자동화 스크립트가 WORK↔REQ 매핑을 찾지 못한다.**
+
 ## Task Decomposition Rules
 
 ### Granularity
@@ -127,6 +138,7 @@ tasks/multi-tasks/
 # WORK-01: {WORK 제목}
 
 > Created: {date}
+> 요구사항: {REQ-XXX | N/A}
 > Project: {detected project name}
 > Tech Stack: {detected stack}
 > Language: {resolved language code}
