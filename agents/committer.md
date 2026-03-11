@@ -227,6 +227,79 @@ git add "tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md"
 git commit --amend --no-edit
 ```
 
+## Step 4.5: TaskCallback (External System Integration)
+
+After git commit completes successfully, optionally send task result to external system.
+
+### Configuration
+
+Read callback URL and token from CLAUDE.md:
+
+```bash
+# Extract TaskCallback URL from CLAUDE.md
+TASK_CALLBACK=$(grep "^TaskCallback:" CLAUDE.md 2>/dev/null | sed 's/^TaskCallback: //' | tr -d '\r')
+
+# Extract CallbackToken from CLAUDE.md
+CALLBACK_TOKEN=$(grep "^CallbackToken:" CLAUDE.md 2>/dev/null | sed 's/^CallbackToken: //' | tr -d '\r')
+```
+
+### Conditional Execution
+
+Only invoke curl if TaskCallback URL is configured:
+
+```bash
+if [ -n "$TASK_CALLBACK" ] && [ "$TASK_CALLBACK" != "TaskCallback:" ]; then
+  # TaskCallback URL is configured, proceed with curl call
+  COMMIT_HASH=$(git log --oneline -1 | cut -d' ' -f1)
+  TIMESTAMP=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+  # Parse files changed from result.md or builder context
+  # Extract what/why/caution/incomplete from builder-result XML
+  WHAT="{builder context-handoff what}"
+  WHY="{builder context-handoff why}"
+  CAUTION="{builder context-handoff caution}"
+  INCOMPLETE="{builder context-handoff incomplete}"
+
+  # Build JSON payload
+  PAYLOAD=$(cat <<EOF
+{
+  "workId": "${WORK_ID}",
+  "taskId": "${TASK_ID}",
+  "status": "SUCCESS",
+  "what": "$WHAT",
+  "why": "$WHY",
+  "caution": "$CAUTION",
+  "incomplete": "$INCOMPLETE",
+  "filesChanged": [$(grep "^- \`" "tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md" 2>/dev/null | sed 's/^- `//; s/` .*//' | sed 's/^/"/; s/$/"/' | paste -sd, -)],
+  "commitHash": "${COMMIT_HASH}",
+  "timestamp": "${TIMESTAMP}"
+}
+EOF
+  )
+
+  # Prepare authorization header
+  CURL_HEADER_AUTH=""
+  if [ -n "$CALLBACK_TOKEN" ] && [ "$CALLBACK_TOKEN" != "CallbackToken:" ]; then
+    CURL_HEADER_AUTH="-H \"Authorization: Bearer ${CALLBACK_TOKEN}\""
+  fi
+
+  # Execute curl POST request
+  curl -s -X POST "$TASK_CALLBACK" \
+    -H "Content-Type: application/json" \
+    $CURL_HEADER_AUTH \
+    -d "$PAYLOAD" 2>/dev/null || echo "WARNING: TaskCallback request failed (${TASK_CALLBACK}), continuing..."
+else
+  echo "INFO: TaskCallback not configured in CLAUDE.md, skipping external notification"
+fi
+```
+
+### Error Handling
+
+- If curl fails: Print warning message and continue (commit already completed)
+- Never block task completion on callback failure
+- Network issues are transient; don't retry
+- Always log the attempt (warning or success) for audit trail
+
 ## Step 5: Report Next Tasks
 
 Return structured XML result format (see `agents/xml-schema.md` Section 2):
