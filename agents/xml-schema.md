@@ -229,6 +229,62 @@ All agents return results in this structure:
 
 **Path Format**: Relative paths from project root (e.g., `agents/scheduler.md`, `tasks/multi-tasks/WORK-03/PROGRESS.md`)
 
+### 4.5.1 Context-Handoff Element (within task-result)
+
+Context handoff is a structured way to pass task execution context and decision rationale to dependent tasks and agents through the pipeline.
+
+```xml
+<context-handoff from="{agent_name}" detail-level="{FULL|SUMMARY|DROP}">
+  <what>{변경 사항 요약 — 구체적으로 무엇이 생성/수정/삭제되었는가}</what>
+  <why>{의사결정 근거 — 왜 이런 방식으로 구현/검증했는가}</why>
+  <caution>{다음 에이전트가 주의할 점 — 조건부 완료, 수동 검증 필요 부분}</caution>
+  <incomplete>{미완료/보류 사항 — 완료하지 못한 항목이 있다면}</incomplete>
+</context-handoff>
+```
+
+**Attributes**:
+
+| Attribute | Values | Description |
+|-----------|--------|-------------|
+| `from` | builder, verifier, committer | Source agent that generated this handoff |
+| `detail-level` | FULL, SUMMARY, DROP | Sliding window level for context compression (see context-policy.md) |
+
+**Child Elements**:
+
+| Element | Required | Description |
+|---------|----------|-------------|
+| `<what>` | YES | Concrete summary of changes: files created/modified/deleted, features added, verification results passed/failed |
+| `<why>` | FULL only | Decision rationale, technical reasoning, alternative analysis (omitted in SUMMARY) |
+| `<caution>` | FULL only | Edge cases, conditional completeness, manual verification required, environment constraints (omitted in SUMMARY) |
+| `<incomplete>` | FULL only | Unfinished items, postponed work, future improvements (omitted in SUMMARY) |
+
+**Detail Level Rules**:
+
+- **FULL**: All 4 fields included (what, why, caution, incomplete)
+- **SUMMARY**: Only `what` field included, 1-3 lines
+- **DROP**: Element completely omitted from XML
+
+**Example (Builder returns FULL context-handoff)**:
+```xml
+<task-result status="PASS">
+  <context-handoff from="builder" detail-level="FULL">
+    <what>Created agents/context-policy.md with 4-field structure (what/why/caution/incomplete), sliding window rules (FULL/SUMMARY/DROP), and pipeline matrix. Modified agents/xml-schema.md to add context-handoff element definition with detail-level attribute.</what>
+    <why>Context handoff enables downstream agents to understand not just what changed, but why and what to watch for. Sliding window compression reduces token waste by dropping distant dependencies while preserving direct lineage.</why>
+    <caution>context-policy.md must be read by all dependent TASK implementations to maintain consistent detail-level application. xml-schema.md modifications should preserve backward compatibility.</caution>
+    <incomplete>None — both files fully implemented per WORK-07-TASK-00 acceptance criteria.</incomplete>
+  </context-handoff>
+</task-result>
+```
+
+**Example (Committer receives SUMMARY from builder)**:
+```xml
+<dispatch to="committer">
+  <context-handoff from="builder" detail-level="SUMMARY">
+    <what>Created agents/context-policy.md and modified agents/xml-schema.md with context-handoff element and detail-level definitions.</what>
+  </context-handoff>
+</dispatch>
+```
+
 ### 4.6 Verification Element
 
 ```xml
@@ -374,4 +430,9 @@ When implementing this schema:
 - **Created**: 2026-03-10
 - **Purpose**: WORK-03 — Agent간 프롬프트 전달 시 데이터 구조화로 토큰 절감
 - **Referenced by**: scheduler.md, router.md, builder.md, verifier.md, committer.md, planner.md
-- **Last Updated**: 2026-03-10
+- **Last Updated**: 2026-03-12
+- **Updates** (2026-03-12, WORK-07-TASK-00):
+  - Added Section 4.5.1: `<context-handoff>` element with 4-field structure (what/why/caution/incomplete)
+  - Added `detail-level` attribute: FULL (all fields), SUMMARY (what only), DROP (element omitted)
+  - Added reference to `agents/context-policy.md` for sliding window rules
+  - Added example workflows for FULL and SUMMARY detail levels
