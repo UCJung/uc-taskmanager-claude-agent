@@ -36,6 +36,33 @@ This agent receives dispatch instructions in structured XML format (see `agents/
 
 Execute in order. Stop on CRITICAL failure.
 
+### Step 0: Progress File Gate (CRITICAL)
+
+Builder가 progress 파일을 완료 상태로 기록했는지 **가장 먼저** 검사한다.
+
+```bash
+PROGRESS_FILE="tasks/multi-tasks/${WORK_ID}/${WORK_ID}-${TASK_ID}-progress.md"
+
+# 1. 파일 존재 여부
+if [ ! -f "$PROGRESS_FILE" ]; then
+  echo "CRITICAL FAIL: Progress file missing — $PROGRESS_FILE"
+  echo "Builder must create this file with Status: COMPLETED before verification."
+  exit 1
+fi
+
+# 2. Status: COMPLETED 확인
+STATUS=$(grep "^- Status:" "$PROGRESS_FILE" | sed 's/^- Status: //' | tr -d '\r')
+if [ "$STATUS" != "COMPLETED" ]; then
+  echo "CRITICAL FAIL: Progress Status is '$STATUS', expected COMPLETED"
+  echo "Builder must update $PROGRESS_FILE to Status: COMPLETED."
+  exit 1
+fi
+
+echo "Progress gate: PASS (Status: COMPLETED)"
+```
+
+Status가 COMPLETED가 아니면 **즉시 CRITICAL FAIL** — 이후 단계를 실행하지 않는다.
+
 ### Step 1: Build (CRITICAL)
 
 See `agents/shared-prompt-sections.md` § 2 for standard build commands with cache_control markers.
@@ -187,6 +214,7 @@ Return structured XML result format (see `agents/xml-schema.md` Section 2):
 <task-result work="{WORK_ID}" task="{TASK_ID}" agent="verifier" status="{PASS|FAIL}">
   <summary>{검증 결과 요약}</summary>
   <verification>
+    <check name="progress" status="{PASS|FAIL}">{progress file exists and Status=COMPLETED}</check>
     <check name="build" status="{PASS|FAIL}">{output}</check>
     <check name="lint" status="{PASS|FAIL|N/A}">{output}</check>
     <check name="tests" status="{PASS|FAIL|N/A}" count="{N}">{output}</check>
@@ -209,6 +237,9 @@ Return structured XML result format (see `agents/xml-schema.md` Section 2):
 
 ```
 ## Verification Report: {WORK_ID}-TASK-XX
+
+### 0. Progress File: ✅ PASS / ❌ FAIL (CRITICAL)
+{progress file path and Status value}
 
 ### 1. Build: ✅ PASS / ❌ FAIL
 {output}

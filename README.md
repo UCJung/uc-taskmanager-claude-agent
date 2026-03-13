@@ -120,10 +120,10 @@ router: Analyze → Implement → Self-verify → Commit
 | Agent | Role | Model | Permission |
 |-------|------|-------|------------|
 | **router** | `[]` tag detection, 3-path routing (Direct/Pipeline/WORK), WORK-LIST.md management | **sonnet** | read + dispatch |
-| **planner** | Create WORK + decompose TASKs + generate plan files | **opus** | read-only |
+| **planner** | Create WORK + decompose TASKs + generate plan files + pre-create progress templates (Status: PENDING) | **opus** | read-only |
 | **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch |
 | **builder** | Code implementation + progress.md checkpoint recording. Uses Serena MCP for symbol-level code navigation when available | **sonnet** | full access |
-| **verifier** | Build/lint/test verification based on builder's context-handoff (read-only) | **haiku** | read + execute |
+| **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification based on builder's context-handoff (read-only) | **haiku** | read + execute |
 | **committer** | Gate check (progress.md) → write result.md → git commit | **haiku** | read + write + git |
 
 ---

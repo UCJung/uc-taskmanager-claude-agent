@@ -124,13 +124,33 @@ Every TASK MUST have:
 ```
 tasks/multi-tasks/
 └── WORK-01/
-    ├── PLAN.md                    ← WORK overview + DAG
-    ├── PROGRESS.md                ← scheduler가 관리
-    ├── WORK-01-TASK-00.md         ← 개별 작업 상세
+    ├── PLAN.md                            ← WORK overview + DAG
+    ├── PROGRESS.md                        ← scheduler가 관리
+    ├── WORK-01-TASK-00.md                 ← 개별 작업 상세
+    ├── WORK-01-TASK-00-progress.md        ← builder가 갱신, planner가 템플릿 생성
     ├── WORK-01-TASK-01.md
+    ├── WORK-01-TASK-01-progress.md
     ├── WORK-01-TASK-02.md
+    ├── WORK-01-TASK-02-progress.md
     └── ...
 ```
+
+### Progress Template Pre-creation (CRITICAL)
+
+**Planner는 TASK 파일을 생성할 때 반드시 동일한 디렉토리에 progress 템플릿 파일도 함께 생성해야 한다.**
+
+각 `{WORK_ID}-TASK-XX.md` 파일과 쌍으로 `{WORK_ID}-TASK-XX-progress.md`를 아래 초기 상태로 생성한다:
+
+```markdown
+# {WORK_ID}-TASK-XX Progress
+
+- Status: PENDING
+- Started: (not started)
+- Updated: (not started)
+- Files changed:
+```
+
+**이유**: Builder가 progress 파일 생성을 누락하는 사고를 방지한다. 파일이 이미 존재하면 builder는 "생성"이 아닌 "갱신"만 하면 되므로 누락 가능성이 사라진다. Verifier는 `Status: COMPLETED` 여부를 게이트로 검사한다.
 
 ### PLAN.md Format
 
