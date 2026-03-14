@@ -1,8 +1,8 @@
 # WORK-12 Progress
 
 > WORK: README.md / README_KO.md 개선 — 사용법 섹션 재배치 + router_rule_config.json 설명 추가
-> Status: IN_PROGRESS
-> Last updated: 2026-03-14 11:16
+> Status: COMPLETED
+> Last updated: 2026-03-14 11:26
 > Mode: full
 
 ## Summary
