@@ -126,56 +126,14 @@ Router가 자신의 세션 내에서 다음 단계를 순차 수행한다:
 6.  코드 수정 + self-check (build && lint)
 7.  TASK-00_progress.md 갱신 (Status: COMPLETED)
 8.  TASK-00_result.md 생성 (최소 포맷)
-9.  git add -A && git commit -m "{type}(WORK-NN-TASK-00): {summary}"
+9.  git add -A && git commit -m "{type}(TASK-00): {summary}"
 10. 커밋 해시 백필 → git commit --amend --no-edit
 11. COMMITTER DONE 콜백 전송 (curl POST, §6 참조)
 12. WORK-LIST.md에 IN_PROGRESS 추가
 ```
 
-**PLAN.md 포맷 (direct):**
-```markdown
-# WORK-NN: {사용자 요청 1줄 요약}
-
-> Created: {YYYY-MM-DD}
-> 요구사항: {REQ-XXX | N/A}
-> Execution-Mode: direct
-> Project: {프로젝트명}
-> Tech Stack: {감지된 스택}
-> Language: {언어코드}
-> Status: PLANNED
-
-## Goal
-{사용자 요청 원문 또는 1-2문장 요약}
-
-## Tasks
-
-### WORK-NN-TASK-00: {TASK 제목}
-- **Depends on**: (none)
-- **Scope**: {변경 범위 1-2줄}
-- **Files**: {대상 파일 목록}
-- **Acceptance Criteria**: {핵심 완료 기준}
-```
-
-**result.md 최소 포맷 (direct):**
-```markdown
-# WORK-NN-TASK-00 Result
-
-> WORK: WORK-NN — {제목}
-> Completed: {YYYY-MM-DD HH:MM}
-> Execution-Mode: direct
-> Status: **DONE**
-> Commit: {hash}
-
-## 요약
-{1줄 변경 요약}
-
-## 변경 파일
-- `{path/to/file}` — {변경 내용}
-
-## 검증
-- Build: PASS (self-check)
-- Lint: PASS (self-check)
-```
+→ **`agents/file-content-schema.md` § 1** 참조 (PLAN.md 포맷 + 7개 필드 필수)
+→ **`agents/file-content-schema.md` § 5** 참조 (result.md 최소 포맷 — direct 전용)
 
 > **설계 근거:** Committer(Haiku) 서브에이전트 세션 초기화만으로 입력 ~12,500 토큰이
 > 소비되는 반면, 1파일 수정의 result.md 출력은 ~120 토큰이다. Router 세션은 이미
@@ -193,33 +151,11 @@ router: PLAN 생성 → Builder dispatch → Verifier dispatch → Committer dis
 
 Router가 stage 콜백을 대행한다 (BUILDER/VERIFIER/COMMITTER START/DONE).
 
-**PLAN.md 포맷 (pipeline):**
-```markdown
-# WORK-NN: {사용자 요청 1줄 요약}
-
-> Created: {YYYY-MM-DD}
-> 요구사항: {REQ-XXX | N/A}
-> Execution-Mode: pipeline
-> Project: {프로젝트명}
-> Tech Stack: {감지된 스택}
-> Language: {언어코드}
-> Status: PLANNED
-
-## Goal
-{사용자 요청 원문 또는 1-2문장 요약}
-
-## Tasks
-
-### WORK-NN-TASK-00: {TASK 제목}
-- **Depends on**: (none)
-- **Scope**: {변경 범위 1-2줄}
-- **Files**: {대상 파일 목록}
-- **Acceptance Criteria**: {핵심 완료 기준}
-```
+→ **`agents/file-content-schema.md` § 1** 참조 (PLAN.md 포맷 + 7개 필드 필수)
 
 **Builder dispatch:**
 ```xml
-<dispatch to="builder" work="{WORK-NN}" task="{WORK-NN-TASK-00}"
+<dispatch to="builder" work="{WORK-NN}" task="TASK-00"
           execution-mode="pipeline">
   <context>
     <project>{detected project name}</project>
