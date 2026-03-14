@@ -1,0 +1,36 @@
+{
+  "$schema": "http://uc-taskmanager.local/schemas/router-rules/v1.0.json",
+  "version": "1.0.0",
+  "description": "Router execution-mode 판정 기준 설정",
+  "rules": {
+    "direct": {
+      "description": "Router가 단독으로 처리하는 모드 — 복잡도 낮음, 서브에이전트 불필요",
+      "criteria": {
+        "build_test_required": false,
+        "max_tasks": 2,
+        "dependencies_allowed": false,
+        "max_files": 1,
+        "max_lines_changed": 10
+      }
+    },
+    "pipeline": {
+      "description": "Builder → Verifier → Committer 파이프라인 실행",
+      "criteria": {
+        "build_test_required": true,
+        "single_domain_only": true,
+        "max_tasks": 5,
+        "dag_complexity": "sequential",
+        "max_files": 3
+      }
+    },
+    "full": {
+      "description": "Planner → Scheduler → 다중 TASK 파이프라인 실행 (복잡 프로젝트)",
+      "criteria": {
+        "task_count_exceeds": 5,
+        "dag_complexity": "complex",
+        "multi_domain": true,
+        "new_module": true
+      }
+    }
+  }
+}
