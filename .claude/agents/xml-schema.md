@@ -358,7 +358,7 @@ Context handoff is a structured way to pass task execution context and decision 
 
 ## 5. Full Example Workflows
 
-### Example 1: WORK-03-TASK-00 (Builder creates files)
+### Example 1: TASK-00 in WORK-03 (Builder creates files)
 
 **Scheduler dispatches to Builder**:
 ```xml
@@ -395,7 +395,7 @@ Context handoff is a structured way to pass task execution context and decision 
 </task-result>
 ```
 
-### Example 2: WORK-03-TASK-01 (Verifier checks builder output)
+### Example 2: TASK-01 in WORK-03 (Verifier checks builder output)
 
 **Scheduler dispatches to Verifier** (includes builder result):
 ```xml

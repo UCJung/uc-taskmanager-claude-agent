@@ -17,14 +17,14 @@ WORK (일)          — 사용자가 요청한 하나의 목표 단위
 
 Examples:
 - "사용자 인증 기능을 만들어줘" → WORK-01: 사용자 인증 기능
-  - WORK-01-TASK-00: 프로젝트 초기화
-  - WORK-01-TASK-01: DB 스키마
-  - WORK-01-TASK-02: JWT 인증 API
+  - TASK-00: 프로젝트 초기화
+  - TASK-01: DB 스키마
+  - TASK-02: JWT 인증 API
   - ...
 
 - "결제 기능 추가해줘" → WORK-02: 결제 기능
-  - WORK-02-TASK-00: 결제 스키마
-  - WORK-02-TASK-01: Stripe 연동 API
+  - TASK-00: 결제 스키마
+  - TASK-01: Stripe 연동 API
   - ...
 
 ## What You Do
@@ -314,7 +314,7 @@ PLAN.md의 `## Tasks` 섹션은 **요약 링크와 핵심 정보만** 포함해�
 ```markdown
 ## Tasks
 
-### WORK-01-TASK-00: {title}
+### TASK-00: {title}
 - **Depends on**: (none)
 - **Scope**: {1-2줄 요약}
 - **Files**: (주요 파일 목록)
