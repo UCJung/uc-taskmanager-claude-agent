@@ -19,9 +19,9 @@
 
 ---
 
-## 개념: 세 가지 실행 경로
+## 개념: 세 가지 실행 모드 (execution-mode)
 
-**router**가 모든 `[]` 태그 요청을 분석하여 세 가지 경로 중 하나로 라우팅합니다:
+**router**가 모든 `[]` 태그 요청을 분석하여 `execution-mode`를 결정합니다:
 
 ```
 사용자 요청
@@ -32,25 +32,27 @@
   └───┬────┘
       │ [] 태그 감지
       ▼
-  복잡도 판단
+  복잡도 판단 → execution-mode 결정
       │
-      ├─ 초단순 (1 파일, ≤10줄 변경)
+      ├─ direct  (1 파일, ≤10줄)
       │   ▼
-      │  S-TASK Direct ── router가 직접 처리
-      │                   (가장 빠름, 서브에이전트 오버헤드 없음)
+      │  Router가 모든 것을 직접 처리 — 추가 세션 0개
+      │  WORK-NN 디렉토리 + mini-PLAN + result.md + commit (10단계)
       │
-      ├─ 단순 (2~3 파일, 또는 >10줄)
+      ├─ pipeline  (2~3 파일, 또는 >10줄)
       │   ▼
-      │  S-TASK Pipeline ── builder → verifier → committer
-      │                     (컨텍스트 격리, WORK과 동일한 품질)
+      │  router → builder → verifier → committer
+      │  Router가 mini-PLAN 생성 후 3개 서브에이전트 순차 dispatch
       │
-      └─ 복잡 (4+ 파일, 3+ 단계, 의존성 존재)
+      └─ full  (4+ 파일, 3+ 단계, 의존성 존재)
           ▼
-         WORK ── planner → scheduler → [builder → verifier → committer] × N
+         router → planner → scheduler → [builder → verifier → committer] × N
                  (전체 계획 + 다중 작업 파이프라인)
 ```
 
-### WORK (다중 작업)
+3가지 모드 모두 `tasks/multi-tasks/WORK-NN/`에 동일한 산출물 구조(PLAN.md + result.md + COMMITTER DONE 콜백)를 생성합니다.
+
+### WORK (다중 작업, full 모드)
 
 복잡한 기능을 위한 2단계 계층 구조:
 
@@ -60,7 +62,7 @@ WORK (일)                 하나의 목표. 사용자가 요청한 단위.
     └── result            완료 증빙. 검증 통과 후 자동 생성.
 ```
 
-### S-TASK Pipeline (단일 작업, 위임)
+### pipeline 모드 (단일 작업, 위임)
 
 중간 규모 단일 작업을 서브에이전트에 위임. router 컨텍스트를 깨끗하게 유지합니다.
 
@@ -68,12 +70,12 @@ WORK (일)                 하나의 목표. 사용자가 요청한 단위.
 router → builder(sonnet) → verifier(haiku) → committer(haiku)
 ```
 
-### S-TASK Direct (초단순)
+### direct 모드 (초단순)
 
-router가 자체 컨텍스트에서 모든 것을 처리. 1파일, ≤10줄 변경에만 사용합니다.
+router가 자체 세션에서 모든 것을 처리. 추가 서브에이전트 세션 없음.
 
 ```
-router: 분석 → 구현 → 자체 검증 → 커밋
+router: 분석 → 구현 → self-check → 커밋 → result.md
 ```
 
 ---
@@ -94,37 +96,37 @@ router: 분석 → 구현 → 자체 검증 → 커밋
                                                                           다음 TASK로 반복 ◀┘
 ```
 
-### S-TASK Pipeline (단순 → 위임)
+### pipeline 모드 (단순 → 위임)
 
 ```
   router            builder          verifier         committer
  ┌────────┐       ┌──────────┐     ┌──────────┐     ┌──────────┐
- │요청     │─────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
- │분석     │      │파일 생성  │     │검증 실행  │     │→ git커밋 │
+ │mini-PLAN│─────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
+ │+TASK생성│      │파일 생성  │     │검증 실행  │     │→ git커밋 │
  └────────┘      └──────────┘     └──────────┘     └──────────┘
   (컨텍스트 유지)   (sonnet)         (haiku)           (haiku)
 ```
 
-### S-TASK Direct (초단순)
+### direct 모드 (초단순)
 
 ```
   router
- ┌──────────────────────────────────────┐
- │ 분석 → 구현 → 검증 → 커밋             │
- └──────────────────────────────────────┘
-  (1 파일, ≤10줄 — 서브에이전트 오버헤드 없음)
+ ┌────────────────────────────────────────────────┐
+ │ 분석 → 구현 → self-check → 커밋 → result.md    │
+ └────────────────────────────────────────────────┘
+  (1 파일, ≤10줄 — 추가 서브에이전트 세션 0개)
 ```
 
 ### 에이전트
 
-| 에이전트 | 역할 | 모델 | 권한 |
-|----------|------|------|------|
-| **router** | `[]` 태그 감지, 3경로 라우팅 (Direct/Pipeline/WORK), WORK-LIST.md 관리 | **sonnet** | read + dispatch |
-| **planner** | WORK 생성 + TASK 분해 + 계획 파일 생성 | **opus** | read-only |
-| **scheduler** | 특정 WORK의 DAG 관리 + 파이프라인 실행 | **haiku** | read + dispatch |
-| **builder** | 코드 구현 + self-check (빌드/린트). Serena MCP 사용 시 심볼 단위 탐색으로 토큰 절감 | **sonnet** | full access |
-| **verifier** | 빌드/린트/테스트 검증 (읽기 전용, 소스 수정 금지) | **haiku** | read + execute |
-| **committer** | 결과 보고서 생성 → git commit → 다음 TASK 안내 | **haiku** | read + write + git |
+| 에이전트 | 역할 | 모델 | 권한 | MCP |
+|----------|------|------|------|-----|
+| **router** | `[]` 태그 감지, execution-mode 판정(direct/pipeline/full), mini-PLAN 생성, WORK-LIST 관리 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
+| **planner** | WORK 생성 + TASK 분해 + PLAN.md(Execution-Mode:full) + progress 템플릿 선생성 | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
+| **scheduler** | 특정 WORK의 DAG 관리 + [B→V→C]×N 파이프라인 실행 | **haiku** | read + dispatch | — |
+| **builder** | 코드 구현 + progress.md 체크포인트 기록 | **sonnet** | full access | Serena(심볼단위탐색/편집) |
+| **verifier** | progress gate 검사 → 빌드/린트/테스트 검증 (읽기 전용) | **haiku** | read + execute | — |
+| **committer** | gate 검사 → result.md 생성 → git commit → COMMITTER DONE 콜백 | **haiku** | read + write + git | — |
 
 ---
 
@@ -157,11 +159,7 @@ tasks/
 │   │   ├── WORK-01-TASK-01.md
 │   │   └── ...
 │   └── WORK-02/
-│       └── ...
-│
-└── simple-tasks/
-    ├── S-TASK-00001-result.md          ← 단일 작업 결과
-    └── ...
+│       └── ...                        ← direct/pipeline/full 모두 여기에 출력
 ```
 
 ### WORK-LIST.md
@@ -230,21 +228,21 @@ claude
 
 ## 사용법
 
-### 초단순 수정 (S-TASK Direct)
+### 초단순 수정 (direct 모드)
 
 ```
 > [버그수정] 로그인 에러 메시지 오타 수정
 ```
 
-router가 1줄 수정으로 판단 → 직접 처리. 서브에이전트 오버헤드 없음.
+router가 `execution-mode: direct` 선택 → 자체 세션에서 직접 처리. 추가 서브에이전트 세션 없음. WORK-NN 디렉토리 + mini-PLAN + result.md + commit 자동 생성.
 
-### 간단한 작업 (S-TASK Pipeline)
+### 간단한 작업 (pipeline 모드)
 
 ```
 > [버그수정] 모바일에서 로그인 버튼이 반응하지 않는 문제 수정
 ```
 
-router가 중간 규모 수정으로 판단 (여러 줄, 2개 파일) → builder → verifier → committer에 위임. router 컨텍스트는 깨끗하게 유지.
+router가 `execution-mode: pipeline` 선택 → mini-PLAN 생성 후 builder → verifier → committer에 위임. router 컨텍스트는 깨끗하게 유지.
 
 ### 복잡한 기능 (WORK)
 
@@ -464,14 +462,14 @@ scheduler's context after 5 TASKs:
 | 추적 | 채팅 히스토리 스크롤 | 파일 기반 (PLAN.md, result.md) |
 | 검증 | 수동 | 자동 (build/lint/test) |
 
-### 세 경로 라우팅
+### 세 가지 실행 모드
 
-router가 복잡도에 맞는 최적의 경로를 선택합니다:
-- **S-TASK Direct**: 1줄 오타 수정 — 서브에이전트 오버헤드 없이 즉시 처리
-- **S-TASK Pipeline**: 중간 규모 수정 — 서브에이전트에 위임, router 컨텍스트 깨끗 유지
-- **WORK**: 복잡한 기능 — 전체 계획, 분해, 추적
+router가 복잡도에 맞는 `execution-mode`를 선택합니다:
+- **direct**: 1줄 오타 수정 — 추가 세션 0개. Committer 세션 초기화 비용(~12,500 토큰) 완전 제거
+- **pipeline**: 중간 규모 수정 — 서브에이전트에 위임, router 컨텍스트 깨끗 유지
+- **full**: 복잡한 기능 — 전체 계획, 분해, 추적
 
-연속 S-TASK Pipeline 처리 시 router는 처리 건수와 무관하게 ~1,000 tokens만 사용합니다. 직접 처리하면 ~15K+ tokens이 누적됩니다.
+3가지 모드 모두 동일한 산출물 구조(`WORK-NN/` + result.md + 콜백)를 생성하므로 Runner 연동이 모드에 무관하게 동작합니다.
 
 ### 구조화된 에이전트 통신
 
@@ -600,18 +598,17 @@ uc-taskmanager/
 ├── README_KO.md             ← 한국어
 ├── LICENSE
 ├── agents/                  ← 배포용: 이 파일들을 복사하여 설치
-│   ├── router.md            ← 요청 라우팅 (WORK vs S-TASK)
-│   ├── planner.md           ← WORK 생성 + TASK 분해
-│   ├── scheduler.md         ← WORK별 파이프라인 실행
+│   ├── router.md            ← execution-mode 판정 (direct/pipeline/full)
+│   ├── planner.md           ← WORK 생성 + TASK 분해 (full 모드)
+│   ├── scheduler.md         ← WORK별 파이프라인 실행 (full 모드)
 │   ├── builder.md           ← 코드 구현
 │   ├── verifier.md          ← 검증 (read-only)
-│   └── committer.md         ← 결과 보고서 → git commit
+│   └── committer.md         ← 결과 보고서 → git commit → 콜백
 └── tasks/
-    ├── multi-tasks/         ← WORK 디렉토리 (자동 생성)
-    │   ├── WORK-LIST.md     ← 마스터 인덱스
-    │   ├── WORK-01/
-    │   └── ...
-    └── simple-tasks/        ← S-TASK 결과 (자동 생성)
+    └── multi-tasks/         ← 모든 모드의 산출물 디렉토리
+        ├── WORK-LIST.md     ← 마스터 인덱스
+        ├── WORK-01/
+        └── ...
 ```
 
 ---

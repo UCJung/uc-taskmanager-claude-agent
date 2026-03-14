@@ -19,9 +19,9 @@ Six subagents work across any project and any language, automatically handling *
 
 ---
 
-## Concept: Three Execution Paths
+## Concept: Three Execution Modes
 
-The **router** analyzes every `[]`-tagged request and routes to one of three paths:
+The **router** analyzes every `[]`-tagged request and selects one of three `execution-mode` values:
 
 ```
 User Request
@@ -32,25 +32,27 @@ User Request
   └───┬────┘
       │ [] tag detected
       ▼
-  Assess complexity
+  Assess complexity → execution-mode
       │
-      ├─ Trivial (1 file, ≤10 lines)
+      ├─ direct  (1 file, ≤10 lines)
       │   ▼
-      │  S-TASK Direct ── router handles directly
-      │                   (fastest, no subagent overhead)
+      │  Router handles everything — no subagent overhead
+      │  Creates WORK-NN/mini-PLAN.md + result.md + commit (10 steps, 0 extra sessions)
       │
-      ├─ Simple (2~3 files, or >10 lines)
+      ├─ pipeline  (2~3 files, or >10 lines)
       │   ▼
-      │  S-TASK Pipeline ── builder → verifier → committer
-      │                     (context-isolated, same quality as WORK)
+      │  router → builder → verifier → committer
+      │  Router creates mini-PLAN, dispatches 3 subagents
       │
-      └─ Complex (4+ files, 3+ steps, dependencies)
+      └─ full  (4+ files, 3+ steps, dependencies)
           ▼
-         WORK ── planner → scheduler → [builder → verifier → committer] × N
+         router → planner → scheduler → [builder → verifier → committer] × N
                  (full planning + multi-task pipeline)
 ```
 
-### WORK (Multi-Task)
+All three modes output to `tasks/multi-tasks/WORK-NN/` and guarantee `result.md` + `COMMITTER DONE` callback.
+
+### WORK (Multi-Task, full mode)
 
 A two-level hierarchy for complex features:
 
@@ -60,7 +62,7 @@ WORK (unit of work)       A single goal. The unit requested by the user.
     └── result            Completion proof. Auto-generated after verification.
 ```
 
-### S-TASK Pipeline (Single Task, Delegated)
+### pipeline mode (Single Task, Delegated)
 
 Subagent-delegated path for moderate single tasks. Router stays clean.
 
@@ -68,12 +70,12 @@ Subagent-delegated path for moderate single tasks. Router stays clean.
 router → builder(sonnet) → verifier(haiku) → committer(haiku)
 ```
 
-### S-TASK Direct (Trivial)
+### direct mode (Trivial)
 
-Router handles everything in its own context. For 1-file, ≤10-line changes only.
+Router handles everything in its own context. No subagent sessions spawned.
 
 ```
-router: Analyze → Implement → Self-verify → Commit
+router: Analyze → Implement → Self-verify → Commit → result.md
 ```
 
 ---
@@ -94,37 +96,37 @@ router: Analyze → Implement → Self-verify → Commit
                                                                          Next TASK loop ◀┘
 ```
 
-### S-TASK Pipeline (Simple → Delegated)
+### pipeline mode (Simple → Delegated)
 
 ```
   router            builder          verifier         committer
  ┌────────┐       ┌──────────┐     ┌──────────┐     ┌──────────┐
- │Request  │─────▶│Code      │────▶│Build/Test│────▶│Result    │
- │Analysis │      │Implement │     │Verify    │     │→ git     │
+ │mini-PLAN│─────▶│Code      │────▶│Build/Test│────▶│Result    │
+ │+TASK    │      │Implement │     │Verify    │     │→ git     │
  └────────┘      └──────────┘     └──────────┘     └──────────┘
   (context clean)  (sonnet)         (haiku)           (haiku)
 ```
 
-### S-TASK Direct (Trivial)
+### direct mode (Trivial)
 
 ```
   router
- ┌──────────────────────────────────────┐
- │ Analyze → Implement → Verify → Commit │
- └──────────────────────────────────────┘
-  (1 file, ≤10 lines — no subagent overhead)
+ ┌──────────────────────────────────────────────────┐
+ │ Analyze → Implement → Self-check → Commit → result│
+ └──────────────────────────────────────────────────┘
+  (1 file, ≤10 lines — no subagent overhead, 0 extra sessions)
 ```
 
 ### Agents
 
-| Agent | Role | Model | Permission |
-|-------|------|-------|------------|
-| **router** | `[]` tag detection, 3-path routing (Direct/Pipeline/WORK), WORK-LIST.md management | **sonnet** | read + dispatch |
-| **planner** | Create WORK + decompose TASKs + generate plan files + pre-create progress templates (Status: PENDING) | **opus** | read-only |
-| **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch |
-| **builder** | Code implementation + progress.md checkpoint recording. Uses Serena MCP for symbol-level code navigation when available | **sonnet** | full access |
-| **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification based on builder's context-handoff (read-only) | **haiku** | read + execute |
-| **committer** | Gate check (progress.md) → write result.md → git commit | **haiku** | read + write + git |
+| Agent | Role | Model | Permission | MCP |
+|-------|------|-------|------------|-----|
+| **router** | `[]` tag detection, execution-mode판정(direct/pipeline/full), mini-PLAN생성, WORK-LIST관리 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
+| **planner** | Create WORK + decompose TASKs + generate PLAN.md(Execution-Mode:full) + pre-create progress templates | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
+| **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch | — |
+| **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena(심볼단위탐색/편집) |
+| **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification (read-only) | **haiku** | read + execute | — |
+| **committer** | Gate check (progress.md) → write result.md → git commit → COMMITTER DONE callback | **haiku** | read + write + git | — |
 
 ---
 
@@ -159,10 +161,6 @@ tasks/
 │   │   └── ...
 │   └── WORK-02/
 │       └── ...
-│
-└── simple-tasks/
-    ├── S-TASK-00001-result.md            ← Single task results
-    └── ...
 ```
 
 ### WORK-LIST.md
@@ -231,21 +229,21 @@ claude
 
 ## Usage
 
-### Trivial Fix (S-TASK Direct)
+### Trivial Fix (direct mode)
 
 ```
 > [버그수정] Fix typo in login error message
 ```
 
-Router detects a trivial 1-line fix → handles directly. No subagent overhead.
+Router selects `execution-mode: direct` → handles entirely in its own session. No subagent spawned. Creates WORK-NN directory + mini-PLAN + result.md + commit.
 
-### Quick Task (S-TASK Pipeline)
+### Quick Task (pipeline mode)
 
 ```
 > [버그수정] Fix the login button not responding on mobile
 ```
 
-Router detects a moderate fix (multiple lines, 2 files) → delegates to builder → verifier → committer. Router context stays clean.
+Router selects `execution-mode: pipeline` → creates mini-PLAN, delegates to builder → verifier → committer. Router context stays clean.
 
 ### Complex Feature (WORK)
 
@@ -465,14 +463,14 @@ scheduler's context after 5 TASKs:
 | Tracking | Scroll chat history | File-based (PLAN.md, result.md) |
 | Verification | Manual | Automated (build/lint/test) |
 
-### Three-Path Routing
+### Three Execution Modes
 
-The router matches effort to complexity:
-- **S-TASK Direct**: 1-line typo fix — no subagent overhead, instant
-- **S-TASK Pipeline**: Moderate fix — delegated to subagents, router context stays clean
-- **WORK**: Complex features — full planning, decomposition, and tracking
+The router matches effort to complexity via `execution-mode`:
+- **direct**: 1-line typo fix — 0 extra sessions, Router handles everything. Committer session overhead (~12,500 tokens) completely eliminated.
+- **pipeline**: Moderate fix — delegated to builder → verifier → committer, router context stays clean
+- **full**: Complex features — full planning, decomposition, and tracking
 
-Consecutive S-TASK Pipelines keep the router at ~1,000 tokens regardless of how many tasks are processed, versus ~15K+ tokens if the router handled everything directly.
+All three modes output to `tasks/multi-tasks/WORK-NN/` with identical artifact structure (PLAN.md + result.md + COMMITTER DONE callback), ensuring Runner integration works regardless of mode.
 
 ### Structured Agent Communication
 
@@ -649,7 +647,7 @@ uc-taskmanager/
 ├── CLAUDE.md                ← Project-level Claude instructions (push procedure, language)
 ├── LICENSE
 ├── agents/                  ← Distribution: copy these to install
-│   ├── router.md            ← Request routing (WORK vs S-TASK)
+│   ├── router.md            ← execution-mode routing (direct/pipeline/full)
 │   ├── planner.md           ← Create WORK + decompose TASKs
 │   ├── scheduler.md         ← Run pipeline per WORK (sliding window dispatch)
 │   ├── builder.md           ← Code implementation + progress.md checkpoint
@@ -666,7 +664,7 @@ uc-taskmanager/
     │   ├── WORK-LIST.md     ← Master index
     │   ├── WORK-01/
     │   └── ...
-    └── simple-tasks/        ← S-TASK results (auto-generated)
+    └── ...                  ← all modes output here (direct/pipeline/full)
 ```
 
 ---
