@@ -12,3 +12,4 @@
 | WORK-08 | 슬라이딩 윈도우 컨텍스트 전달 시스템 동작 검증 테스트 | COMPLETED | 2026-03-12 | 2026-03-12 |
 | WORK-09 | CLAUDE.md 콜백 URL 기반 외부 시스템 결과 전달 | COMPLETED | 2026-03-12 | 2026-03-12 |
 | WORK-10 | SDD v1.3 execution-mode 3종 체계 적용 (S-TASK 폐지, MCP 확장) | COMPLETED | 2026-03-14 | 2026-03-14 |
+| WORK-11 | Router execution-mode 판정 기준 외부 config 파일 분리 | COMPLETED | 2026-03-14 | 2026-03-14 |

@@ -33,18 +33,19 @@ User Request
       │ [] tag detected
       ▼
   Assess complexity → execution-mode
+  (reads .agent/router_rule_config.json if present)
       │
-      ├─ direct  (1 file, ≤10 lines)
+      ├─ direct  (no build/test required)
       │   ▼
       │  Router handles everything — no subagent overhead
-      │  Creates WORK-NN/PLAN.md + result.md + commit (10 steps, 0 extra sessions)
+      │  Creates WORK-NN/PLAN.md + result.md + commit (0 extra sessions)
       │
-      ├─ pipeline  (2~3 files, or >10 lines)
+      ├─ pipeline  (build/test required, single domain, sequential)
       │   ▼
       │  router → builder → verifier → committer
       │  Router creates PLAN, dispatches 3 subagents
       │
-      └─ full  (4+ files, 3+ steps, dependencies)
+      └─ full  (multi-domain / complex DAG / new module / 5+ tasks)
           ▼
          router → planner → scheduler → [builder → verifier → committer] × N
                  (full planning + multi-task pipeline)
@@ -114,7 +115,7 @@ router: Analyze → Implement → Self-verify → Commit → result.md
  ┌──────────────────────────────────────────────────┐
  │ Analyze → Implement → Self-check → Commit → result│
  └──────────────────────────────────────────────────┘
-  (1 file, ≤10 lines — no subagent overhead, 0 extra sessions)
+  (no build/test required — no subagent overhead, 0 extra sessions)
 ```
 
 ### Agents

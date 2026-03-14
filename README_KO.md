@@ -33,18 +33,19 @@
       │ [] 태그 감지
       ▼
   복잡도 판단 → execution-mode 결정
+  (.agent/router_rule_config.json 파일이 있으면 해당 기준 우선 적용)
       │
-      ├─ direct  (1 파일, ≤10줄)
+      ├─ direct  (빌드/테스트 검증 불필요)
       │   ▼
       │  Router가 모든 것을 직접 처리 — 추가 세션 0개
-      │  WORK-NN 디렉토리 + PLAN + result.md + commit (10단계)
+      │  WORK-NN 디렉토리 + PLAN + result.md + commit
       │
-      ├─ pipeline  (2~3 파일, 또는 >10줄)
+      ├─ pipeline  (빌드/테스트 필요, 단일 도메인, 순차 처리)
       │   ▼
       │  router → builder → verifier → committer
       │  Router가 PLAN 생성 후 3개 서브에이전트 순차 dispatch
       │
-      └─ full  (4+ 파일, 3+ 단계, 의존성 존재)
+      └─ full  (멀티 도메인 / 복잡 DAG / 신규 모듈 / 5+ TASK)
           ▼
          router → planner → scheduler → [builder → verifier → committer] × N
                  (전체 계획 + 다중 작업 파이프라인)
@@ -114,7 +115,7 @@ router: 분석 → 구현 → self-check → 커밋 → result.md
  ┌────────────────────────────────────────────────┐
  │ 분석 → 구현 → self-check → 커밋 → result.md    │
  └────────────────────────────────────────────────┘
-  (1 파일, ≤10줄 — 추가 서브에이전트 세션 0개)
+  (빌드/테스트 불필요 — 추가 서브에이전트 세션 0개)
 ```
 
 ### 에이전트
