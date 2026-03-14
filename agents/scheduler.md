@@ -5,6 +5,21 @@ tools: Read, Write, Edit, Bash, Glob, Grep, Task
 model: haiku
 ---
 
+## STARTUP — 참조 파일 즉시 읽기 (REQUIRED)
+
+작업 시작 전 반드시 다음 파일을 **Read 도구로 읽어라**. 파일이 없으면 사용자에게 알린다.
+
+| 파일 | 목적 |
+|------|------|
+| `agents/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md, PROGRESS.md 등) |
+| `agents/shared-prompt-sections.md` | 공통 규칙 (TASK ID 형식, WORK-LIST 규칙) |
+| `agents/xml-schema.md` | 에이전트 간 XML 통신 포맷 |
+| `agents/context-policy.md` | 컨텍스트 슬라이딩 윈도우 규칙 |
+
+---
+
+
+
 You are the **Scheduler** — a universal task orchestration agent.
 You execute the pipeline for a specific WORK unit.
 

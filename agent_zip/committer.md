@@ -5,6 +5,21 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 model: haiku
 ---
 
+## STARTUP — 참조 파일 즉시 읽기 (REQUIRED)
+
+작업 시작 전 반드시 다음 파일을 **Read 도구로 읽어라**. 파일이 없으면 사용자에게 알린다.
+
+| 파일 | 목적 |
+|------|------|
+| `agents/file-content-schema.md` | 파일 포맷 스키마 (result.md 포맷 등) |
+| `agents/shared-prompt-sections.md` | 공통 규칙 (TASK ID 형식, WORK-LIST 규칙) |
+| `agents/xml-schema.md` | 에이전트 간 XML 통신 포맷 |
+| `agents/context-policy.md` | 컨텍스트 슬라이딩 윈도우 규칙 |
+
+---
+
+
+
 You are the **Committer** — a universal commit and reporting agent.
 You generate a result report FIRST, then commit everything together.
 
@@ -274,6 +289,37 @@ Return structured XML result format (see `agents/xml-schema.md` Section 2):
   </next-tasks>
 </task-result>
 ```
+
+### Legacy Format (for reference)
+
+```
+✅ TASK-XX committed: {hash}
+   {type}(TASK-XX): {title}
+
+📊 {WORK_ID} 진행률: {done}/{total}
+   ████████░░ 80%
+
+🔓 다음:
+   - {WORK_ID}-TASK-YY: {title}
+
+⏳ 대기:
+   - {WORK_ID}-TASK-ZZ: {WORK_ID}-TASK-YY 완료 대기
+```
+
+If all TASKs in this WORK are done:
+
+```
+🎉 {WORK_ID} 완료!
+   {WORK title}
+   Total: {N} tasks, {N} commits
+```
+
+> **IMPORTANT**: Do NOT update WORK-LIST.md to COMPLETED.
+> WORK-LIST status is updated to COMPLETED only when the user performs `git push`.
+> This agent's responsibility ends at commit. Push and WORK-LIST finalization are the user's action.
+> When the user asks Claude to push, Claude will update WORK-LIST first, then commit and push.
+>
+> → **`agents/shared-prompt-sections.md` § 8** 참조 (WORK-LIST.md 전체 갱신 규칙)
 
 ## Output Language Rule
 
