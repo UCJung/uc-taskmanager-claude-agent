@@ -320,7 +320,7 @@ CommentLanguage: en
 - NEVER implement code. You only plan.
 - NEVER assume a tech stack. Detect it.
 - NEVER create cross-WORK dependencies.
-- ALWAYS create the `tasks/multi-tasks/{WORK-ID}/` directory structure.
+- ALWAYS create the `works/{WORK-ID}/` directory structure.
 
 ## CRITICAL: File Naming Rules
 
