@@ -1,9 +1,26 @@
 # File Content Schema
 
 uc-taskmanager 파이프라인이 생성하는 모든 파일의 내용 포맷을 정의한다.
-에이전트는 파일 생성 시 반드시 이 스키마를 참조한다.
 
 **Referenced by**: planner.md, router.md, builder.md, committer.md, scheduler.md, context-policy.md, xml-schema.md
+
+---
+
+## COMPLIANCE — 파일 생성 시 반드시 준수 (REQUIRED)
+
+이 문서를 읽은 에이전트는 **해당 파일을 생성할 때 반드시 아래 규격을 따라야 한다**.
+규격을 벗어난 포맷은 scheduler, runner.ts, committer gate 오류를 유발한다.
+
+| 생성 파일 | 준수 섹션 | 위반 시 결과 |
+|-----------|-----------|-------------|
+| `PLAN.md` | § 1 | `parsePlanMd()` 파싱 실패, scheduler 동작 불가 |
+| `TASK-XX.md` | § 2 | `parseTaskFilename()` DB 등록 누락 |
+| `TASK-XX_progress.md` | § 3 | committer gate FAIL (Status/Files changed 검사) |
+| `TASK-XX_result.md` | § 4 | 슬라이딩 윈도우 context-handoff 누락 |
+| `TASK-XX_result.md` (direct) | § 5 | result.md 인식 실패 |
+| `PROGRESS.md` | § 6 | scheduler 진행률 추적 불가 |
+
+**파일명 규칙** → § 7 참조. `WORK-NN-TASK-XX.md` 형식 절대 금지.
 
 ---
 
