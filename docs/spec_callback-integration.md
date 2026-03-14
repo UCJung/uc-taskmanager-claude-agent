@@ -9,11 +9,17 @@ The uc-taskmanager pipeline supports optional HTTP callbacks for external system
 1. **Optional Activation**: Callbacks are only active if TaskCallback/ProgressCallback URLs are configured in CLAUDE.md
 2. **Failure Tolerance**: If curl fails, agents print a warning and continue (never block task execution)
 3. **Universal Compatibility**: Projects without callback configuration operate unchanged
+4. **Mode-Invariant**: All three execution-modes (direct, pipeline, full) guarantee COMMITTER DONE callback delivery
 
-### Callback Agents
+### Callback Agents by execution-mode
 
-- **TaskCallback**: Invoked by committer after result.md is generated and git commit completes
-- **ProgressCallback**: Invoked by builder after progress.md checkpoint updates
+| execution-mode | TaskCallback 전송 주체 | ProgressCallback 전송 주체 |
+|:--------------:|:---------------------:|:-------------------------:|
+| `direct` | **Router** (committer 역할 대행) | **Router** (builder 역할 대행) |
+| `pipeline` | **Committer** | **Builder** |
+| `full` | **Committer** | **Builder** |
+
+모든 모드에서 COMMITTER DONE 콜백(TaskCallback) 전송은 불변 보장 항목이다.
 
 ---
 
@@ -48,7 +54,7 @@ CallbackToken: <bearer-token>
 
 ## TaskCallback Payload Schema
 
-Sent by **committer** after git commit completes.
+Sent after git commit completes. Sender varies by execution-mode (see table above).
 
 ### JSON Schema
 
@@ -117,7 +123,7 @@ curl -X POST "http://your-system.com/api/v1/task-result" \
 
 ## ProgressCallback Payload Schema
 
-Sent by **builder** after progress.md checkpoint updates.
+Sent after progress.md checkpoint updates. Sender varies by execution-mode (see table above).
 
 ### JSON Schema
 
@@ -192,18 +198,43 @@ curl -X POST "http://your-system.com/api/v1/task-progress" \
 
 ---
 
-## Callback Execution Flow
+## Callback Execution Flow by execution-mode
 
-### Sequence Diagram
+### direct 모드 — Router 단독 수행
 
 ```mermaid
 sequenceDiagram
-    participant Scheduler
+    participant User
+    participant Router
+    participant External System
+
+    User->>Router: [] 태그 요청 (direct 판정)
+
+    loop Progress Checkpoints
+        Router->>Router: 코드 수정
+        Router->>Router: progress.md 갱신
+        Router->>External System: POST ProgressCallback (if configured)
+        External System-->>Router: 200 OK or error
+        Note over Router: Continue regardless of callback result
+    end
+
+    Router->>Router: result.md 생성
+    Router->>Router: Git commit
+    Router->>External System: POST TaskCallback (if configured)
+    External System-->>Router: 200 OK or error
+    Note over Router: Continue regardless of callback result
+```
+
+### pipeline / full 모드 — 서브에이전트 수행
+
+```mermaid
+sequenceDiagram
+    participant Dispatcher
     participant Builder
     participant Committer
     participant External System
 
-    Scheduler->>Builder: dispatch (implement TASK)
+    Dispatcher->>Builder: dispatch (implement TASK)
 
     loop Progress Checkpoints
         Builder->>Builder: Modify file(s)
@@ -213,18 +244,20 @@ sequenceDiagram
         Note over Builder: Continue regardless of callback result
     end
 
-    Builder->>Scheduler: return task-result (PASS/FAIL)
+    Builder->>Dispatcher: return task-result (PASS/FAIL)
 
-    Scheduler->>Committer: dispatch (commit TASK)
+    Dispatcher->>Committer: dispatch (commit TASK)
     Committer->>Committer: Generate result.md
     Committer->>Committer: Git commit
     Committer->>External System: POST TaskCallback (if configured)
     External System-->>Committer: 200 OK or error
     Note over Committer: Continue regardless of callback result
-    Committer->>Scheduler: return task-result with commit hash
+    Committer->>Dispatcher: return task-result with commit hash
 ```
 
-### Timeline
+*pipeline 모드의 Dispatcher는 Router, full 모드의 Dispatcher는 Scheduler.*
+
+### Timeline (pipeline / full 공통)
 
 1. **Builder Phase**:
    - Modifies files and updates progress.md
@@ -260,7 +293,7 @@ curl ... 2>/dev/null || echo "WARNING: callback request failed ($CALLBACK_URL), 
 - Warning message logged
 - Task execution continues
 - No retry attempted
-- Commit/result already finalized (for committer)
+- Commit/result already finalized (for committer/router)
 
 ### Network Transience
 
@@ -298,7 +331,7 @@ curl ... 2>/dev/null || echo "WARNING: callback request failed ($CALLBACK_URL), 
 
 ## Implementation Guide for External Systems
 
-### Receiving TaskCallback (Committer Results)
+### Receiving TaskCallback (Committer/Router Results)
 
 Expected HTTP request:
 
@@ -321,7 +354,7 @@ Authorization: Bearer <token>
 }
 ```
 
-### Receiving ProgressCallback (Builder Checkpoints)
+### Receiving ProgressCallback (Builder/Router Checkpoints)
 
 Expected HTTP requests (multiple):
 
@@ -454,7 +487,7 @@ ProgressCallback: http://127.0.0.1:3000/task-progress
 CallbackToken: test_token_123
 ```
 
-### 3. Run Builder/Committer and Monitor
+### 3. Run Pipeline and Monitor
 
 ```bash
 # Monitor curl calls
@@ -477,13 +510,19 @@ curl -X POST "http://127.0.0.1:3000/task-result" \
 
 - **Created**: 2026-03-12
 - **Purpose**: WORK-09 — Document callback integration design for external system notifications
-- **Referenced by**: CLAUDE.md, agents/shared-prompt-sections.md (Section 6), agents/builder.md (ProgressCallback), agents/committer.md (Step 4.5)
+- **Updated**: 2026-03-14 — WORK-10 (SDD v1.3): execution-mode 3종 체계 반영
+  - execution-mode별 콜백 전송 주체 명시 (direct: Router, pipeline/full: Builder/Committer)
+  - 불변 보장: 모든 모드에서 COMMITTER DONE 콜백(TaskCallback) 전송 보장
+  - Sequence diagram을 direct 모드 / pipeline+full 모드로 분리
+- **Referenced by**: CLAUDE.md, agents/shared-prompt-sections.md (Section 6), agents/builder.md (ProgressCallback), agents/committer.md (Step 4.5), agents/router.md (direct 모드 콜백)
 
 ---
 
 ## Related Documents
 
 - `agents/shared-prompt-sections.md` § 6: Task Callbacks configuration guide
-- `agents/builder.md` → ProgressCallback section: Builder implementation
-- `agents/committer.md` → Step 4.5: Committer implementation
-- `agents/xml-schema.md`: Agent communication format (baseline)
+- `agents/router.md` → direct 모드 12단계: Router가 직접 콜백 전송
+- `agents/builder.md` → ProgressCallback section: Builder implementation (pipeline/full)
+- `agents/committer.md` → Step 4.5: Committer implementation (pipeline/full)
+- `agents/xml-schema.md`: Agent communication format + execution-mode attribute (SDD v1.3)
+- `docs/spec_pipeline-architecture.md`: 전체 파이프라인 구조 및 불변 보장 항목

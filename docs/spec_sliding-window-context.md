@@ -111,9 +111,21 @@ builder가 result.md를 직접 쓰면 작업에 집중하다 빠뜨리는 문제
 
 ---
 
-## 4. 파이프라인 내 슬라이딩 윈도우
+## 4. execution-mode별 컨텍스트 전달 방식
 
-### builder → verifier → committer 단계
+슬라이딩 윈도우는 pipeline / full 모드에서 동작한다. direct 모드는 Router가 단일 세션에서 처리하므로 컨텍스트 전달 문제 자체가 없다.
+
+### direct 모드
+
+Router 단일 세션 내 처리 — 서브에이전트 간 handoff 없음.
+
+```
+Router 세션:
+  [분석] → [코드 수정] → [self-check] → [result.md] → [commit] → [콜백]
+  ↑ 모두 동일 세션, 컨텍스트 누적됨
+```
+
+### pipeline 모드 — Builder → Verifier → Committer
 
 ```
 builder 완료
@@ -130,19 +142,13 @@ verifier 완료
 committer가 받는 컨텍스트:
   verifier.what + why + caution + incomplete  ← FULL
   builder.what (1~2줄 요약)                   ← SUMMARY
-  planner/scheduler 내용                      ← DROP
+  planner/scheduler 내용                      ← DROP (pipeline 모드엔 없음)
 ```
 
----
-
-## 5. TASK 간 의존성 전달
-
-### 문제
+### full 모드 — TASK 간 의존성 전달
 
 TASK-1 완료 후 TASK-2가 시작될 때, TASK-2의 builder는 새 세션으로 시작한다.
-TASK-1에서 무엇을, 왜 했는지 알아야 올바르게 이어받을 수 있다.
-
-### 슬라이딩 윈도우 적용
+scheduler가 슬라이딩 윈도우 규칙에 따라 선행 TASK result context-handoff를 자동으로 포함한다.
 
 ```
 TASK-00 → TASK-01 → TASK-02 → TASK-03
@@ -155,14 +161,15 @@ TASK-03 builder가 받는 컨텍스트:
 
 의존성 깊이에 따라 **scheduler가 자동으로 detail-level을 결정**해서 전달한다.
 
-### scheduler 디스패치 예시
+### scheduler dispatch 예시 (full 모드)
 
 ```xml
-<dispatch to="builder" work="WORK-XX" task="WORK-XX-TASK-03">
+<dispatch to="builder" work="WORK-NN" task="WORK-NN-TASK-03"
+          execution-mode="full">
   <task-spec>...</task-spec>
 
   <!-- 직전 TASK: FULL -->
-  <context-handoff from="prev-task" task="WORK-XX-TASK-02" detail-level="FULL">
+  <context-handoff from="prev-task" task="WORK-NN-TASK-02" detail-level="FULL">
     <what>user-validator.js 생성. validateEmail() 함수 구현.</what>
     <why>TASK-02의 User 클래스를 기반으로 검증 레이어 추가.</why>
     <caution>User 클래스의 email 필드명 변경 시 함께 수정 필요.</caution>
@@ -170,7 +177,7 @@ TASK-03 builder가 받는 컨텍스트:
   </context-handoff>
 
   <!-- 2단계 전 TASK: SUMMARY -->
-  <context-handoff from="prev-prev-task" task="WORK-XX-TASK-01" detail-level="SUMMARY">
+  <context-handoff from="prev-prev-task" task="WORK-NN-TASK-01" detail-level="SUMMARY">
     <what>user.js 생성. User 클래스 (name, email, getInfo()).</what>
   </context-handoff>
 
@@ -180,16 +187,16 @@ TASK-03 builder가 받는 컨텍스트:
 
 ---
 
-## 6. progress.md — 체크포인트 시스템
+## 5. progress.md — 체크포인트 시스템
 
 ### 목적
 
-비정상 종료(세션 크래시, 타임아웃)에 대비해 builder가 작업 중간 상태를 파일로 기록한다.
+비정상 종료(세션 크래시, 타임아웃)에 대비해 builder(또는 direct 모드의 router)가 작업 중간 상태를 파일로 기록한다.
 
 ### 구조
 
 ```markdown
-# WORK-XX-TASK-NN Progress
+# WORK-NN-TASK-XX Progress
 
 ## Status
 IN_PROGRESS | COMPLETED | FAILED
@@ -209,13 +216,18 @@ IN_PROGRESS | COMPLETED | FAILED
 
 ### 재시작 시 활용
 
-builder가 재디스패치되면 progress.md를 읽고 **마지막 완료된 체크포인트부터 이어서 작업**한다.
+builder가 재dispatch되면 progress.md를 읽고 **마지막 완료된 체크포인트부터 이어서 작업**한다.
+
+### progress.md 선생성 규칙
+
+- **full 모드**: planner가 TASK 파일 생성 시 progress 템플릿을 함께 미리 생성 (`Status: PENDING`)
+- **pipeline / direct 모드**: Router가 TASK 파일 생성 시 함께 생성
 
 ---
 
-## 7. committer Gate 역할
+## 6. committer Gate 역할
 
-committer는 작업 시작 전 반드시 다음을 확인한다:
+committer(pipeline / full 모드)는 작업 시작 전 반드시 다음을 확인한다:
 
 ```
 [Gate 검사]
@@ -226,20 +238,23 @@ committer는 작업 시작 전 반드시 다음을 확인한다:
 [Gate 통과 시]
   → result.md 작성 (what/why/caution/incomplete)
   → git commit
+  → COMMITTER DONE 콜백 전송
 
 [Gate 실패 시]
-  → scheduler에 FAIL 반환
-  → scheduler가 builder 재디스패치 (최대 2회 재시도)
+  → dispatcher(Router 또는 Scheduler)에 FAIL 반환
+  → dispatcher가 builder 재dispatch (최대 2회 재시도)
 ```
+
+direct 모드에서는 Router가 self-check로 동등한 검증을 수행한다.
 
 ---
 
-## 8. result.md 구조 (committer 작성)
+## 7. result.md 구조 (committer 작성)
 
 committer가 builder + verifier의 context-handoff를 종합해 작성한다.
 
 ```markdown
-# WORK-XX-TASK-NN Result
+# WORK-NN-TASK-XX Result
 
 ## Status
 SUCCESS | PARTIAL | FAILED
@@ -265,35 +280,41 @@ builder와 verifier의 context-handoff를 종합한 변경 내용 요약
 {hash}: {message}
 ```
 
+direct 모드에서는 Router가 최소 포맷의 result.md를 직접 작성한다 (`Execution-Mode: direct` 필드 포함).
+
 ---
 
-## 9. 토큰 절감 효과
+## 8. 토큰 절감 효과
 
 TASK 3개 의존성 체인 기준 (TASK-00 → TASK-01 → TASK-02):
 
-| 항목 | 현재 방식 | 슬라이딩 윈도우 | 절감 |
+| 항목 | 기존 방식 | 슬라이딩 윈도우 | 절감 |
 |------|---------|--------------|------|
 | TASK-1 소계 | ~10,980 토큰 | ~6,300 토큰 | 43% |
 | TASK-2 소계 | ~13,280 토큰 | ~6,600 토큰 | 50% |
 | TASK-3 소계 | ~13,280 토큰 | ~6,600 토큰 | 50% |
 | **합계** | **~37,540 토큰** | **~19,500 토큰** | **~48%** |
 
-TASK 수가 늘어날수록 현재 방식은 result가 누적되어 컨텍스트가 계속 커지지만,
+TASK 수가 늘어날수록 기존 방식은 result가 누적되어 컨텍스트가 계속 커지지만,
 슬라이딩 윈도우는 **항상 일정 크기를 유지**하므로 절감 효과가 증가한다.
+
+direct 모드의 경우 서브에이전트 세션 초기화 비용(~12,500 토큰) 자체가 0이 되어 추가 절감된다.
 
 ---
 
-## 10. 구현 파일 목록
+## 9. 구현 파일 목록
 
 | 파일 | 역할 |
 |------|------|
 | `agents/context-policy.md` | 슬라이딩 윈도우 정책 상세 규칙 |
-| `agents/xml-schema.md` | context-handoff XML 요소 스키마 |
-| `agents/scheduler.md` | 슬라이딩 윈도우 디스패치 로직 |
+| `agents/xml-schema.md` | context-handoff XML 요소 스키마 + execution-mode 속성 |
+| `agents/router.md` | direct/pipeline/full 모드 판정 + 직접 실행 로직 |
+| `agents/scheduler.md` | 슬라이딩 윈도우 dispatch 로직 (full 모드) |
 | `agents/builder.md` | progress.md 체크포인트 기록 규칙 |
 | `agents/verifier.md` | context-handoff 기반 타겟 검증 |
-| `agents/committer.md` | Gate 역할 + result.md 작성 |
+| `agents/committer.md` | Gate 역할 + result.md 작성 + COMMITTER DONE 콜백 |
 
 ---
 
 *최초 작성: 2026-03-12 | WORK-07 구현 기반 | WORK-08 테스트 검증 완료*
+*갱신: 2026-03-14 | WORK-10 — SDD v1.3 execution-mode 3종 체계 반영 (direct/pipeline/full)*
