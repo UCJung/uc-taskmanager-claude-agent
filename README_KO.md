@@ -37,12 +37,12 @@
       ├─ direct  (1 파일, ≤10줄)
       │   ▼
       │  Router가 모든 것을 직접 처리 — 추가 세션 0개
-      │  WORK-NN 디렉토리 + mini-PLAN + result.md + commit (10단계)
+      │  WORK-NN 디렉토리 + PLAN + result.md + commit (10단계)
       │
       ├─ pipeline  (2~3 파일, 또는 >10줄)
       │   ▼
       │  router → builder → verifier → committer
-      │  Router가 mini-PLAN 생성 후 3개 서브에이전트 순차 dispatch
+      │  Router가 PLAN 생성 후 3개 서브에이전트 순차 dispatch
       │
       └─ full  (4+ 파일, 3+ 단계, 의존성 존재)
           ▼
@@ -101,7 +101,7 @@ router: 분석 → 구현 → self-check → 커밋 → result.md
 ```
   router            builder          verifier         committer
  ┌────────┐       ┌──────────┐     ┌──────────┐     ┌──────────┐
- │mini-PLAN│─────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
+ │PLAN    │─────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
  │+TASK생성│      │파일 생성  │     │검증 실행  │     │→ git커밋 │
  └────────┘      └──────────┘     └──────────┘     └──────────┘
   (컨텍스트 유지)   (sonnet)         (haiku)           (haiku)
@@ -121,7 +121,7 @@ router: 분석 → 구현 → self-check → 커밋 → result.md
 
 | 에이전트 | 역할 | 모델 | 권한 | MCP |
 |----------|------|------|------|-----|
-| **router** | `[]` 태그 감지, execution-mode 판정(direct/pipeline/full), mini-PLAN 생성, WORK-LIST 관리 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
+| **router** | `[]` 태그 감지, execution-mode 판정(direct/pipeline/full), PLAN 생성, WORK-LIST 관리 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
 | **planner** | WORK 생성 + TASK 분해 + PLAN.md(Execution-Mode:full) + progress 템플릿 선생성 | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
 | **scheduler** | 특정 WORK의 DAG 관리 + [B→V→C]×N 파이프라인 실행 | **haiku** | read + dispatch | — |
 | **builder** | 코드 구현 + progress.md 체크포인트 기록 | **sonnet** | full access | Serena(심볼단위탐색/편집) |
@@ -234,7 +234,7 @@ claude
 > [버그수정] 로그인 에러 메시지 오타 수정
 ```
 
-router가 `execution-mode: direct` 선택 → 자체 세션에서 직접 처리. 추가 서브에이전트 세션 없음. WORK-NN 디렉토리 + mini-PLAN + result.md + commit 자동 생성.
+router가 `execution-mode: direct` 선택 → 자체 세션에서 직접 처리. 추가 서브에이전트 세션 없음. WORK-NN 디렉토리 + PLAN + result.md + commit 자동 생성.
 
 ### 간단한 작업 (pipeline 모드)
 
@@ -242,7 +242,7 @@ router가 `execution-mode: direct` 선택 → 자체 세션에서 직접 처리.
 > [버그수정] 모바일에서 로그인 버튼이 반응하지 않는 문제 수정
 ```
 
-router가 `execution-mode: pipeline` 선택 → mini-PLAN 생성 후 builder → verifier → committer에 위임. router 컨텍스트는 깨끗하게 유지.
+router가 `execution-mode: pipeline` 선택 → PLAN 생성 후 builder → verifier → committer에 위임. router 컨텍스트는 깨끗하게 유지.
 
 ### 복잡한 기능 (WORK)
 

@@ -81,12 +81,12 @@ After detecting `[]` tag, assess complexity and route to one of three execution 
 
 ### direct 모드 — Router 단독 수행 (서브에이전트 없음)
 
-Router가 자신의 세션 내에서 다음 단계를 순차 수행한다:
+Router가 PLAN.md를 직접 생성하고 자신의 세션 내에서 다음 단계를 순차 수행한다:
 
 ```
 1.  WORK ID 결정 (§3 파일시스템 스캔 + WORK-LIST 검증)
 2.  mkdir tasks/multi-tasks/WORK-NN/
-3.  mini-PLAN.md 생성 (Execution-Mode: direct)
+3.  PLAN.md 생성 (Execution-Mode: direct)
 4.  WORK-NN-TASK-00.md 생성
 5.  WORK-NN-TASK-00-progress.md 생성 (Status: PENDING)
 6.  코드 수정 + self-check (build && lint)
@@ -98,7 +98,7 @@ Router가 자신의 세션 내에서 다음 단계를 순차 수행한다:
 12. WORK-LIST.md에 IN_PROGRESS 추가
 ```
 
-**mini-PLAN.md 포맷 (direct):**
+**PLAN.md 포맷 (direct):**
 ```markdown
 # WORK-NN: {사용자 요청 1줄 요약}
 
@@ -151,15 +151,15 @@ Router가 자신의 세션 내에서 다음 단계를 순차 수행한다:
 
 ### pipeline 모드 — Builder → Verifier → Committer
 
-Router가 mini-PLAN + TASK 파일 생성 후 서브에이전트를 순차 dispatch한다.
+Router가 PLAN.md + TASK 파일을 직접 생성한 후 서브에이전트를 순차 dispatch한다.
 
 ```
-router: mini-PLAN 생성 → Builder dispatch → Verifier dispatch → Committer dispatch
+router: PLAN 생성 → Builder dispatch → Verifier dispatch → Committer dispatch
 ```
 
 Router가 stage 콜백을 대행한다 (BUILDER/VERIFIER/COMMITTER START/DONE).
 
-**mini-PLAN.md 포맷 (pipeline):**
+**PLAN.md 포맷 (pipeline):**
 ```markdown
 # WORK-NN: {사용자 요청 1줄 요약}
 

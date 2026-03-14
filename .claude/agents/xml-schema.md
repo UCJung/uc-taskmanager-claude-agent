@@ -136,7 +136,7 @@ All agents return results in this structure:
 **Receivers**: `agents/builder.md`, `agents/verifier.md`, `agents/committer.md`
 
 **Flow**:
-1. Router가 mini-PLAN.md + TASK 파일 생성 후 `<dispatch to="builder" work="{WORK_ID}" execution-mode="pipeline">` 전송
+1. Router가 PLAN.md + TASK 파일 생성 후 `<dispatch to="builder" work="{WORK_ID}" execution-mode="pipeline">` 전송
 2. Builder returns `<task-result>`
 3. Router가 `<dispatch to="verifier" execution-mode="pipeline">` 전송 (builder result 포함)
 4. Verifier returns `<task-result>`
@@ -336,7 +336,7 @@ Context handoff is a structured way to pass task execution context and decision 
 
 | 에이전트 | direct | pipeline | full |
 |---------|--------|----------|------|
-| **Router** | 코드 수정 + self-check + result.md + commit + 콜백 직접 수행 (서브에이전트 0) | mini-PLAN 생성 후 B→V→C 순차 dispatch | Planner에 dispatch |
+| **Router** | 코드 수정 + self-check + result.md + commit + 콜백 직접 수행 (서브에이전트 0) | PLAN 생성 후 B→V→C 순차 dispatch | Planner에 dispatch |
 | **Planner** | 호출되지 않음 | 호출되지 않음 | 기존 동일. PLAN.md에 `Execution-Mode: full` 기록 |
 | **Scheduler** | 호출되지 않음 | 호출되지 않음 | 기존 동일. DAG 관리 + [B→V→C]×N |
 | **Builder** | 호출되지 않음 (Router가 직접 구현) | 정상 실행. progress.md 전체 생명주기. context-handoff FULL 4필드 | 기존 동일 |
@@ -423,7 +423,7 @@ Context handoff is a structured way to pass task execution context and decision 
 ```
 1. WORK ID 결정 (파일시스템 스캔 + WORK-LIST 검증)
 2. mkdir tasks/multi-tasks/WORK-NN/
-3. mini-PLAN.md 생성 (Execution-Mode: direct)
+3. PLAN.md 생성 (Execution-Mode: direct)
 4. WORK-NN-TASK-00.md 생성
 5. WORK-NN-TASK-00-progress.md 생성 (Status: PENDING)
 6. 코드 수정 + self-check (build && lint)

@@ -56,19 +56,19 @@ Router: WORK 파일 생성 → 코드 수정 → self-check → result.md 작성
 ```
 
 - 서브에이전트 호출 비용(~12,500 토큰 세션 초기화) 없음
-- mini-PLAN.md에 `Execution-Mode: direct` 기록
+- PLAN.md에 `Execution-Mode: direct` 기록
 - Router가 committer 역할까지 대행 (result.md + commit + COMMITTER DONE 콜백)
 
 ### 3.2 pipeline 모드
 
-Router가 mini-PLAN + TASK 파일을 생성한 후 서브에이전트를 순차 dispatch한다.
+Router가 PLAN + TASK 파일을 생성한 후 서브에이전트를 순차 dispatch한다.
 
 ```
-Router: mini-PLAN 생성 → Builder dispatch → Verifier dispatch → Committer dispatch
+Router: PLAN 생성 → Builder dispatch → Verifier dispatch → Committer dispatch
 ```
 
 - Router가 stage 콜백 대행 (BUILDER/VERIFIER/COMMITTER START/DONE)
-- mini-PLAN.md에 `Execution-Mode: pipeline` 기록
+- PLAN.md에 `Execution-Mode: pipeline` 기록
 - `execution-mode="pipeline"` 속성을 dispatch XML에 포함
 
 ### 3.3 full 모드

@@ -37,12 +37,12 @@ User Request
       ├─ direct  (1 file, ≤10 lines)
       │   ▼
       │  Router handles everything — no subagent overhead
-      │  Creates WORK-NN/mini-PLAN.md + result.md + commit (10 steps, 0 extra sessions)
+      │  Creates WORK-NN/PLAN.md + result.md + commit (10 steps, 0 extra sessions)
       │
       ├─ pipeline  (2~3 files, or >10 lines)
       │   ▼
       │  router → builder → verifier → committer
-      │  Router creates mini-PLAN, dispatches 3 subagents
+      │  Router creates PLAN, dispatches 3 subagents
       │
       └─ full  (4+ files, 3+ steps, dependencies)
           ▼
@@ -101,8 +101,8 @@ router: Analyze → Implement → Self-verify → Commit → result.md
 ```
   router            builder          verifier         committer
  ┌────────┐       ┌──────────┐     ┌──────────┐     ┌──────────┐
- │mini-PLAN│─────▶│Code      │────▶│Build/Test│────▶│Result    │
- │+TASK    │      │Implement │     │Verify    │     │→ git     │
+ │PLAN    │─────▶│Code      │────▶│Build/Test│────▶│Result    │
+ │+TASK   │      │Implement │     │Verify    │     │→ git     │
  └────────┘      └──────────┘     └──────────┘     └──────────┘
   (context clean)  (sonnet)         (haiku)           (haiku)
 ```
@@ -121,7 +121,7 @@ router: Analyze → Implement → Self-verify → Commit → result.md
 
 | Agent | Role | Model | Permission | MCP |
 |-------|------|-------|------------|-----|
-| **router** | `[]` tag detection, execution-mode판정(direct/pipeline/full), mini-PLAN생성, WORK-LIST관리 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
+| **router** | `[]` tag detection, execution-mode판정(direct/pipeline/full), PLAN생성, WORK-LIST관리 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
 | **planner** | Create WORK + decompose TASKs + generate PLAN.md(Execution-Mode:full) + pre-create progress templates | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
 | **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch | — |
 | **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena(심볼단위탐색/편집) |
@@ -235,7 +235,7 @@ claude
 > [버그수정] Fix typo in login error message
 ```
 
-Router selects `execution-mode: direct` → handles entirely in its own session. No subagent spawned. Creates WORK-NN directory + mini-PLAN + result.md + commit.
+Router selects `execution-mode: direct` → handles entirely in its own session. No subagent spawned. Creates WORK-NN directory + PLAN + result.md + commit.
 
 ### Quick Task (pipeline mode)
 
@@ -243,7 +243,7 @@ Router selects `execution-mode: direct` → handles entirely in its own session.
 > [버그수정] Fix the login button not responding on mobile
 ```
 
-Router selects `execution-mode: pipeline` → creates mini-PLAN, delegates to builder → verifier → committer. Router context stays clean.
+Router selects `execution-mode: pipeline` → creates PLAN, delegates to builder → verifier → committer. Router context stays clean.
 
 ### Complex Feature (WORK)
 
