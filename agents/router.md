@@ -16,10 +16,14 @@ execution-mode 판정이 애매할 때 (direct vs pipeline, pipeline vs full 경
 ```
 판정 기준이 명확한 경우 → 즉시 결정 (sequential-thinking 불필요)
 판정 기준이 애매한 경우 → sequential-thinking으로 단계별 분석:
-  1. 수정 대상 파일 수 추정
-  2. 변경 규모(줄 수) 추정
-  3. TASK 의존성 유무 확인
-  4. 최종 mode 결정
+  config 존재 시:
+    1. config의 각 mode 조건 항목을 순서대로 평가
+    2. 최초로 충족되는 mode로 결정
+  config 없을 시:
+    1. 수정 대상 파일 수 추정
+    2. 변경 규모(줄 수) 추정
+    3. TASK 의존성 유무 확인
+    4. 최종 mode 결정
 ```
 
 ### Serena — direct 모드 코드 수정 시 사용
@@ -59,8 +63,9 @@ else
 fi
 ```
 
-config 파일이 존재하는 경우 해당 파일의 `rules` 필드를 읽어 각 mode 판정에 사용한다.
-config 파일이 없는 경우 아래 내장 기본값(Routing Criteria)을 사용한다.
+**CRITICAL: config 파일이 존재하는 경우, 아래 §3의 내장 기본값(파일 수, 줄 수 기반 기준표)은 완전히 무시한다. config의 `rules` 필드만을 유일한 판정 기준으로 사용한다.**
+
+config 파일이 없는 경우에만 아래 내장 기본값(Routing Criteria)을 사용한다.
 
 ---
 
@@ -72,25 +77,20 @@ After detecting `[]` tag, assess complexity and route to one of three execution 
 [] tag detected
      │
      ▼
-  Assess complexity
+  .agent/router_rule_config.json 존재?
      │
-     ├─ Trivial (1 file, ≤10 lines changed)
-     │   ▼
-     │  direct ── router handles entirely (no subagents)
+     ├─ YES → config의 rules 기준만 사용하여 mode 판정 (내장 기준 무시)
      │
-     ├─ Simple (2~3 files, or >10 lines, 1~2 steps)
-     │   ▼
-     │  pipeline ── builder → verifier → committer
-     │
-     └─ Complex (4+ files, 3+ steps, dependencies)
-         ▼
-        full ── planner → scheduler → [builder → verifier → committer] × N
+     └─ NO  → 내장 기본값으로 판정 (아래 Routing Criteria 참조)
+                    │
+                    ├─ Trivial (1 file, ≤10 lines changed) → direct
+                    ├─ Simple (2~3 files, or >10 lines, 1~2 steps) → pipeline
+                    └─ Complex (4+ files, 3+ steps, dependencies) → full
 ```
 
 ### Routing Criteria
 
-> **내장 기본값 (config 파일이 없을 때 적용):**
-> 실제 운용 시에는 `.agent/router_rule_config.json`의 `rules` 값이 우선 적용된다.
+> **내장 기본값 — config 파일이 없을 때만 적용:**
 
 | Criterion | direct | pipeline | full |
 |-----------|:---:|:---:|:---:|
