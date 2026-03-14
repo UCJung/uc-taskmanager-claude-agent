@@ -186,90 +186,24 @@ works/
 
 ### PLAN.md Format
 
-```markdown
-# WORK-01: {WORK 제목}
+→ **`agents/file-content-schema.md` § 1** 참조
 
-> Created: {date}
-> 요구사항: {REQ-XXX | N/A}
-> Execution-Mode: full
-> Project: {detected project name}
-> Tech Stack: {detected stack}
-> Language: {resolved language code}
-> Status: PLANNED
-
-## Goal
-{사용자의 요청을 1-2문장으로 요약}
-
-## Task Dependency Graph
-
-{ASCII diagram}
-
-## Tasks
-
-### WORK-01-TASK-00: {title}
-- **Depends on**: (none)
-- **Scope**: {description}
-- **Files**:
-  - `path/to/file` — {description}
-- **Acceptance Criteria**:
-  - [ ] {criterion}
-- **Verify**:
-  ```bash
-  {verification command}
-  ```
-
-### WORK-01-TASK-01: {title}
-- **Depends on**: WORK-01-TASK-00
-...
-```
+핵심 규칙 요약:
+- 제목: `# WORK-NN: {제목}` (PLAN 키워드 금지)
+- 메타정보 7개 필드 필수 (`Created`, `요구사항`, `Execution-Mode`, `Project`, `Tech Stack`, `Language`, `Status`)
+- Tasks 섹션: 요약 + 핵심 정보만 (상세는 개별 TASK-XX.md에)
 
 ### CRITICAL: PLAN.md 메타정보 필드 강제 규칙
 
-**PLAN.md의 `>` 메타정보 블록 7개 필드는 반드시 모두 포함해야 한다. 하나라도 누락되면 scheduler 동작 불가 및 runner WorkDoc 파싱 실패.**
+→ **`agents/file-content-schema.md` § 1** 참조 (전체 포맷 + 7개 필드 상세)
 
-| 필드 | 필수 | 비고 |
-|------|------|------|
-| `> Created:` | ✅ | 생성일 (YYYY-MM-DD) |
-| `> 요구사항:` | ✅ | `REQ-XXX` 또는 `N/A` |
-| `> Execution-Mode:` | ✅ | `direct` / `pipeline` / `full` — router가 파싱 |
-| `> Project:` | ✅ | 프로젝트명 (CLAUDE.md 또는 package.json에서 검출) |
-| `> Tech Stack:` | ✅ | 감지된 기술 스택 |
-| `> Language:` | ✅ | 해결된 언어 코드 (`ko`, `en` 등) |
-| `> Status:` | ✅ | 항상 `PLANNED`로 시작 |
-
-**절대 금지**: 요구사항 문서 내용을 그대로 복사하여 메타정보 블록을 생략하거나 대체하는 행위.
-요구사항 내용이 아무리 복잡해도 메타정보 7개 필드는 PLAN.md 제목 바로 아래에 반드시 위치해야 한다.
+**절대 금지**: 메타정보 7개 필드 누락. 하나라도 없으면 scheduler 동작 불가 및 runner `parsePlanMd()` 실패.
 
 ### Individual TASK File Format
 
-Create `works/WORK-01/TASK-XX.md`:
+→ **`agents/file-content-schema.md` § 2** 참조 (전체 포맷)
 
-```markdown
-# TASK-XX: {title}
-
-## WORK
-WORK-01: {WORK title}
-
-## Dependencies
-- WORK-01-TASK-YY (required)
-
-## Scope
-{detailed description}
-
-## Files
-| Path | Action | Description |
-|------|--------|-------------|
-| `src/auth/auth.module.ts` | CREATE | 인증 모듈 |
-
-## Acceptance Criteria
-- [ ] {criterion 1}
-- [ ] {criterion 2}
-
-## Verify
-```bash
-{commands}
-```
-```
+Create `works/{WORK_ID}/TASK-XX.md` — 파일명은 반드시 `TASK-XX.md` 형식 (WORK prefix 금지).
 
 ## Interaction Protocol
 

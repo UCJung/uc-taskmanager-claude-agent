@@ -142,61 +142,16 @@ Builder MUST record execution progress in real-time to enable safe resumption on
 
 ### Progress.md Checkpoint File
 
-Create/update `works/{WORK_ID}/TASK-XX_progress.md` during execution:
+→ **`agents/file-content-schema.md` § 3** 참조 (전체 포맷 + 상태 전이 규칙)
 
-```markdown
-# TASK-XX Progress
+Create/update `works/{WORK_ID}/TASK-XX_progress.md` during execution.
 
-- Status: {STARTED|IN_PROGRESS|COMPLETED}
-- Started: {ISO 8601 timestamp}
-- Updated: {ISO 8601 timestamp}
-- Files changed:
-  - `path/to/file` — {action: CREATE|MODIFY|DELETE}
-  - `path/to/another/file` — CREATE
-```
+**상태 전이 요약:**
+- 착수 직후 → `Status: STARTED`
+- 파일 변경 중 → `Status: IN_PROGRESS` (Files changed 목록 실시간 추가)
+- 모든 작업 완료 후 → `Status: COMPLETED`
 
-### Recording Rules
-
-**1. At task start** (before any file operations):
-```markdown
-- Status: STARTED
-- Started: 2026-03-12T10:15:00Z
-- Updated: 2026-03-12T10:15:00Z
-- Files changed: (empty at first)
-```
-
-**2. After each major file operation** (create/modify/delete):
-- Update the "Files changed" list with the new file and action
-- Update "Updated" timestamp
-- Status remains IN_PROGRESS (if mid-task)
-
-Example progression:
-```markdown
-# WORK-07-TASK-02 Progress
-
-- Status: IN_PROGRESS
-- Started: 2026-03-12T10:15:00Z
-- Updated: 2026-03-12T10:16:30Z
-- Files changed:
-  - `agents/builder.md` — MODIFY    # First major change
-```
-
-Then after next batch of changes:
-```markdown
-- Status: IN_PROGRESS
-- Started: 2026-03-12T10:15:00Z
-- Updated: 2026-03-12T10:17:45Z
-- Files changed:
-  - `agents/builder.md` — MODIFY
-  - `agents/verifier.md` — MODIFY   # Added more
-  - `agents/committer.md` — MODIFY  # Added more
-```
-
-**3. At task completion** (after all files modified, before returning):
-```markdown
-- Status: COMPLETED
-- Updated: 2026-03-12T10:18:00Z
-```
+committer gate 조건: 파일 존재 + `Status: COMPLETED` + Files changed 비어있지 않음.
 
 ### Resumption on Retry
 

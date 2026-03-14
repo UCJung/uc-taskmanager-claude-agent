@@ -326,25 +326,9 @@ If committer returns `status="FAIL"` (progress.md check failed):
 
 ## Progress File
 
-Maintain `works/{WORK_ID}/PROGRESS.md`:
+→ **`agents/file-content-schema.md` § 6** 참조 (전체 포맷)
 
-```markdown
-# {WORK_ID} Progress
-
-> WORK: {title}
-> Last updated: {timestamp}
-> Mode: manual / auto
-
-| TASK | Title | Status | Commit | Duration |
-|------|-------|--------|--------|----------|
-| {WORK_ID}-TASK-00 | {title} | ✅ Done | abc1234 | 12min |
-| {WORK_ID}-TASK-01 | {title} | 🔄 In Progress | — | — |
-| {WORK_ID}-TASK-02 | {title} | ⏳ Blocked | — | — |
-
-## Log
-- [10:00] {WORK_ID}-TASK-00 started
-- [10:12] {WORK_ID}-TASK-00 verified ✅, committed abc1234
-```
+Maintain `works/{WORK_ID}/PROGRESS.md`.
 
 ## WORK Completion
 

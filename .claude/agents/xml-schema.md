@@ -437,25 +437,7 @@ Context handoff is a structured way to pass task execution context and decision 
 
 **direct 모드 result.md 최소 포맷:**
 
-```markdown
-# TASK-00 Result
-
-> WORK: WORK-NN — {제목}
-> Completed: {YYYY-MM-DD HH:MM}
-> Execution-Mode: direct
-> Status: **DONE**
-> Commit: {hash}
-
-## 요약
-{1줄 변경 요약}
-
-## 변경 파일
-- `{path/to/file}` — {변경 내용}
-
-## 검증
-- Build: PASS (self-check)
-- Lint: PASS (self-check)
-```
+→ **`agents/file-content-schema.md` § 5** 참조
 
 > **설계 근거:** Committer(Haiku) 서브에이전트 세션 초기화만으로 입력 ~12,500 토큰이 소비되는 반면,
 > 1파일 수정의 result.md 출력은 ~120 토큰이다. Router 세션은 이미 열려 있으므로

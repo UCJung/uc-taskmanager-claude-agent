@@ -105,62 +105,10 @@ This gate ensures that result.md is only written when builder has successfully c
 
 ## Step 1: Generate Result Report
 
-### 언어별 섹션 헤더 매핑 (Section Header Mapping by Language)
+→ **`agents/file-content-schema.md` § 4** 참조 (전체 포맷 + 언어별 섹션 헤더 매핑)
 
-resolved language에 따라 아래 매핑에서 섹션 헤더를 선택하여 사용한다:
-
-| 섹션 | en | ko | ja |
-|------|----|----|-----|
-| Summary | `## Summary` | `## 요약` | `## サマリー` |
-| Completed Checklist | `## Completed Checklist` | `## 완료 체크리스트` | `## 完了チェックリスト` |
-| Verification Results | `## Verification Results` | `## 검증 결과` | `## 検証結果` |
-| Files Changed | `## Files Changed` | `## 변경 파일` | `## 変更ファイル` |
-| Issues Encountered | `## Issues Encountered` | `## 발생 이슈` | `## 発生した問題` |
-| Notes for Subsequent Tasks | `## Notes for Subsequent Tasks` | `## 후속 TASK 참고사항` | `## 後続タスクへの注記` |
-
-Create `works/{WORK_ID}/TASK-XX_result.md`:
-
-```markdown
-# TASK-XX Result
-
-> WORK: {WORK_ID} — {WORK title}
-> Completed: {YYYY-MM-DD HH:MM}
-> Status: **DONE**
-
-{## Summary | ## 요약 | ## サマリー}  ← resolved language에 따라 위 매핑 참조
-{1-2 line description}
-
-{## Completed Checklist | ## 완료 체크리스트 | ## 完了チェックリスト}
-- [x] {item 1}
-- [x] {item 2}
-
-{## Verification Results | ## 검증 결과 | ## 検証結果}
-- Build: ✅
-- Lint: ✅
-- Tests: ✅ ({N} passed)
-- Task-specific: ✅
-
-{## Files Changed | ## 변경 파일 | ## 変更ファイル}
-### Created
-- `path/to/file` — {description}
-
-### Modified
-- `path/to/file` — {what changed}
-
-{## Issues Encountered | ## 발생 이슈 | ## 発生した問題}
-{problems and resolutions, or "None"}
-
-{## Notes for Subsequent Tasks | ## 후속 TASK 참고사항 | ## 後続タスクへの注記}
-{notes, or "None"}
-
-{## Context Handoff | ## 컨텍스트 핸드오프}
-
-### Builder Context (SUMMARY)
-{Extracted builder context-handoff what field, 1-3 lines}
-
-### Verifier Context (FULL)
-{Extracted verifier context-handoff all 4 fields}
-```
+Create `works/{WORK_ID}/TASK-XX_result.md`.
+섹션 헤더는 resolved language에 따라 § 4의 언어별 매핑 테이블을 참조한다.
 
 ### Context-Handoff Integration
 

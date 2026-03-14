@@ -113,30 +113,8 @@
 3. Gate 실패 시: FAIL 반환 (scheduler의 재시도 트리거)
 
 **출력:**
-```markdown
-# TASK-XX Result
 
-## Status
-SUCCESS | PARTIAL
-
-## What
-Builder와 Verifier의 context-handoff를 종합하여 무엇이 변경되었는지 기술
-
-## Why
-구현 의사결정 근거
-
-## Caution
-다음 TASK 또는 후속 작업 시 주의할 점
-
-## Incomplete
-미완료 사항
-
-## Files Changed
-- `path/to/file` (created|modified|deleted)
-
-## Commit
-{commit hash}: {message}
-```
+→ **`agents/file-content-schema.md` § 4** 참조 (TASK-XX_result.md 전체 포맷)
 
 ---
 
