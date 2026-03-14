@@ -150,11 +150,11 @@ PLAN.md의 `> 요구사항:` 필드는 **반드시** 채워야 한다:
 - Each TASK: can be **committed independently**
 
 ### Naming
-- `{WORK-ID}-TASK-00`, `{WORK-ID}-TASK-01`, ... `{WORK-ID}-TASK-NN`
+- `TASK-00`, `TASK-01`, ... `TASK-NN` (WORK prefix 금지 — `agents/file-content-schema.md` § 7 참조)
 - Short, descriptive titles
 
 ### Dependencies
-- Express as `depends: [WORK-XX-TASK-YY]`
+- Express as `depends: [TASK-YY]`
 - Dependencies are WITHIN a single WORK (cross-WORK deps are not allowed)
 - Minimize dependencies to maximize parallelizability
 
@@ -184,39 +184,15 @@ works/
 
 **Planner는 TASK 파일을 생성할 때 반드시 동일한 디렉토리에 progress 템플릿 파일도 함께 생성해야 한다.**
 
-각 `TASK-XX.md` 파일과 쌍으로 `TASK-XX_progress.md`를 아래 초기 상태로 생성한다:
-
-```markdown
-# TASK-XX Progress
-
-- Status: PENDING
-- Started: (not started)
-- Updated: (not started)
-- Files changed:
-```
+→ **`agents/file-content-schema.md` § 3** 참조 (초기 상태 포맷)
 
 **이유**: Builder가 progress 파일 생성을 누락하는 사고를 방지한다. 파일이 이미 존재하면 builder는 "생성"이 아닌 "갱신"만 하면 되므로 누락 가능성이 사라진다. Verifier는 `Status: COMPLETED` 여부를 게이트로 검사한다.
 
-### PLAN.md Format
+### PLAN.md / TASK 파일 포맷
 
-→ **`agents/file-content-schema.md` § 1** 참조
-
-핵심 규칙 요약:
-- 제목: `# WORK-NN: {제목}` (PLAN 키워드 금지)
-- 메타정보 7개 필드 필수 (`Created`, `요구사항`, `Execution-Mode`, `Project`, `Tech Stack`, `Language`, `Status`)
-- Tasks 섹션: 요약 + 핵심 정보만 (상세는 개별 TASK-XX.md에)
-
-### CRITICAL: PLAN.md 메타정보 필드 강제 규칙
-
-→ **`agents/file-content-schema.md` § 1** 참조 (전체 포맷 + 7개 필드 상세)
-
-**절대 금지**: 메타정보 7개 필드 누락. 하나라도 없으면 scheduler 동작 불가 및 runner `parsePlanMd()` 실패.
-
-### Individual TASK File Format
-
-→ **`agents/file-content-schema.md` § 2** 참조 (전체 포맷)
-
-Create `works/{WORK_ID}/TASK-XX.md` — 파일명은 반드시 `TASK-XX.md` 형식 (WORK prefix 금지).
+→ **`agents/file-content-schema.md` § 1** (PLAN.md — 7개 필드 필수, PLAN 키워드 금지)
+→ **`agents/file-content-schema.md` § 2** (TASK-XX.md — WORK prefix 금지)
+→ **`agents/file-content-schema.md` § 7** (파일명 규칙 요약)
 
 ## Interaction Protocol
 
@@ -286,57 +262,10 @@ CommentLanguage: en
 - NEVER create cross-WORK dependencies.
 - ALWAYS create the `works/{WORK-ID}/` directory structure.
 
-## CRITICAL: File Naming Rules
+## CRITICAL: 파일 포맷 및 파일명 규칙
 
-**TASK 파일명은 반드시 `TASK-XX.md` 형식이어야 한다. (WORK-ID 프리픽스 제거)**
+→ **`agents/file-content-schema.md`** 전체 참조 (STARTUP 블록에서 이미 읽었음)
 
-| 파일 종류 | 올바른 예 | 잘못된 예 |
-|-----------|-----------|-----------|
-| TASK 계획 | `TASK-01.md` | ❌ `WORK-75-TASK-01.md`, `TASK-01-plan.md` |
-| TASK 결과 (committer 생성) | `TASK-01_result.md` | ❌ `RESULT.md`, `result-01.md` |
-| TASK progress (builder 갱신) | `TASK-01_progress.md` | ❌ `WORK-75-TASK-01-progress.md` |
-
-**이유**: `backfill-work-docs.ts` 스크립트가 파일명 패턴으로 TASK를 인식한다.
-프리픽스를 제거하여 파일명을 단순화하고, WORK 디렉토리 내에 TASK를 그룹화한다.
-
-## CRITICAL: TASK 파일 분리 규칙 (PLAN.md 임베딩 절대 금지)
-
-**PLAN.md 내부에 TASK 상세 내용을 임베딩하는 것은 절대 금지한다.**
-
-### 금지 사항
-- PLAN.md의 `## Tasks` 섹션에 TASK 전체 내용(Files, Acceptance Criteria, Verify 등)을 포함하지 않는다
-- 모든 TASK 상세는 반드시 별도 `TASK-XX.md` 파일에 작성해야 한다
-
-### PLAN.md 제목 포맷 규칙
-
-```
-# WORK-NN: 제목      ← 올바른 형식 (PLAN 키워드 금지)
-```
-
-| 올바른 예 | 잘못된 예 |
-|-----------|-----------|
-| `# WORK-80: REQ-050 구현` | ❌ `# WORK-80 PLAN: REQ-050 구현` |
-| `# WORK-80: REQ-050 구현` | ❌ `# WORK-80 PLAN — REQ-050 구현` |
-
-**이유**: `parsePlanMd()` 함수가 `# WORK-NN: 제목` 패턴을 파싱한다. "PLAN" 키워드가 포함되면 파싱 오류가 발생할 수 있다.
-
-### PLAN.md의 Tasks 섹션 허용 형식
-
-PLAN.md의 `## Tasks` 섹션은 **요약 링크와 핵심 정보만** 포함해야 한다:
-
-```markdown
-## Tasks
-
-### TASK-00: {title}
-- **Depends on**: (none)
-- **Scope**: {1-2줄 요약}
-- **Files**: (주요 파일 목록)
-- **Acceptance Criteria**: (핵심 기준만)
-```
-
-**상세 내용(Verify 명령, 전체 파일 목록 등)은 반드시 개별 TASK 파일에 작성한다.**
-
-### 이유
-- `runner.ts`의 `collectWorkTasks()`가 파일명 패턴(`TASK-XX.md`)으로 TASK 파일을 인식
-- TASK 파일이 없으면 WorkDoc/WorkTask DB 등록 실패
-- scheduler가 TASK 파일을 기반으로 파이프라인 실행 여부를 결정
+- 파일명 규칙: § 7
+- PLAN.md 임베딩 금지 / Tasks 섹션 허용 형식: § 1
+- TASK 파일 분리 이유: `runner.ts collectWorkTasks()`가 `TASK-XX.md` 패턴으로 인식, 파일 없으면 DB 등록 실패
