@@ -4,6 +4,7 @@
 > 요구사항: N/A
 > Project: uc-taskmanager (Universal Claude Task Manager)
 > Tech Stack: Claude Code CLI Subagent System (Markdown-based agent definitions)
+> Execution-Mode: full
 > Language: ko
 > Status: PLANNED
 

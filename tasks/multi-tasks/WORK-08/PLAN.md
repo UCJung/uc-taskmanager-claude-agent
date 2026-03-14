@@ -4,6 +4,7 @@
 > 요구사항: N/A
 > Project: uc-taskmanager (Universal Claude Task Manager)
 > Tech Stack: JavaScript (Node.js)
+> Execution-Mode: full
 > Language: ko
 > Status: PLANNED
 

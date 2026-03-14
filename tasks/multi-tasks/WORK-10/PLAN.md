@@ -4,6 +4,7 @@
 > 요구사항: N/A
 > Project: uc-taskmanager
 > Tech Stack: Claude Code CLI, Markdown agents
+> Execution-Mode: full
 > Language: ko
 > Status: PLANNED
 
