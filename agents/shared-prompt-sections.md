@@ -120,7 +120,7 @@ All file paths follow these conventions:
 
 ### Directory Structure
 ```
-tasks/multi-tasks/{WORK_ID}/
+works/{WORK_ID}/
   ├─ PLAN.md                          # WORK plan with task definitions
   ├─ PROGRESS.md                      # Progress tracking
   ├─ {WORK_ID}-TASK-00.md            # Task 00 specification
@@ -132,13 +132,13 @@ tasks/multi-tasks/{WORK_ID}/
 
 ### File Naming Rules
 - WORK ID format: `WORK-{2-digit number}` (e.g., `WORK-03`)
-- TASK ID format: `{WORK_ID}-TASK-{2-digit number}` (e.g., `WORK-03-TASK-00`)
-- Result file: `{WORK_ID}-TASK-{2-digit number}-result.md`
+- TASK ID format: `TASK-{2-digit number}` (e.g., `TASK-00`)
+- Result file: `TASK-{2-digit number}-result.md`
 
 ### Path Resolution in Agents
 When agents need to reference files:
-- Absolute paths: `/c/rnd/agent/uc-taskmanager/tasks/multi-tasks/{WORK_ID}/{file}`
-- Relative patterns: `tasks/multi-tasks/{WORK_ID}/{file}`
+- Absolute paths: `/c/rnd/agent/uc-taskmanager/works/{WORK_ID}/{file}`
+- Relative patterns: `works/{WORK_ID}/{file}`
 ```
 
 **Cache Control Marker**:
@@ -168,10 +168,10 @@ When agents need to reference files:
 
 ### Find Latest WORK with Remaining Tasks
 ```bash
-for dir in $(ls -d tasks/multi-tasks/WORK-* 2>/dev/null | sort -V -r); do
+for dir in $(ls -d works/WORK-* 2>/dev/null | sort -V -r); do
   WORK_ID=$(basename $dir)
-  TOTAL=$(ls $dir/${WORK_ID}-TASK-*.md 2>/dev/null | grep -v result | wc -l)
-  DONE=$(ls $dir/${WORK_ID}-TASK-*-result.md 2>/dev/null | wc -l)
+  TOTAL=$(ls $dir/$TASK-*.md 2>/dev/null | grep -v result | wc -l)
+  DONE=$(ls $dir/$TASK-*_result.md 2>/dev/null | wc -l)
   if [ "$DONE" -lt "$TOTAL" ]; then
     echo "$WORK_ID"
     break
@@ -181,14 +181,14 @@ done
 
 ### List All WORK Units
 ```bash
-ls -d tasks/multi-tasks/WORK-* 2>/dev/null | sort -V
+ls -d works/WORK-* 2>/dev/null | sort -V
 ```
 
 ### Count TASK Completion Status
 ```bash
 WORK_ID="WORK-03"
-TOTAL=$(ls tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-*.md 2>/dev/null | grep -v result | wc -l)
-DONE=$(ls tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-*-result.md 2>/dev/null | wc -l)
+TOTAL=$(ls works/${WORK_ID}/$TASK-*.md 2>/dev/null | grep -v result | wc -l)
+DONE=$(ls works/${WORK_ID}/$TASK-*_result.md 2>/dev/null | wc -l)
 echo "$DONE / $TOTAL"
 ```
 ```
@@ -236,7 +236,7 @@ All receiver agents (builder, verifier, committer) return results in the followi
 
 ### Example from Builder
 ```xml
-<task-result work="WORK-03" task="WORK-03-TASK-00" agent="builder" status="PASS">
+<task-result work="WORK-03" task="TASK-00" agent="builder" status="PASS">
   <summary>Created shared-prompt-sections.md and xml-schema.md with full documentation</summary>
   <files-changed>
     <file action="created" path="agents/shared-prompt-sections.md">Common reusable sections with cache_control markers</file>
@@ -389,7 +389,7 @@ curl -s -X POST "$TASK_CALLBACK" \
     "taskId": "{TASK_ID}",
     "status": "completed",
     "commitHash": "{git-commit-hash}",
-    "resultFile": "tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md",
+    "resultFile": "works/{WORK_ID}/TASK-XX-result.md",
     "timestamp": "{ISO-8601-timestamp}"
   }' 2>/dev/null || echo "WARNING: TaskCallback request failed, continuing..."
 ```
@@ -446,4 +446,4 @@ curl -s -X POST "$PROGRESS_CALLBACK" \
 - **Created**: 2026-03-10
 - **Purpose**: WORK-03 — Agent간 프롬프트 전달 시 데이터 구조화로 토큰 절감
 - **Referenced by**: scheduler.md, router.md, builder.md, verifier.md, committer.md
-- **Updated**: 2026-03-12 (WORK-09-TASK-00) — Added Section 6: Task Callbacks for external system integration
+- **Updated**: 2026-03-12 (TASK-00) — Added Section 6: Task Callbacks for external system integration

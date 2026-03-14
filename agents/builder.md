@@ -18,10 +18,10 @@ This agent receives dispatch instructions in structured XML format (see `agents/
   <context>
     <project>{project name}</project>
     <language>{lang_code}</language>
-    <plan-file>tasks/multi-tasks/{WORK_ID}/PLAN.md</plan-file>
+    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
   </context>
   <task-spec>
-    <file>tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX.md</file>
+    <file>works/{WORK_ID}/TASK-XX.md</file>
     <title>{task title}</title>
     <action>implement</action>
   </task-spec>
@@ -42,7 +42,7 @@ This agent receives dispatch instructions in structured XML format (see `agents/
 
 ## What You Do
 
-1. Read the TASK specification (`tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX.md`)
+1. Read the TASK specification (`works/{WORK_ID}/TASK-XX.md`)
 2. Read project context (CLAUDE.md, existing code)
 3. Implement all required code changes
 4. Self-check: build + lint must pass before reporting
@@ -56,7 +56,7 @@ This agent receives dispatch instructions in structured XML format (see `agents/
 cat CLAUDE.md 2>/dev/null || cat README.md 2>/dev/null
 
 # 이전 TASK 결과 확인 (컨텍스트용)
-ls tasks/multi-tasks/${WORK_ID}/*-result.md 2>/dev/null
+ls works/${WORK_ID}/*_result.md 2>/dev/null
 ```
 
 ### 2. 코드 탐색 — Serena 우선순위 (반드시 준수)
@@ -142,10 +142,10 @@ Builder MUST record execution progress in real-time to enable safe resumption on
 
 ### Progress.md Checkpoint File
 
-Create/update `tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-progress.md` during execution:
+Create/update `works/{WORK_ID}/TASK-XX_progress.md` during execution:
 
 ```markdown
-# {WORK_ID}-TASK-XX Progress
+# TASK-XX Progress
 
 - Status: {STARTED|IN_PROGRESS|COMPLETED}
 - Started: {ISO 8601 timestamp}
@@ -248,7 +248,7 @@ if [ -n "$PROGRESS_CALLBACK" ] && [ "$PROGRESS_CALLBACK" != "ProgressCallback:" 
 
   # Build checklist from progress.md files changed
   # Example: {"item": "agents/builder.md modified", "done": true}
-  CHECKLIST=$(grep "^  - \`" "tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-progress.md" 2>/dev/null | \
+  CHECKLIST=$(grep "^  - \`" "works/${WORK_ID}/$TASK-XX_progress.md" 2>/dev/null | \
     sed 's/^  - `//; s/` .*//' | \
     sed 's/^/{"item": "/' | sed 's/$/" , "done": true}/' | \
     paste -sd, -)
@@ -260,7 +260,7 @@ if [ -n "$PROGRESS_CALLBACK" ] && [ "$PROGRESS_CALLBACK" != "ProgressCallback:" 
   "taskId": "${TASK_ID}",
   "status": "IN_PROGRESS",
   "checklist": [$CHECKLIST],
-  "currentReasoning": "Current progress: $(grep "^- Updated:" "tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-progress.md" 2>/dev/null | sed 's/^- Updated: //')",
+  "currentReasoning": "Current progress: $(grep "^- Updated:" "works/${WORK_ID}/$TASK-XX_progress.md" 2>/dev/null | sed 's/^- Updated: //')",
   "timestamp": "${TIMESTAMP}"
 }
 EOF
@@ -390,7 +390,7 @@ Return structured XML result format (see `agents/xml-schema.md` Section 2):
 If XML dispatch not available, use this text format:
 
 ```
-## Builder Report: {WORK_ID}-TASK-XX
+## Builder Report: TASK-XX
 
 ### Created Files
 - `path/to/file` — {description}
@@ -421,7 +421,7 @@ See `agents/shared-prompt-sections.md` § 1 for full specification with cache_co
 <!-- CACHE_CONTROL_EPHEMERAL: shared-prompt-sections.md § 1 -->
 
 - **Priority**: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en` (default)
-- Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md` first
+- Read `> Language:` from `works/{WORK_ID}/PLAN.md` first
 - If not found, read `Language:` from CLAUDE.md
 - If neither exists, use `en`
 - Write completion report summaries, descriptions, notes in the resolved language (pass via dispatch `<context><language>`)

@@ -17,7 +17,7 @@ This agent receives dispatch instructions in structured XML format (see `agents/
           execution-mode="{pipeline|full}">
   <context>
     <language>{lang_code}</language>
-    <plan-file>tasks/multi-tasks/{WORK_ID}/PLAN.md</plan-file>
+    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
   </context>
   <task-spec>
     <title>{task title}</title>
@@ -42,8 +42,8 @@ This agent receives dispatch instructions in structured XML format (see `agents/
 ## CRITICAL: Execution Order
 
 ```
-1. Generate result report   → tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md
-2. Update progress file     → tasks/multi-tasks/{WORK_ID}/PROGRESS.md
+1. Generate result report   → works/{WORK_ID}/TASK-XX_result.md
+2. Update progress file     → works/{WORK_ID}/PROGRESS.md
 3. Stage ALL changes        → git add -A  (result file included)
 4. Git commit
 5. Backfill commit hash into result file
@@ -58,7 +58,7 @@ CRITICAL: Before generating any result.md file, committer MUST validate that bui
 
 1. **Check progress.md existence**:
    ```bash
-   PROGRESS_FILE="tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-progress.md"
+   PROGRESS_FILE="works/${WORK_ID}/$TASK-XX_progress.md"
    if [ ! -f "$PROGRESS_FILE" ]; then
      # FAIL: builder did not create progress.md
      return FAIL with reason: "progress.md not found"
@@ -118,10 +118,10 @@ resolved language에 따라 아래 매핑에서 섹션 헤더를 선택하여 �
 | Issues Encountered | `## Issues Encountered` | `## 발생 이슈` | `## 発生した問題` |
 | Notes for Subsequent Tasks | `## Notes for Subsequent Tasks` | `## 후속 TASK 참고사항` | `## 後続タスクへの注記` |
 
-Create `tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md`:
+Create `works/{WORK_ID}/TASK-XX_result.md`:
 
 ```markdown
-# {WORK_ID}-TASK-XX Result
+# TASK-XX Result
 
 > WORK: {WORK_ID} — {WORK title}
 > Completed: {YYYY-MM-DD HH:MM}
@@ -183,7 +183,7 @@ This ensures that result.md reflects both implementation and verification perspe
 
 ## Step 2: Update Progress
 
-Update `tasks/multi-tasks/{WORK_ID}/PROGRESS.md`:
+Update `works/{WORK_ID}/PROGRESS.md`:
 - Current TASK → ✅ Done
 - Add timestamp
 - Check which blocked TASKs are now unblocked
@@ -192,7 +192,7 @@ Update `tasks/multi-tasks/{WORK_ID}/PROGRESS.md`:
 
 ```bash
 # result.md 존재 가드 — 없으면 ABORT (커밋 차단)
-RESULT_FILE="tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md"
+RESULT_FILE="works/${WORK_ID}/$TASK-XX_result.md"
 if [ ! -f "$RESULT_FILE" ]; then
   echo "ABORT: result file not found: $RESULT_FILE"
   echo "Step 1(결과 보고서 생성)을 먼저 완료하세요."
@@ -203,14 +203,14 @@ fi
 git add -A
 
 # Commit
-git commit -m "{type}(${WORK_ID}-TASK-XX): {title}
+git commit -m "{type}($TASK-XX): {title}
 
 - {change 1}
 - {change 2}
 - {change 3}
 
-Result: tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md
-Closes ${WORK_ID}-TASK-XX"
+Result: works/${WORK_ID}/$TASK-XX_result.md
+Closes $TASK-XX"
 ```
 
 Type detection:
@@ -228,8 +228,8 @@ Type detection:
 
 ```bash
 HASH=$(git log --oneline -1 | cut -d' ' -f1)
-sed -i "s/> Status: \*\*DONE\*\*/> Status: **DONE**\n> Commit: ${HASH}/" "tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md"
-git add "tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md"
+sed -i "s/> Status: \*\*DONE\*\*/> Status: **DONE**\n> Commit: ${HASH}/" "works/${WORK_ID}/$TASK-XX_result.md"
+git add "works/${WORK_ID}/$TASK-XX_result.md"
 git commit --amend --no-edit
 ```
 
@@ -276,7 +276,7 @@ if [ -n "$TASK_CALLBACK" ] && [ "$TASK_CALLBACK" != "TaskCallback:" ]; then
   "why": "$WHY",
   "caution": "$CAUTION",
   "incomplete": "$INCOMPLETE",
-  "filesChanged": [$(grep "^- \`" "tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-XX-result.md" 2>/dev/null | sed 's/^- `//; s/` .*//' | sed 's/^/"/; s/$/"/' | paste -sd, -)],
+  "filesChanged": [$(grep "^- \`" "works/${WORK_ID}/$TASK-XX_result.md" 2>/dev/null | sed 's/^- `//; s/` .*//' | sed 's/^/"/; s/$/"/' | paste -sd, -)],
   "commitHash": "${COMMIT_HASH}",
   "timestamp": "${TIMESTAMP}"
 }
@@ -318,7 +318,7 @@ Return structured XML result format (see `agents/xml-schema.md` Section 2):
     <message>{commit message}</message>
     <type>{feat|fix|chore|...}</type>
   </commit>
-  <result-file>tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md</result-file>
+  <result-file>works/{WORK_ID}/TASK-XX_result.md</result-file>
   <progress>
     <done>{N}</done>
     <total>{M}</total>
@@ -332,8 +332,8 @@ Return structured XML result format (see `agents/xml-schema.md` Section 2):
 ### Legacy Format (for reference)
 
 ```
-✅ {WORK_ID}-TASK-XX committed: {hash}
-   {type}({WORK_ID}-TASK-XX): {title}
+✅ TASK-XX committed: {hash}
+   {type}(TASK-XX): {title}
 
 📊 {WORK_ID} 진행률: {done}/{total}
    ████████░░ 80%
@@ -365,7 +365,7 @@ See `agents/shared-prompt-sections.md` § 1 for full specification with cache_co
 <!-- CACHE_CONTROL_EPHEMERAL: shared-prompt-sections.md § 1 -->
 
 - **Priority**: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en` (default)
-- Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md` first
+- Read `> Language:` from `works/{WORK_ID}/PLAN.md` first
 - If not found, read `Language:` from CLAUDE.md
 - If neither exists, use `en`
 - Write result report (summary, checklist, notes) in the resolved language (pass via dispatch `<context><language>`)
@@ -394,7 +394,7 @@ See `agents/context-policy.md` for:
 
 ## Important
 - ALWAYS create result report BEFORE git commit
-- Result file path: `tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md`
+- Result file path: `works/{WORK_ID}/TASK-XX_result.md`
 - NEVER commit without verifying result file exists
 - NEVER amend previous task commits (only current)
 - Result file = completion proof. Scheduler depends on it.

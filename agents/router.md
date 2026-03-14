@@ -109,7 +109,7 @@ Router가 자신의 세션 내에서 다음 단계를 순차 수행한다:
 
 ```
 1.  WORK ID 결정 (§3 파일시스템 스캔 + WORK-LIST 검증)
-2.  mkdir tasks/multi-tasks/WORK-NN/
+2.  mkdir works/WORK-NN/
 3.  PLAN.md 생성 (Execution-Mode: direct)
 4.  WORK-NN-TASK-00.md 생성
 5.  WORK-NN-TASK-00-progress.md 생성 (Status: PENDING)
@@ -214,10 +214,10 @@ Router가 stage 콜백을 대행한다 (BUILDER/VERIFIER/COMMITTER START/DONE).
   <context>
     <project>{detected project name}</project>
     <language>{resolved lang_code}</language>
-    <plan-file>tasks/multi-tasks/{WORK-NN}/PLAN.md</plan-file>
+    <plan-file>works/{WORK-NN}/PLAN.md</plan-file>
   </context>
   <task-spec>
-    <file>tasks/multi-tasks/{WORK-NN}/{WORK-NN}-TASK-00.md</file>
+    <file>works/{WORK-NN}/TASK-00.md</file>
     <title>{task title from user request}</title>
     <action>implement</action>
     <description>{parsed requirement}</description>
@@ -254,7 +254,7 @@ Router dispatches to planner for new WORK creation, or directly to scheduler for
 <dispatch to="scheduler" work="{WORK_ID}" execution-mode="full">
   <context>
     <language>{resolved lang_code}</language>
-    <plan-file>tasks/multi-tasks/{WORK_ID}/PLAN.md</plan-file>
+    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
   </context>
   <cache-hint sections="output-language-rule"/>
 </dispatch>
@@ -272,11 +272,11 @@ Router performs validation before dispatching planner or scheduler.
 
 ```bash
 # Step 1: Scan filesystem for existing WORK directories
-WORK_FS=$(ls -d tasks/multi-tasks/WORK-* 2>/dev/null | grep -oP 'WORK-\K\d+' | sort -n | tail -1)
+WORK_FS=$(ls -d works/WORK-* 2>/dev/null | grep -oP 'WORK-\K\d+' | sort -n | tail -1)
 WORK_FS=${WORK_FS:-0}
 
 # Step 2: Check WORK-LIST.md for max WORK number
-WORK_LIST=$(grep -oP '^WORK-\K\d+' tasks/multi-tasks/WORK-LIST.md 2>/dev/null | sort -n | tail -1)
+WORK_LIST=$(grep -oP '^WORK-\K\d+' works/WORK-LIST.md 2>/dev/null | sort -n | tail -1)
 WORK_LIST=${WORK_LIST:-0}
 
 # Step 3: Use maximum of the two sources + 1
@@ -296,7 +296,7 @@ fi
 
 ### 4.2 Standard WORK Assignment Flow
 
-1. **Read `tasks/multi-tasks/WORK-LIST.md`** — check for IN_PROGRESS WORKs
+1. **Read `works/WORK-LIST.md`** — check for IN_PROGRESS WORKs
 2. Perform WORK ID validation (as per 3.1) to ensure consistency
 3. If IN_PROGRESS exists → ask user:
    > "현재 진행 중인 WORK-XX ({title})가 있습니다. 이 WORK에 추가 TASK로 진행할까요, 아니면 새 WORK를 생성할까요?"
@@ -307,7 +307,7 @@ fi
 
 ## 5. WORK-LIST.md Management
 
-`tasks/multi-tasks/WORK-LIST.md` is the master list of all WORKs.
+`works/WORK-LIST.md` is the master list of all WORKs.
 
 | Status | Meaning |
 |--------|---------|
@@ -337,7 +337,7 @@ See `agents/shared-prompt-sections.md` § 1 for full specification with cache_co
 <!-- CACHE_CONTROL_EPHEMERAL: shared-prompt-sections.md § 1 -->
 
 - **Priority**: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en` (default)
-- Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md` first
+- Read `> Language:` from `works/{WORK_ID}/PLAN.md` first
 - If not found, read `Language:` from CLAUDE.md
 - If neither exists, use `en`
 - Pass the language code to planner/scheduler/builder/verifier/committer in dispatch `<context><language>` field

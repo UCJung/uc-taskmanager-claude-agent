@@ -25,7 +25,7 @@ All agent-to-agent calls use this structure:
   <context>
     <project>{project name}</project>
     <language>{language code, e.g., en, ko}</language>
-    <plan-file>tasks/multi-tasks/{WORK_ID}/PLAN.md</plan-file>
+    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
   </context>
   <task-spec>
     <file>{path to TASK definition file}</file>
@@ -167,7 +167,7 @@ All agents return results in this structure:
 <context>
   <project>{detected project name, e.g., "uc-taskmanager"}</project>
   <language>{language code: en, ko, ja, etc.}</language>
-  <plan-file>tasks/multi-tasks/{WORK_ID}/PLAN.md</plan-file>
+  <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
   <next-work-id>{next WORK ID for routing decisions}</next-work-id>  <!-- optional -->
 </context>
 ```
@@ -181,7 +181,7 @@ All agents return results in this structure:
 
 ```xml
 <task-spec>
-  <file>tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX.md</file>
+  <file>works/{WORK_ID}/TASK-XX.md</file>
   <title>{exact title from PLAN.md or user request}</title>
   <action>{implement|verify|commit|plan}</action>
   <description>{optional longer description of what needs to be done}</description>
@@ -246,7 +246,7 @@ All agents return results in this structure:
 - `modified` — File was edited (existing content changed)
 - `deleted` — File was removed
 
-**Path Format**: Relative paths from project root (e.g., `agents/scheduler.md`, `tasks/multi-tasks/WORK-03/PROGRESS.md`)
+**Path Format**: Relative paths from project root (e.g., `agents/scheduler.md`, `works/WORK-03/PROGRESS.md`)
 
 ### 4.5.1 Context-Handoff Element (within task-result)
 
@@ -347,7 +347,7 @@ Context handoff is a structured way to pass task execution context and decision 
 
 | 불변 항목 | direct 수행 주체 | pipeline/full 수행 주체 |
 |-----------|:---------------:|:----------------------:|
-| `tasks/multi-tasks/WORK-NN/` 디렉토리 | Router | Router / Planner |
+| `works/WORK-NN/` 디렉토리 | Router | Router / Planner |
 | `PLAN.md` (mini 또는 full) | Router | Router / Planner |
 | `WORK-NN-TASK-XX.md` 파일 | Router | Router / Planner |
 | `WORK-NN-TASK-XX-result.md` 생성 | **Router** | **Committer** |
@@ -366,10 +366,10 @@ Context handoff is a structured way to pass task execution context and decision 
   <context>
     <project>uc-taskmanager</project>
     <language>ko</language>
-    <plan-file>tasks/multi-tasks/WORK-03/PLAN.md</plan-file>
+    <plan-file>works/WORK-03/PLAN.md</plan-file>
   </context>
   <task-spec>
-    <file>tasks/multi-tasks/WORK-03/WORK-03-TASK-00.md</file>
+    <file>works/WORK-03/WORK-03-TASK-00.md</file>
     <title>공통 시스템 프롬프트 섹션 식별 및 캐싱 마킹 + XML 스키마 설계</title>
     <action>implement</action>
   </task-spec>
@@ -402,10 +402,10 @@ Context handoff is a structured way to pass task execution context and decision 
 <dispatch to="verifier" work="WORK-03" task="WORK-03-TASK-01">
   <context>
     <language>ko</language>
-    <plan-file>tasks/multi-tasks/WORK-03/PLAN.md</plan-file>
+    <plan-file>works/WORK-03/PLAN.md</plan-file>
   </context>
   <task-spec>
-    <file>tasks/multi-tasks/WORK-03/WORK-03-TASK-01.md</file>
+    <file>works/WORK-03/WORK-03-TASK-01.md</file>
     <title>scheduler.md 구조화 XML 디스패치 포맷 적용</title>
     <action>verify</action>
   </task-spec>
@@ -422,7 +422,7 @@ Context handoff is a structured way to pass task execution context and decision 
 
 ```
 1. WORK ID 결정 (파일시스템 스캔 + WORK-LIST 검증)
-2. mkdir tasks/multi-tasks/WORK-NN/
+2. mkdir works/WORK-NN/
 3. PLAN.md 생성 (Execution-Mode: direct)
 4. WORK-NN-TASK-00.md 생성
 5. WORK-NN-TASK-00-progress.md 생성 (Status: PENDING)
