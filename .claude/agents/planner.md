@@ -166,19 +166,13 @@ Every TASK MUST have:
 
 ## Output Structure
 
-```
-works/
-└── WORK-01/
-    ├── PLAN.md                            ← WORK overview + DAG
-    ├── PROGRESS.md                        ← scheduler가 관리
-    ├── TASK-00.md                         ← 개별 작업 상세
-    ├── TASK-00_progress.md                ← builder가 갱신, planner가 템플릿 생성
-    ├── TASK-01.md
-    ├── TASK-01_progress.md
-    ├── TASK-02.md
-    ├── TASK-02_progress.md
-    └── ...
-```
+→ **`agents/file-content-schema.md` § 7** 참조 (파일명 규칙 + 생성 주체)
+
+생성 책임:
+- `PLAN.md`, `TASK-XX.md`, `TASK-XX_progress.md` (초기 템플릿) → **Planner**
+- `PROGRESS.md` → **Scheduler**
+- `TASK-XX_progress.md` (갱신) → **Builder**
+- `TASK-XX_result.md` → **Committer**
 
 ### Progress Template Pre-creation (CRITICAL)
 
@@ -264,8 +258,6 @@ CommentLanguage: en
 
 ## CRITICAL: 파일 포맷 및 파일명 규칙
 
-→ **`agents/file-content-schema.md`** 전체 참조 (STARTUP 블록에서 이미 읽었음)
+→ **`agents/file-content-schema.md`** COMPLIANCE 섹션 참조 (STARTUP에서 읽은 내용 준수)
 
-- 파일명 규칙: § 7
-- PLAN.md 임베딩 금지 / Tasks 섹션 허용 형식: § 1
-- TASK 파일 분리 이유: `runner.ts collectWorkTasks()`가 `TASK-XX.md` 패턴으로 인식, 파일 없으면 DB 등록 실패
+특히: `runner.ts collectWorkTasks()`가 `TASK-XX.md` 패턴으로 파일을 인식하므로 파일명 오류 시 DB 등록 실패.
