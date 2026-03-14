@@ -50,11 +50,11 @@ The planner analyzes the project and creates WORK-01:
 ```
 WORK-01: User Authentication
 
-  WORK-01-TASK-00: Project initialization        ← no dependencies
-  WORK-01-TASK-01: DB schema design              ← TASK-00
-  WORK-01-TASK-02: JWT auth API                  ← TASK-01
-  WORK-01-TASK-03: User CRUD                     ← TASK-02
-  WORK-01-TASK-04: Tests + documentation         ← TASK-03
+  WORK-01: TASK-00: Project initialization        ← no dependencies
+  WORK-01: TASK-01: DB schema design              ← TASK-00
+  WORK-01: TASK-02: JWT auth API                  ← TASK-01
+  WORK-01: TASK-03: User CRUD                     ← TASK-02
+  WORK-01: TASK-04: Tests + documentation         ← TASK-03
 
   Do you approve this plan?
 ```
@@ -97,7 +97,7 @@ WORK Status
 Skip to a specific TASK within a WORK (e.g., retry after a failure):
 
 ```
-> Run WORK-02-TASK-02
+> Run WORK-02: TASK-02
 ```
 
 The scheduler reads the TASK file directly and dispatches builder → verifier → committer.
@@ -116,13 +116,13 @@ If a TASK fails during the pipeline, the scheduler retries up to 3 times automat
 If it still fails, you can inspect the result file and retry manually:
 
 ```
-> WORK-02-TASK-01 failed. Retry it.
+> WORK-02: TASK-01 failed. Retry it.
 ```
 
 Or fix the issue and re-run:
 
 ```
-> Fix the issue in src/auth.ts, then retry WORK-02-TASK-01
+> Fix the issue in src/auth.ts, then retry WORK-02: TASK-01
 ```
 
 #### 9. Add a TASK to an In-Progress WORK
@@ -138,7 +138,7 @@ If WORK-02 is `IN_PROGRESS`, the router asks:
 
 ```
 > Show WORK-02 progress
-> What's the status of WORK-03-TASK-02?
+> What's the status of WORK-03: TASK-02?
 ```
 
 The scheduler reads `PROGRESS.md` and `result.md` files to report current state.
@@ -221,7 +221,7 @@ User Request
                  (full planning + multi-task pipeline)
 ```
 
-All three modes output to `tasks/multi-tasks/WORK-NN/` and guarantee `result.md` + `COMMITTER DONE` callback.
+All three modes output to `works/WORK-NN/` and guarantee `result.md` + `COMMITTER DONE` callback.
 
 ### WORK (Multi-Task, full mode)
 
@@ -310,10 +310,10 @@ tasks/
 │   ├── WORK-01/                          ← "User Authentication"
 │   │   ├── PLAN.md                       ← Plan + dependency graph
 │   │   ├── PROGRESS.md                   ← Progress tracking (auto-updated)
-│   │   ├── WORK-01-TASK-00.md            ← Task specification
-│   │   ├── WORK-01-TASK-00-progress.md   ← Real-time checkpoint (builder writes)
-│   │   ├── WORK-01-TASK-00-result.md     ← Completion report (committer writes)
-│   │   ├── WORK-01-TASK-01.md
+│   │   ├── WORK-01: TASK-00.md            ← Task specification
+│   │   ├── WORK-01: TASK-00-progress.md   ← Real-time checkpoint (builder writes)
+│   │   ├── WORK-01: TASK-00-result.md     ← Completion report (committer writes)
+│   │   ├── WORK-01: TASK-01.md
 │   │   └── ...
 │   └── WORK-02/
 │       └── ...
@@ -321,7 +321,7 @@ tasks/
 
 ### WORK-LIST.md
 
-The router maintains `tasks/multi-tasks/WORK-LIST.md` as the master index:
+The router maintains `works/WORK-LIST.md` as the master index:
 
 | WORK ID | Title | Status | Created |
 |---------|-------|--------|---------|
@@ -341,10 +341,10 @@ The router maintains `tasks/multi-tasks/WORK-LIST.md` as the master index:
 When you ask Claude to push (`"push this"`, `"git push"`), Claude handles the full sequence automatically:
 
 ```
-1. Open tasks/multi-tasks/WORK-LIST.md
+1. Open works/WORK-LIST.md
 2. Find all IN_PROGRESS WORKs
 3. Change status → COMPLETED, update date
-4. git add tasks/multi-tasks/WORK-LIST.md
+4. git add works/WORK-LIST.md
 5. git commit -m "chore: update WORK-LIST — WORK-XX COMPLETED"
 6. git push
 ```
@@ -400,22 +400,22 @@ Claude: [planner]
 
   WORK-03: Comment Feature
 
-  WORK-03-TASK-00: Comment model + migration          ← no dependencies
-  WORK-03-TASK-01: Comment CRUD API                   ← TASK-00
-  WORK-03-TASK-02: Nested comments (self-relation)    ← TASK-01
-  WORK-03-TASK-03: Frontend comment component         ← TASK-00 (parallelizable)
-  WORK-03-TASK-04: Integration + notifications        ← TASK-02, TASK-03
+  WORK-03: TASK-00: Comment model + migration          ← no dependencies
+  WORK-03: TASK-01: Comment CRUD API                   ← TASK-00
+  WORK-03: TASK-02: Nested comments (self-relation)    ← TASK-01
+  WORK-03: TASK-03: Frontend comment component         ← TASK-00 (parallelizable)
+  WORK-03: TASK-04: Integration + notifications        ← TASK-02, TASK-03
 
   Do you approve?
 
 User: Approve. Run automatically.
 
 Claude: [scheduler → auto mode]
-  WORK-03-TASK-00 → builder → verifier ✅ → committer [a1b2c3d]
-  WORK-03-TASK-01 → builder → verifier ✅ → committer [d4e5f6g]
-  WORK-03-TASK-02 → builder → verifier ✅ → committer [h7i8j9k]
-  WORK-03-TASK-03 → builder → verifier ✅ → committer [l0m1n2o]
-  WORK-03-TASK-04 → builder → verifier ✅ → committer [p3q4r5s]
+  WORK-03: TASK-00 → builder → verifier ✅ → committer [a1b2c3d]
+  WORK-03: TASK-01 → builder → verifier ✅ → committer [d4e5f6g]
+  WORK-03: TASK-02 → builder → verifier ✅ → committer [h7i8j9k]
+  WORK-03: TASK-03 → builder → verifier ✅ → committer [l0m1n2o]
+  WORK-03: TASK-04 → builder → verifier ✅ → committer [p3q4r5s]
 
   🎉 WORK-03 completed! 5 tasks, 5 commits
 ```
@@ -428,14 +428,14 @@ Claude: [scheduler → auto mode]
 
 WORK IDs are assigned based on a **filesystem-first approach**:
 
-1. **Filesystem Source**: The planner scans `tasks/multi-tasks/` directory to find existing WORK directories and determines the next WORK ID based on the latest directory found.
+1. **Filesystem Source**: The planner scans `works/` directory to find existing WORK directories and determines the next WORK ID based on the latest directory found.
 2. **MEMORY.md NOT used**: Project memory (MEMORY.md) is never referenced for WORK numbering. Only the filesystem is the authoritative source.
 3. **Consistency Check**: The router validates WORK ID consistency by checking both the filesystem and WORK-LIST.md before dispatching to the planner.
 
 This ensures:
 - No duplicate WORK IDs even if MEMORY.md is stale or corrupted
 - Reliable resumption across sessions
-- Clear traceability: WORK-NN directly corresponds to `tasks/multi-tasks/WORK-NN/`
+- Clear traceability: WORK-NN directly corresponds to `works/WORK-NN/`
 
 ### Context Isolation
 
@@ -445,11 +445,11 @@ Each subagent runs in an independent context. Even if the builder creates 50 fil
 scheduler's context after 5 TASKs:
 
   PLAN.md (loaded once)                              ~500 tokens
-  WORK-01-TASK-00 result: "20 files, PASS"           ~200 tokens
-  WORK-01-TASK-01 result: "15 files, PASS"           ~200 tokens
-  WORK-01-TASK-02 result: "8 files, PASS"            ~200 tokens
-  WORK-01-TASK-03 result: "12 files, PASS"           ~200 tokens
-  WORK-01-TASK-04 result: "5 files, PASS"            ~200 tokens
+  WORK-01: TASK-00 result: "20 files, PASS"           ~200 tokens
+  WORK-01: TASK-01 result: "15 files, PASS"           ~200 tokens
+  WORK-01: TASK-02 result: "8 files, PASS"            ~200 tokens
+  WORK-01: TASK-03 result: "12 files, PASS"           ~200 tokens
+  WORK-01: TASK-04 result: "5 files, PASS"            ~200 tokens
   ────────────────────────────────────────
   Total: ~1,500 tokens (stays flat)
 ```
@@ -568,7 +568,7 @@ The router matches effort to complexity via `execution-mode`:
 - **pipeline**: Moderate fix — delegated to builder → verifier → committer, router context stays clean
 - **full**: Complex features — full planning, decomposition, and tracking
 
-All three modes output to `tasks/multi-tasks/WORK-NN/` with identical artifact structure (PLAN.md + result.md + COMMITTER DONE callback), ensuring Runner integration works regardless of mode.
+All three modes output to `works/WORK-NN/` with identical artifact structure (PLAN.md + result.md + COMMITTER DONE callback), ensuring Runner integration works regardless of mode.
 
 ### Structured Agent Communication
 
@@ -576,13 +576,13 @@ Instead of ambiguous natural language prompts, agents communicate using structur
 
 **Dispatch Format** (Caller → Receiver):
 ```xml
-<dispatch to="builder" work="WORK-03" task="WORK-03-TASK-00">
+<dispatch to="builder" work="WORK-03" task="WORK-03: TASK-00">
   <context>
     <project>uc-taskmanager</project>
     <language>ko</language>
   </context>
   <task-spec>
-    <file>tasks/multi-tasks/WORK-03/WORK-03-TASK-00.md</file>
+    <file>works/WORK-03/WORK-03: TASK-00.md</file>
     <title>공통 시스템 프롬프트 섹션 식별 및 XML 스키마 설계</title>
     <action>implement</action>
   </task-spec>
@@ -592,7 +592,7 @@ Instead of ambiguous natural language prompts, agents communicate using structur
 
 **Result Format** (Receiver → Caller):
 ```xml
-<task-result work="WORK-03" task="WORK-03-TASK-00" agent="builder" status="PASS">
+<task-result work="WORK-03" task="WORK-03: TASK-00" agent="builder" status="PASS">
   <summary>Created shared-prompt-sections.md and xml-schema.md</summary>
   <files-changed>
     <file action="created" path="agents/shared-prompt-sections.md">Common sections with cache_control</file>

@@ -50,11 +50,11 @@ planner가 프로젝트를 분석하고 WORK-01을 생성합니다:
 ```
 WORK-01: 사용자 인증 기능
 
-  WORK-01-TASK-00: 프로젝트 초기화           ← 선행 없음
-  WORK-01-TASK-01: DB 스키마 설계            ← TASK-00
-  WORK-01-TASK-02: JWT 인증 API             ← TASK-01
-  WORK-01-TASK-03: 사용자 CRUD              ← TASK-02
-  WORK-01-TASK-04: 테스트 + 문서화           ← TASK-03
+  WORK-01: TASK-00 프로젝트 초기화           ← 선행 없음
+  WORK-01: TASK-01 DB 스키마 설계            ← TASK-00
+  WORK-01: TASK-02 JWT 인증 API             ← TASK-01
+  WORK-01: TASK-03 사용자 CRUD              ← TASK-02
+  WORK-01: TASK-04 테스트 + 문서화           ← TASK-03
 
   이 계획을 승인하시겠습니까?
 ```
@@ -221,7 +221,7 @@ claude
                  (전체 계획 + 다중 작업 파이프라인)
 ```
 
-3가지 모드 모두 `tasks/multi-tasks/WORK-NN/`에 동일한 산출물 구조(PLAN.md + result.md + COMMITTER DONE 콜백)를 생성합니다.
+3가지 모드 모두 `works/WORK-NN/`에 동일한 산출물 구조(PLAN.md + result.md + COMMITTER DONE 콜백)를 생성합니다.
 
 ### WORK (다중 작업, full 모드)
 
@@ -310,9 +310,9 @@ tasks/
 │   ├── WORK-01/                        ← "사용자 인증 기능"
 │   │   ├── PLAN.md                     ← 계획 + 의존성 그래프
 │   │   ├── PROGRESS.md                 ← 진행 상황 (자동 업데이트)
-│   │   ├── WORK-01-TASK-00.md          ← 작업 명세
-│   │   ├── WORK-01-TASK-00-result.md   ← 완료 보고서 (= 완료 증거)
-│   │   ├── WORK-01-TASK-01.md
+│   │   ├── WORK-01: TASK-00.md          ← 작업 명세
+│   │   ├── WORK-01: TASK-00-result.md   ← 완료 보고서 (= 완료 증거)
+│   │   ├── WORK-01: TASK-01.md
 │   │   └── ...
 │   └── WORK-02/
 │       └── ...                        ← direct/pipeline/full 모두 여기에 출력
@@ -320,7 +320,7 @@ tasks/
 
 ### WORK-LIST.md
 
-router가 `tasks/multi-tasks/WORK-LIST.md`를 마스터 인덱스로 관리합니다:
+router가 `works/WORK-LIST.md`를 마스터 인덱스로 관리합니다:
 
 | WORK ID | Title | Status | Created |
 |---------|-------|--------|---------|
@@ -340,10 +340,10 @@ router가 `tasks/multi-tasks/WORK-LIST.md`를 마스터 인덱스로 관리합�
 Claude에게 push를 요청하면 (`"push 해줘"`, `"git push"`), Claude가 아래 순서를 자동으로 처리합니다:
 
 ```
-1. tasks/multi-tasks/WORK-LIST.md 열기
+1. works/WORK-LIST.md 열기
 2. IN_PROGRESS 상태인 WORK 전체 확인
 3. 해당 WORK 상태 → COMPLETED, 날짜 업데이트
-4. git add tasks/multi-tasks/WORK-LIST.md
+4. git add works/WORK-LIST.md
 5. git commit -m "chore: WORK-LIST 갱신 — WORK-XX COMPLETED"
 6. git push
 ```
@@ -399,11 +399,11 @@ Claude: [planner]
 
   WORK-03: 댓글 기능
 
-  WORK-03-TASK-00: Comment 모델 + 마이그레이션        ← 선행 없음
-  WORK-03-TASK-01: 댓글 CRUD API                     ← TASK-00
-  WORK-03-TASK-02: 대댓글 (self-relation)             ← TASK-01
-  WORK-03-TASK-03: 프론트엔드 댓글 컴포넌트            ← TASK-00 (병렬 가능)
-  WORK-03-TASK-04: 통합 + 알림                        ← TASK-02, TASK-03
+  WORK-03: TASK-00 Comment 모델 + 마이그레이션        ← 선행 없음
+  WORK-03: TASK-01 댓글 CRUD API                     ← TASK-00
+  WORK-03: TASK-02 대댓글 (self-relation)             ← TASK-01
+  WORK-03: TASK-03 프론트엔드 댓글 컴포넌트            ← TASK-00 (병렬 가능)
+  WORK-03: TASK-04 통합 + 알림                        ← TASK-02, TASK-03
 
   승인하시겠습니까?
 
@@ -427,14 +427,14 @@ Claude: [scheduler → 자동 모드]
 
 WORK ID는 **파일시스템 우선 원칙**을 따릅니다:
 
-1. **파일시스템 소스**: planner가 `tasks/multi-tasks/` 디렉토리를 스캔하여 기존 WORK 디렉토리를 찾고, 가장 최신 디렉토리를 기반으로 다음 WORK ID를 결정합니다.
+1. **파일시스템 소스**: planner가 `works/` 디렉토리를 스캔하여 기존 WORK 디렉토리를 찾고, 가장 최신 디렉토리를 기반으로 다음 WORK ID를 결정합니다.
 2. **MEMORY.md 미참조**: 프로젝트 메모리(MEMORY.md)는 WORK 번호 결정에 절대 참조되지 않습니다. 오직 파일시스템만이 유일한 정보원입니다.
 3. **일관성 검증**: router는 planner 전에 파일시스템과 WORK-LIST.md를 모두 확인하여 WORK ID 일관성을 검증합니다.
 
 이를 통해:
 - MEMORY.md가 오래되거나 손상되어도 WORK ID 중복 할당 방지
 - 세션 간 신뢰성 있는 재개 보장
-- 명확한 추적성: WORK-NN은 직접 `tasks/multi-tasks/WORK-NN/` 폴더에 대응
+- 명확한 추적성: WORK-NN은 직접 `works/WORK-NN/` 폴더에 대응
 
 ### 컨텍스트 격리
 
@@ -444,11 +444,11 @@ WORK ID는 **파일시스템 우선 원칙**을 따릅니다:
 scheduler's context after 5 TASKs:
 
   PLAN.md (loaded once)                              ~500 tokens
-  WORK-01-TASK-00 result: "20 files, PASS"           ~200 tokens
-  WORK-01-TASK-01 result: "15 files, PASS"           ~200 tokens
-  WORK-01-TASK-02 result: "8 files, PASS"            ~200 tokens
-  WORK-01-TASK-03 result: "12 files, PASS"           ~200 tokens
-  WORK-01-TASK-04 result: "5 files, PASS"            ~200 tokens
+  WORK-01: TASK-00 result: "20 files, PASS"           ~200 tokens
+  WORK-01: TASK-01 result: "15 files, PASS"           ~200 tokens
+  WORK-01: TASK-02 result: "8 files, PASS"            ~200 tokens
+  WORK-01: TASK-03 result: "12 files, PASS"           ~200 tokens
+  WORK-01: TASK-04 result: "5 files, PASS"            ~200 tokens
   ────────────────────────────────────────
   Total: ~1,500 tokens (stays flat)
 ```
@@ -581,7 +581,7 @@ router가 복잡도에 맞는 `execution-mode`를 선택합니다:
     <language>ko</language>
   </context>
   <task-spec>
-    <file>tasks/multi-tasks/WORK-03/WORK-03-TASK-00.md</file>
+    <file>works/WORK-03/TASK-00.md</file>
     <title>공통 시스템 프롬프트 섹션 식별 및 XML 스키마 설계</title>
     <action>implement</action>
   </task-spec>

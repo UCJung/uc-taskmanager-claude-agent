@@ -101,12 +101,12 @@ Router → Planner → Scheduler → [Builder → Verifier → Committer] × N
 모든 execution-mode에서 동일한 파일 구조를 사용한다 (불변 보장).
 
 ```
-tasks/multi-tasks/
+works/
   WORK-LIST.md                  # 전체 WORK 목록
   WORK-NN/
     PLAN.md                     # WORK 개요 + DAG (mini 또는 full)
     PROGRESS.md                 # scheduler 진행 상태 (full 모드만)
-    WORK-NN-TASK-XX.md          # TASK 명세
+    TASK-XX.md          # TASK 명세
     WORK-NN-TASK-XX-progress.md # 실시간 체크포인트 (builder/router 작성)
     WORK-NN-TASK-XX-result.md   # 완료 보고서 (committer/router 작성)
 ```
@@ -117,9 +117,9 @@ tasks/multi-tasks/
 
 | 불변 항목 | direct 수행 주체 | pipeline/full 수행 주체 |
 |-----------|:---------------:|:----------------------:|
-| `tasks/multi-tasks/WORK-NN/` 디렉토리 | Router | Router / Planner |
+| `works/WORK-NN/` 디렉토리 | Router | Router / Planner |
 | `PLAN.md` (mini 또는 full) | Router | Router / Planner |
-| `WORK-NN-TASK-XX.md` 파일 | Router | Router / Planner |
+| `TASK-XX.md` 파일 | Router | Router / Planner |
 | `WORK-NN-TASK-XX-result.md` 생성 | **Router** | **Committer** |
 | COMMITTER DONE 콜백 전송 | **Router** | **Committer** |
 | `WORK-LIST.md` IN_PROGRESS 추가 | Router | Router |
@@ -163,10 +163,10 @@ dispatcher (Router 또는 Scheduler)
   <context>
     <project>uc-taskmanager</project>
     <language>ko</language>
-    <plan-file>tasks/multi-tasks/WORK-NN/PLAN.md</plan-file>
+    <plan-file>works/WORK-NN/PLAN.md</plan-file>
   </context>
   <task-spec>
-    <file>tasks/multi-tasks/WORK-NN/WORK-NN-TASK-XX.md</file>
+    <file>works/WORK-NN/TASK-XX.md</file>
     <title>TASK 제목</title>
     <action>implement</action>
   </task-spec>
