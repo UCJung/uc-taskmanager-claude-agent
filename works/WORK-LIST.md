@@ -14,4 +14,4 @@
 | WORK-10 | SDD v1.3 execution-mode 3종 체계 적용 (S-TASK 폐지, MCP 확장) | COMPLETED | 2026-03-14 | 2026-03-14 |
 | WORK-11 | Router execution-mode 판정 기준 외부 config 파일 분리 | COMPLETED | 2026-03-14 | 2026-03-14 |
 | WORK-12 | README.md / README_KO.md 개선 — 사용법 섹션 재배치 + router_rule_config.json 설명 추가 | COMPLETED | 2026-03-14 | 2026-03-14 |
-| WORK-13 | 파일경로 현행화 — tasks/multi-tasks/ → works/, TASK 파일명 중복 프리픽스 제거 | IN_PROGRESS | 2026-03-14 | — |
+| WORK-13 | 파일경로 현행화 — tasks/multi-tasks/ → works/, TASK 파일명 중복 프리픽스 제거 | COMPLETED | 2026-03-14 | 2026-03-14 |
