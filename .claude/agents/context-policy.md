@@ -54,12 +54,12 @@
 ### Builder (TASK 구현)
 
 **입력:**
-- TASK spec (`{WORK_ID}-TASK-XX.md`)
+- TASK spec (`TASK-XX.md`)
 - 의존 TASK의 result.md에서 context-handoff 섹션 추출 (슬라이딩 윈도우 적용)
 
 **처리:**
 - TASK 명세에 따라 파일 생성/수정
-- 중간 진행상태를 `{WORK_ID}-TASK-XX-progress.md`에 실시간 기록
+- 중간 진행상태를 `TASK-XX_progress.md`에 실시간 기록
 
 **출력:**
 ```xml
@@ -76,7 +76,7 @@
 ### Verifier (구현 검증)
 
 **입력:**
-- TASK spec (`{WORK_ID}-TASK-XX.md`)
+- TASK spec (`TASK-XX.md`)
 - Builder의 context-handoff (FULL)
 - Builder의 context-handoff를 바탕으로 TASK spec과 대조
 
@@ -102,7 +102,7 @@
 **입력:**
 - Verifier의 context-handoff (FULL)
 - Builder의 context-handoff (SUMMARY로 변환)
-- `{WORK_ID}-TASK-XX-progress.md` (gate 역할: 존재/COMPLETED 확인)
+- `TASK-XX_progress.md` (gate 역할: 존재/COMPLETED 확인)
 
 **처리:**
 1. Gate 역할: progress.md 확인
@@ -114,7 +114,7 @@
 
 **출력:**
 ```markdown
-# {WORK_ID}-TASK-XX Result
+# TASK-XX Result
 
 ## Status
 SUCCESS | PARTIAL
@@ -193,12 +193,12 @@ Builder → Verifier → Committer 3단계 내에서:
 Scheduler가 다음 TASK의 builder에 의존 정보를 전달할 때:
 
 ```xml
-<dispatch to="builder" work="{WORK_ID}" task="{NEXT_TASK_ID}">
+<dispatch to="builder" work="{WORK_ID}" task="TASK-YY">
   <!-- TASK-02 result.md context-handoff: FULL (직전) -->
-  <context-handoff from="prev-task" task="WORK-07-TASK-02" detail-level="FULL">...</context-handoff>
+  <context-handoff from="prev-task" task="TASK-02" detail-level="FULL">...</context-handoff>
 
   <!-- TASK-01 result.md context-handoff: SUMMARY (2단계 전) -->
-  <context-handoff from="prev-prev-task" task="WORK-07-TASK-01" detail-level="SUMMARY">...</context-handoff>
+  <context-handoff from="prev-prev-task" task="TASK-01" detail-level="SUMMARY">...</context-handoff>
 
   <!-- TASK-00: DROP (3단계 이상) -->
 </dispatch>

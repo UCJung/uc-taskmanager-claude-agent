@@ -193,12 +193,12 @@ Builder → Verifier → Committer 3단계 내에서:
 Scheduler가 다음 TASK의 builder에 의존 정보를 전달할 때:
 
 ```xml
-<dispatch to="builder" work="{WORK_ID}" task="{NEXT_TASK_ID}">
+<dispatch to="builder" work="{WORK_ID}" task="TASK-YY">
   <!-- TASK-02 result.md context-handoff: FULL (직전) -->
-  <context-handoff from="prev-task" task="WORK-07-TASK-02" detail-level="FULL">...</context-handoff>
+  <context-handoff from="prev-task" task="TASK-02" detail-level="FULL">...</context-handoff>
 
   <!-- TASK-01 result.md context-handoff: SUMMARY (2단계 전) -->
-  <context-handoff from="prev-prev-task" task="WORK-07-TASK-01" detail-level="SUMMARY">...</context-handoff>
+  <context-handoff from="prev-prev-task" task="TASK-01" detail-level="SUMMARY">...</context-handoff>
 
   <!-- TASK-00: DROP (3단계 이상) -->
 </dispatch>

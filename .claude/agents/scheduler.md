@@ -11,10 +11,10 @@ You execute the pipeline for a specific WORK unit.
 ## What You Do
 
 1. Identify the target WORK (from user request or latest WORK)
-2. Load `tasks/multi-tasks/{WORK-ID}/PLAN.md` for the DAG
+2. Load `works/{WORK-ID}/PLAN.md` for the DAG
 3. Determine which TASKs are **READY**
 4. For each: dispatch **builder** → **verifier** → **committer**
-5. Track progress in `tasks/multi-tasks/{WORK-ID}/PROGRESS.md`
+5. Track progress in `works/{WORK-ID}/PROGRESS.md`
 6. Repeat until all TASKs in this WORK are done
 
 ## WORK Identification
@@ -29,12 +29,12 @@ Parse the user's request to find the WORK ID:
 WORK_ID="WORK-XX"  # from user request, or:
 
 # Auto-detect: find latest WORK with remaining tasks
-for dir in $(ls -d tasks/multi-tasks/WORK-* 2>/dev/null | sort -V -r); do
+for dir in $(ls -d works/WORK-* 2>/dev/null | sort -V -r); do
   WORK_ID=$(basename $dir)
   PLAN="$dir/PLAN.md"
   # Check if any tasks lack result files
   TOTAL=$(ls $dir/${WORK_ID}-TASK-*.md 2>/dev/null | grep -v result | wc -l)
-  DONE=$(ls $dir/${WORK_ID}-TASK-*-result.md 2>/dev/null | wc -l)
+  DONE=$(ls $dir/TASK-*_result.md 2>/dev/null | wc -l)
   if [ "$DONE" -lt "$TOTAL" ]; then
     echo "Active WORK: $WORK_ID ($DONE/$TOTAL done)"
     break
@@ -46,20 +46,20 @@ done
 
 ```bash
 # 1. Load the WORK plan
-cat tasks/multi-tasks/${WORK_ID}/PLAN.md
+cat works/${WORK_ID}/PLAN.md
 
 # 2. Check completed tasks
-ls tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-*-result.md 2>/dev/null
+ls works/${WORK_ID}/TASK-*_result.md 2>/dev/null
 
 # 3. Load progress
-cat tasks/multi-tasks/${WORK_ID}/PROGRESS.md 2>/dev/null
+cat works/${WORK_ID}/PROGRESS.md 2>/dev/null
 ```
 
 ## DAG Resolution
 
 ```
 For each TASK in this WORK's plan:
-  if result file exists (tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md):
+  if result file exists (works/{WORK_ID}/TASK-XX_result.md):
     status = DONE
   else if ALL dependencies are DONE:
     status = READY
@@ -96,38 +96,47 @@ Before and after each phase, call the callback API to report stage transitions.
 curl -s -X POST "$CALLBACK_URL" \
   -H "Authorization: Bearer $CALLBACK_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"stage": "BUILDER", "event": "START"}'
+  -d "{\"stage\": \"BUILDER\", \"event\": \"START\", \"workId\": \"${WORK_ID}\", \"taskId\": \"${TASK_ID}\"}"
 
 # Stage DONE example (run after sub-agent returns)
 curl -s -X POST "$CALLBACK_URL" \
   -H "Authorization: Bearer $CALLBACK_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"stage": "BUILDER", "event": "DONE"}'
+  -d "{\"stage\": \"BUILDER\", \"event\": \"DONE\", \"workId\": \"${WORK_ID}\", \"taskId\": \"${TASK_ID}\"}"
 ```
 
 **Required callbacks per task cycle:**
-- Before builder dispatch: `{"stage": "BUILDER", "event": "START"}`
-- After builder returns: `{"stage": "BUILDER", "event": "DONE"}`
-- Before verifier dispatch: `{"stage": "VERIFIER", "event": "START"}`
-- After verifier returns: `{"stage": "VERIFIER", "event": "DONE"}`
-- Before committer dispatch: `{"stage": "COMMITTER", "event": "START"}`
-- After committer returns: `{"stage": "COMMITTER", "event": "DONE"}`
+- Before builder dispatch: `{"stage": "BUILDER", "event": "START", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
+- After builder returns: `{"stage": "BUILDER", "event": "DONE", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
+- Before verifier dispatch: `{"stage": "VERIFIER", "event": "START", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
+- After verifier returns: `{"stage": "VERIFIER", "event": "DONE", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
+- Before committer dispatch: `{"stage": "COMMITTER", "event": "START", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
+- After committer returns: `{"stage": "COMMITTER", "event": "DONE", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
 
-On failure: `{"stage": "{STAGE}", "event": "FAILED"}`
+On failure: `{"stage": "{STAGE}", "event": "FAILED", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
+
+### Dispatch `task` Attribute Format
+
+**CRITICAL**: The `task` attribute in ALL `<dispatch>` elements must be `TASK-XX` format only.
+- ✅ Correct: `task="TASK-00"`, `task="TASK-01"`
+- ❌ Wrong: `task="WORK-120-TASK-00"` (WORK prefix 포함 금지)
+
+`work` attribute에 이미 `{WORK_ID}`가 있으므로 `task`에는 TASK 번호만 넣는다.
+Callback payload의 `taskId` 필드가 `WORK-XX-TASK-YY`로 오염되는 원인이 됨.
 
 ### Phase 2: Build
 Delegate to **builder** using structured XML dispatch format (see `agents/xml-schema.md`):
 
 ```xml
-<dispatch to="builder" work="{WORK_ID}" task="{TASK_ID}"
+<dispatch to="builder" work="{WORK_ID}" task="TASK-XX"
           execution-mode="full">
   <context>
     <project>{detected project name}</project>
     <language>{resolved lang_code}</language>
-    <plan-file>tasks/multi-tasks/{WORK_ID}/PLAN.md</plan-file>
+    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
   </context>
   <task-spec>
-    <file>tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX.md</file>
+    <file>works/{WORK_ID}/TASK-XX.md</file>
     <title>{task title}</title>
     <action>implement</action>
   </task-spec>
@@ -144,14 +153,14 @@ Builder implements all changes and returns `<task-result>` XML (see `agents/xml-
 Delegate to **verifier** using structured XML dispatch format:
 
 ```xml
-<dispatch to="verifier" work="{WORK_ID}" task="{TASK_ID}"
+<dispatch to="verifier" work="{WORK_ID}" task="TASK-XX"
           execution-mode="full">
   <context>
     <language>{resolved lang_code}</language>
-    <plan-file>tasks/multi-tasks/{WORK_ID}/PLAN.md</plan-file>
+    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
   </context>
   <task-spec>
-    <file>tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX.md</file>
+    <file>works/{WORK_ID}/TASK-XX.md</file>
     <title>{task title}</title>
     <action>verify</action>
   </task-spec>
@@ -169,14 +178,14 @@ Delegate to **verifier** using structured XML dispatch format:
 Delegate to **committer** using structured XML dispatch format:
 
 ```xml
-<dispatch to="committer" work="{WORK_ID}" task="{TASK_ID}"
+<dispatch to="committer" work="{WORK_ID}" task="TASK-XX"
           execution-mode="full">
   <context>
     <language>{resolved lang_code}</language>
-    <plan-file>tasks/multi-tasks/{WORK_ID}/PLAN.md</plan-file>
+    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
   </context>
   <task-spec>
-    <file>tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX.md</file>
+    <file>works/{WORK_ID}/TASK-XX.md</file>
     <title>{task title}</title>
     <action>commit</action>
   </task-spec>
@@ -194,7 +203,7 @@ When dispatching within the single TASK's pipeline (builder → verifier → com
 
 **Verifier dispatch** (receives builder output):
 ```xml
-<dispatch to="verifier" work="{WORK_ID}" task="{TASK_ID}"
+<dispatch to="verifier" work="{WORK_ID}" task="TASK-XX"
           execution-mode="full">
   <!-- Builder's context-handoff is passed with detail-level="FULL" (direct predecessor) -->
   <context-handoff from="builder" detail-level="FULL">{builder's FULL output}</context-handoff>
@@ -203,7 +212,7 @@ When dispatching within the single TASK's pipeline (builder → verifier → com
 
 **Committer dispatch** (receives builder AND verifier output):
 ```xml
-<dispatch to="committer" work="{WORK_ID}" task="{TASK_ID}"
+<dispatch to="committer" work="{WORK_ID}" task="TASK-XX"
           execution-mode="full">
   <!-- Verifier is direct predecessor: FULL detail level -->
   <context-handoff from="verifier" detail-level="FULL">{verifier's output}</context-handoff>
@@ -232,7 +241,7 @@ When subsequent TASK's builder execution depends on previous TASK results, extra
 
 **Implementation in builder dispatch**:
 ```xml
-<dispatch to="builder" work="{WORK_ID}" task="{NEXT_TASK_ID}"
+<dispatch to="builder" work="{WORK_ID}" task="TASK-YY"  <!-- next task number -->
           execution-mode="full">
   <context>...</context>
   <task-spec>...</task-spec>
@@ -260,7 +269,7 @@ When subsequent TASK's builder execution depends on previous TASK results, extra
 ```
 
 **Extracting context-handoff from result.md**:
-1. Open `tasks/multi-tasks/{WORK_ID}/{PREV_TASK_ID}-result.md`
+1. Open `works/{WORK_ID}/TASK-XX_result.md`
 2. Find the `## Context Handoff` section (created by committer per `agents/committer.md`)
 3. Extract the Builder Context (SUMMARY) and Verifier Context (FULL)
 4. Apply sliding window detail-level when passing to next TASK's builder
@@ -279,7 +288,7 @@ If committer returns `status="FAIL"` (progress.md check failed):
 **Retry strategy**:
 1. **Re-dispatch builder** with existing progress.md
    ```xml
-   <dispatch to="builder" work="{WORK_ID}" task="{TASK_ID}"
+   <dispatch to="builder" work="{WORK_ID}" task="TASK-XX"
              execution-mode="full">
      <previous-progress>{existing TASK-XX-progress.md content}</previous-progress>
      <!-- Builder reads this to resume from last checkpoint -->
@@ -317,7 +326,7 @@ If committer returns `status="FAIL"` (progress.md check failed):
 
 ## Progress File
 
-Maintain `tasks/multi-tasks/{WORK_ID}/PROGRESS.md`:
+Maintain `works/{WORK_ID}/PROGRESS.md`:
 
 ```markdown
 # {WORK_ID} Progress
@@ -359,10 +368,10 @@ When all TASKs in the WORK are done:
 When user asks "WORK 목록" or "전체 현황":
 
 ```bash
-for dir in $(ls -d tasks/multi-tasks/WORK-* 2>/dev/null | sort -V); do
+for dir in $(ls -d works/WORK-* 2>/dev/null | sort -V); do
   WORK_ID=$(basename $dir)
   TOTAL=$(ls $dir/${WORK_ID}-TASK-*.md 2>/dev/null | grep -v result | wc -l)
-  DONE=$(ls $dir/${WORK_ID}-TASK-*-result.md 2>/dev/null | wc -l)
+  DONE=$(ls $dir/TASK-*_result.md 2>/dev/null | wc -l)
   echo "$WORK_ID: $DONE/$TOTAL tasks"
 done
 ```
@@ -382,7 +391,7 @@ See `agents/shared-prompt-sections.md` § 1 for full specification with cache_co
 <!-- CACHE_CONTROL_EPHEMERAL: shared-prompt-sections.md § 1 -->
 
 - **Priority**: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en` (default)
-- Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md` first
+- Read `> Language:` from `works/{WORK_ID}/PLAN.md` first
 - If not found, read `Language:` from CLAUDE.md
 - If neither exists, use `en`
 - Write ALL status messages, PROGRESS.md entries in the resolved language
@@ -415,6 +424,6 @@ All agents (builder, verifier, committer) MUST follow context-policy.md rules fo
 - ONLY execute TASKs within the specified WORK
 - NEVER mix TASKs from different WORKs in one pipeline run
 - NEVER create cross-WORK dependencies
-- ALWAYS scope file paths to `tasks/multi-tasks/{WORK_ID}/`
+- ALWAYS scope file paths to `works/{WORK_ID}/`
 - **TASK가 1개뿐인 단순 WORK도 직접 구현 금지** — 반드시 builder → verifier → committer 파이프라인을 실행해야 한다
 - 파이프라인을 우회하면 result.md가 생성되지 않아 WORK 완료로 인식되지 않고 WorkDoc/WorkTask DB 등록도 실패한다

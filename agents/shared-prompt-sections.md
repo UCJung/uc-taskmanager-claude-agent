@@ -123,17 +123,21 @@ All file paths follow these conventions:
 works/{WORK_ID}/
   ├─ PLAN.md                          # WORK plan with task definitions
   ├─ PROGRESS.md                      # Progress tracking
-  ├─ {WORK_ID}-TASK-00.md            # Task 00 specification
-  ├─ {WORK_ID}-TASK-00-result.md     # Task 00 result (after completion)
-  ├─ {WORK_ID}-TASK-01.md
-  ├─ {WORK_ID}-TASK-01-result.md
+  ├─ TASK-00.md                       # Task 00 specification (WORK prefix 없음)
+  ├─ TASK-00_progress.md              # Task 00 progress (구분자: 언더스코어)
+  ├─ TASK-00_result.md                # Task 00 result (구분자: 언더스코어)
+  ├─ TASK-01.md
+  ├─ TASK-01_progress.md
+  ├─ TASK-01_result.md
   └─ ... (more tasks)
 ```
 
 ### File Naming Rules
 - WORK ID format: `WORK-{2-digit number}` (e.g., `WORK-03`)
-- TASK ID format: `TASK-{2-digit number}` (e.g., `TASK-00`)
-- Result file: `TASK-{2-digit number}-result.md`
+- TASK ID format: `TASK-{2-digit number}` (e.g., `TASK-00`) — **WORK prefix 포함 금지**
+- Task spec file: `TASK-{2-digit number}.md` (프리픽스 없음)
+- Progress file: `TASK-{2-digit number}_progress.md` (구분자: 언더스코어)
+- Result file: `TASK-{2-digit number}_result.md` (구분자: 언더스코어)
 
 ### Path Resolution in Agents
 When agents need to reference files:
@@ -386,10 +390,10 @@ curl -s -X POST "$TASK_CALLBACK" \
   -H "Content-Type: application/json" \
   -d '{
     "workId": "{WORK_ID}",
-    "taskId": "{TASK_ID}",
+    "taskId": "TASK-XX",
     "status": "completed",
     "commitHash": "{git-commit-hash}",
-    "resultFile": "works/{WORK_ID}/TASK-XX-result.md",
+    "resultFile": "works/{WORK_ID}/TASK-XX_result.md",
     "timestamp": "{ISO-8601-timestamp}"
   }' 2>/dev/null || echo "WARNING: TaskCallback request failed, continuing..."
 ```
@@ -404,11 +408,13 @@ curl -s -X POST "$PROGRESS_CALLBACK" \
   -H "Content-Type: application/json" \
   -d '{
     "workId": "{WORK_ID}",
-    "taskId": "{TASK_ID}",
-    "stage": "implementation",
-    "checkpoint": "files_created",
-    "details": "{brief description of what completed}",
-    "timestamp": "{ISO-8601-timestamp}"
+    "taskId": "TASK-XX",
+    "status": "IN_PROGRESS",
+    "checklist": [
+      {"item": "{작업 항목 1}", "done": true},
+      {"item": "{작업 항목 2}", "done": false}
+    ],
+    "currentReasoning": "{현재 진행 중인 작업 설명}"
   }' 2>/dev/null || echo "WARNING: ProgressCallback request failed, continuing..."
 ```
 

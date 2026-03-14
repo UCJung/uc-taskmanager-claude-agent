@@ -96,30 +96,39 @@ Before and after each phase, call the callback API to report stage transitions.
 curl -s -X POST "$CALLBACK_URL" \
   -H "Authorization: Bearer $CALLBACK_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"stage": "BUILDER", "event": "START"}'
+  -d "{\"stage\": \"BUILDER\", \"event\": \"START\", \"workId\": \"${WORK_ID}\", \"taskId\": \"${TASK_ID}\"}"
 
 # Stage DONE example (run after sub-agent returns)
 curl -s -X POST "$CALLBACK_URL" \
   -H "Authorization: Bearer $CALLBACK_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"stage": "BUILDER", "event": "DONE"}'
+  -d "{\"stage\": \"BUILDER\", \"event\": \"DONE\", \"workId\": \"${WORK_ID}\", \"taskId\": \"${TASK_ID}\"}"
 ```
 
 **Required callbacks per task cycle:**
-- Before builder dispatch: `{"stage": "BUILDER", "event": "START"}`
-- After builder returns: `{"stage": "BUILDER", "event": "DONE"}`
-- Before verifier dispatch: `{"stage": "VERIFIER", "event": "START"}`
-- After verifier returns: `{"stage": "VERIFIER", "event": "DONE"}`
-- Before committer dispatch: `{"stage": "COMMITTER", "event": "START"}`
-- After committer returns: `{"stage": "COMMITTER", "event": "DONE"}`
+- Before builder dispatch: `{"stage": "BUILDER", "event": "START", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
+- After builder returns: `{"stage": "BUILDER", "event": "DONE", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
+- Before verifier dispatch: `{"stage": "VERIFIER", "event": "START", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
+- After verifier returns: `{"stage": "VERIFIER", "event": "DONE", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
+- Before committer dispatch: `{"stage": "COMMITTER", "event": "START", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
+- After committer returns: `{"stage": "COMMITTER", "event": "DONE", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
 
-On failure: `{"stage": "{STAGE}", "event": "FAILED"}`
+On failure: `{"stage": "{STAGE}", "event": "FAILED", "workId": "{WORK_ID}", "taskId": "TASK-XX"}`
+
+### Dispatch `task` Attribute Format
+
+**CRITICAL**: The `task` attribute in ALL `<dispatch>` elements must be `TASK-XX` format only.
+- ✅ Correct: `task="TASK-00"`, `task="TASK-01"`
+- ❌ Wrong: `task="WORK-120-TASK-00"` (WORK prefix 포함 금지)
+
+`work` attribute에 이미 `{WORK_ID}`가 있으므로 `task`에는 TASK 번호만 넣는다.
+Callback payload의 `taskId` 필드가 `WORK-XX-TASK-YY`로 오염되는 원인이 됨.
 
 ### Phase 2: Build
 Delegate to **builder** using structured XML dispatch format (see `agents/xml-schema.md`):
 
 ```xml
-<dispatch to="builder" work="{WORK_ID}" task="{TASK_ID}"
+<dispatch to="builder" work="{WORK_ID}" task="TASK-XX"
           execution-mode="full">
   <context>
     <project>{detected project name}</project>
@@ -144,7 +153,7 @@ Builder implements all changes and returns `<task-result>` XML (see `agents/xml-
 Delegate to **verifier** using structured XML dispatch format:
 
 ```xml
-<dispatch to="verifier" work="{WORK_ID}" task="{TASK_ID}"
+<dispatch to="verifier" work="{WORK_ID}" task="TASK-XX"
           execution-mode="full">
   <context>
     <language>{resolved lang_code}</language>
@@ -169,7 +178,7 @@ Delegate to **verifier** using structured XML dispatch format:
 Delegate to **committer** using structured XML dispatch format:
 
 ```xml
-<dispatch to="committer" work="{WORK_ID}" task="{TASK_ID}"
+<dispatch to="committer" work="{WORK_ID}" task="TASK-XX"
           execution-mode="full">
   <context>
     <language>{resolved lang_code}</language>
@@ -194,7 +203,7 @@ When dispatching within the single TASK's pipeline (builder → verifier → com
 
 **Verifier dispatch** (receives builder output):
 ```xml
-<dispatch to="verifier" work="{WORK_ID}" task="{TASK_ID}"
+<dispatch to="verifier" work="{WORK_ID}" task="TASK-XX"
           execution-mode="full">
   <!-- Builder's context-handoff is passed with detail-level="FULL" (direct predecessor) -->
   <context-handoff from="builder" detail-level="FULL">{builder's FULL output}</context-handoff>
@@ -203,7 +212,7 @@ When dispatching within the single TASK's pipeline (builder → verifier → com
 
 **Committer dispatch** (receives builder AND verifier output):
 ```xml
-<dispatch to="committer" work="{WORK_ID}" task="{TASK_ID}"
+<dispatch to="committer" work="{WORK_ID}" task="TASK-XX"
           execution-mode="full">
   <!-- Verifier is direct predecessor: FULL detail level -->
   <context-handoff from="verifier" detail-level="FULL">{verifier's output}</context-handoff>
@@ -232,7 +241,7 @@ When subsequent TASK's builder execution depends on previous TASK results, extra
 
 **Implementation in builder dispatch**:
 ```xml
-<dispatch to="builder" work="{WORK_ID}" task="{NEXT_TASK_ID}"
+<dispatch to="builder" work="{WORK_ID}" task="TASK-YY"  <!-- next task number -->
           execution-mode="full">
   <context>...</context>
   <task-spec>...</task-spec>
@@ -279,7 +288,7 @@ If committer returns `status="FAIL"` (progress.md check failed):
 **Retry strategy**:
 1. **Re-dispatch builder** with existing progress.md
    ```xml
-   <dispatch to="builder" work="{WORK_ID}" task="{TASK_ID}"
+   <dispatch to="builder" work="{WORK_ID}" task="TASK-XX"
              execution-mode="full">
      <previous-progress>{existing TASK-XX-progress.md content}</previous-progress>
      <!-- Builder reads this to resume from last checkpoint -->

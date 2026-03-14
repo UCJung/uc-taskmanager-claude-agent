@@ -120,25 +120,29 @@ All file paths follow these conventions:
 
 ### Directory Structure
 ```
-tasks/multi-tasks/{WORK_ID}/
+works/{WORK_ID}/
   ├─ PLAN.md                          # WORK plan with task definitions
   ├─ PROGRESS.md                      # Progress tracking
-  ├─ {WORK_ID}-TASK-00.md            # Task 00 specification
-  ├─ {WORK_ID}-TASK-00-result.md     # Task 00 result (after completion)
-  ├─ {WORK_ID}-TASK-01.md
-  ├─ {WORK_ID}-TASK-01-result.md
+  ├─ TASK-00.md                       # Task 00 specification (WORK prefix 없음)
+  ├─ TASK-00_progress.md              # Task 00 progress (구분자: 언더스코어)
+  ├─ TASK-00_result.md                # Task 00 result (구분자: 언더스코어)
+  ├─ TASK-01.md
+  ├─ TASK-01_progress.md
+  ├─ TASK-01_result.md
   └─ ... (more tasks)
 ```
 
 ### File Naming Rules
 - WORK ID format: `WORK-{2-digit number}` (e.g., `WORK-03`)
-- TASK ID format: `{WORK_ID}-TASK-{2-digit number}` (e.g., `WORK-03-TASK-00`)
-- Result file: `{WORK_ID}-TASK-{2-digit number}-result.md`
+- TASK ID format: `TASK-{2-digit number}` (e.g., `TASK-00`) — **WORK prefix 포함 금지**
+- Task spec file: `TASK-{2-digit number}.md` (프리픽스 없음)
+- Progress file: `TASK-{2-digit number}_progress.md` (구분자: 언더스코어)
+- Result file: `TASK-{2-digit number}_result.md` (구분자: 언더스코어)
 
 ### Path Resolution in Agents
 When agents need to reference files:
-- Absolute paths: `/c/rnd/agent/uc-taskmanager/tasks/multi-tasks/{WORK_ID}/{file}`
-- Relative patterns: `tasks/multi-tasks/{WORK_ID}/{file}`
+- Absolute paths: `/c/rnd/agent/uc-taskmanager/works/{WORK_ID}/{file}`
+- Relative patterns: `works/{WORK_ID}/{file}`
 ```
 
 **Cache Control Marker**:
@@ -168,10 +172,10 @@ When agents need to reference files:
 
 ### Find Latest WORK with Remaining Tasks
 ```bash
-for dir in $(ls -d tasks/multi-tasks/WORK-* 2>/dev/null | sort -V -r); do
+for dir in $(ls -d works/WORK-* 2>/dev/null | sort -V -r); do
   WORK_ID=$(basename $dir)
-  TOTAL=$(ls $dir/${WORK_ID}-TASK-*.md 2>/dev/null | grep -v result | wc -l)
-  DONE=$(ls $dir/${WORK_ID}-TASK-*-result.md 2>/dev/null | wc -l)
+  TOTAL=$(ls $dir/$TASK-*.md 2>/dev/null | grep -v result | wc -l)
+  DONE=$(ls $dir/$TASK-*_result.md 2>/dev/null | wc -l)
   if [ "$DONE" -lt "$TOTAL" ]; then
     echo "$WORK_ID"
     break
@@ -181,14 +185,14 @@ done
 
 ### List All WORK Units
 ```bash
-ls -d tasks/multi-tasks/WORK-* 2>/dev/null | sort -V
+ls -d works/WORK-* 2>/dev/null | sort -V
 ```
 
 ### Count TASK Completion Status
 ```bash
 WORK_ID="WORK-03"
-TOTAL=$(ls tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-*.md 2>/dev/null | grep -v result | wc -l)
-DONE=$(ls tasks/multi-tasks/${WORK_ID}/${WORK_ID}-TASK-*-result.md 2>/dev/null | wc -l)
+TOTAL=$(ls works/${WORK_ID}/$TASK-*.md 2>/dev/null | grep -v result | wc -l)
+DONE=$(ls works/${WORK_ID}/$TASK-*_result.md 2>/dev/null | wc -l)
 echo "$DONE / $TOTAL"
 ```
 ```
@@ -236,7 +240,7 @@ All receiver agents (builder, verifier, committer) return results in the followi
 
 ### Example from Builder
 ```xml
-<task-result work="WORK-03" task="WORK-03-TASK-00" agent="builder" status="PASS">
+<task-result work="WORK-03" task="TASK-00" agent="builder" status="PASS">
   <summary>Created shared-prompt-sections.md and xml-schema.md with full documentation</summary>
   <files-changed>
     <file action="created" path="agents/shared-prompt-sections.md">Common reusable sections with cache_control markers</file>
@@ -382,14 +386,14 @@ Invoked by committer after result.md is created and git commit is completed:
 
 ```bash
 curl -s -X POST "$TASK_CALLBACK" \
-  -H "Authorization: Bearer $CALLBACK_TOKEN" \
+  -H "X-Runner-Api-Key: $CALLBACK_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "workId": "{WORK_ID}",
-    "taskId": "{TASK_ID}",
+    "taskId": "TASK-XX",
     "status": "completed",
     "commitHash": "{git-commit-hash}",
-    "resultFile": "tasks/multi-tasks/{WORK_ID}/{WORK_ID}-TASK-XX-result.md",
+    "resultFile": "works/{WORK_ID}/TASK-XX_result.md",
     "timestamp": "{ISO-8601-timestamp}"
   }' 2>/dev/null || echo "WARNING: TaskCallback request failed, continuing..."
 ```
@@ -400,15 +404,17 @@ Invoked by builder at key checkpoints (e.g., after files are created, before ver
 
 ```bash
 curl -s -X POST "$PROGRESS_CALLBACK" \
-  -H "Authorization: Bearer $CALLBACK_TOKEN" \
+  -H "X-Runner-Api-Key: $CALLBACK_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "workId": "{WORK_ID}",
-    "taskId": "{TASK_ID}",
-    "stage": "implementation",
-    "checkpoint": "files_created",
-    "details": "{brief description of what completed}",
-    "timestamp": "{ISO-8601-timestamp}"
+    "taskId": "TASK-XX",
+    "status": "IN_PROGRESS",
+    "checklist": [
+      {"item": "{작업 항목 1}", "done": true},
+      {"item": "{작업 항목 2}", "done": false}
+    ],
+    "currentReasoning": "{현재 진행 중인 작업 설명}"
   }' 2>/dev/null || echo "WARNING: ProgressCallback request failed, continuing..."
 ```
 
@@ -446,4 +452,4 @@ curl -s -X POST "$PROGRESS_CALLBACK" \
 - **Created**: 2026-03-10
 - **Purpose**: WORK-03 — Agent간 프롬프트 전달 시 데이터 구조화로 토큰 절감
 - **Referenced by**: scheduler.md, router.md, builder.md, verifier.md, committer.md
-- **Updated**: 2026-03-12 (WORK-09-TASK-00) — Added Section 6: Task Callbacks for external system integration
+- **Updated**: 2026-03-12 (TASK-00) — Added Section 6: Task Callbacks for external system integration

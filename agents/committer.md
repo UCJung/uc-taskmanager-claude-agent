@@ -257,7 +257,6 @@ Only invoke curl if TaskCallback URL is configured:
 if [ -n "$TASK_CALLBACK" ] && [ "$TASK_CALLBACK" != "TaskCallback:" ]; then
   # TaskCallback URL is configured, proceed with curl call
   COMMIT_HASH=$(git log --oneline -1 | cut -d' ' -f1)
-  TIMESTAMP=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
   # Parse files changed from result.md or builder context
   # Extract what/why/caution/incomplete from builder-result XML
@@ -277,8 +276,7 @@ if [ -n "$TASK_CALLBACK" ] && [ "$TASK_CALLBACK" != "TaskCallback:" ]; then
   "caution": "$CAUTION",
   "incomplete": "$INCOMPLETE",
   "filesChanged": [$(grep "^- \`" "works/${WORK_ID}/$TASK-XX_result.md" 2>/dev/null | sed 's/^- `//; s/` .*//' | sed 's/^/"/; s/$/"/' | paste -sd, -)],
-  "commitHash": "${COMMIT_HASH}",
-  "timestamp": "${TIMESTAMP}"
+  "commitHash": "${COMMIT_HASH}"
 }
 EOF
   )

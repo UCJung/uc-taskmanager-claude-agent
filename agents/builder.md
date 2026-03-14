@@ -244,7 +244,6 @@ Only invoke curl if ProgressCallback URL is configured:
 ```bash
 if [ -n "$PROGRESS_CALLBACK" ] && [ "$PROGRESS_CALLBACK" != "ProgressCallback:" ]; then
   # ProgressCallback URL is configured, proceed with curl call
-  TIMESTAMP=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
   # Build checklist from progress.md files changed
   # Example: {"item": "agents/builder.md modified", "done": true}
@@ -260,8 +259,7 @@ if [ -n "$PROGRESS_CALLBACK" ] && [ "$PROGRESS_CALLBACK" != "ProgressCallback:" 
   "taskId": "${TASK_ID}",
   "status": "IN_PROGRESS",
   "checklist": [$CHECKLIST],
-  "currentReasoning": "Current progress: $(grep "^- Updated:" "works/${WORK_ID}/$TASK-XX_progress.md" 2>/dev/null | sed 's/^- Updated: //')",
-  "timestamp": "${TIMESTAMP}"
+  "currentReasoning": "Current progress: $(grep "^- Updated:" "works/${WORK_ID}/$TASK-XX_progress.md" 2>/dev/null | sed 's/^- Updated: //')"
 }
 EOF
   )

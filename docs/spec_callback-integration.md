@@ -61,7 +61,7 @@ Sent after git commit completes. Sender varies by execution-mode (see table abov
 ```json
 {
   "workId": "WORK-09",
-  "taskId": "WORK-09-TASK-01",
+  "taskId": "TASK-01",
   "status": "SUCCESS|PARTIAL|FAILED",
   "what": "Implementation summary: files created/modified/deleted, features added, verification results",
   "why": "Technical reasoning: why implemented this way, alternatives considered",
@@ -81,7 +81,7 @@ Sent after git commit completes. Sender varies by execution-mode (see table abov
 | Field | Type | Description |
 |-------|------|-------------|
 | `workId` | string | WORK identifier (e.g., `WORK-09`) |
-| `taskId` | string | Task identifier (e.g., `WORK-09-TASK-01`) |
+| `taskId` | string | Task identifier (e.g., `TASK-01`) — WORK prefix 미포함 |
 | `status` | enum | `SUCCESS` = all acceptance criteria met, `PARTIAL` = some criteria incomplete, `FAILED` = task failed |
 | `what` | string | Concrete summary of changes: files created/modified, new functions, configuration updates (2-5 lines) |
 | `why` | string | Technical reasoning for implementation approach, alternatives considered (2-4 lines) |
@@ -94,20 +94,19 @@ Sent after git commit completes. Sender varies by execution-mode (see table abov
 ### HTTP Request Format
 
 ```bash
-curl -X POST "http://your-system.com/api/v1/task-result" \
+curl -X POST "http://your-system.com/api/v1/runner/task-result" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk_test_abcd1234..." \
+  -H "X-Runner-Api-Key: {RUNNER_API_KEY}" \
   -d '{
     "workId": "WORK-09",
-    "taskId": "WORK-09-TASK-01",
+    "taskId": "TASK-01",
     "status": "SUCCESS",
     "what": "Added TaskCallback section to committer.md with conditional curl invocation",
     "why": "Enable external systems to receive task completion notifications",
     "caution": "Curl failure must not block commit completion",
     "incomplete": "",
     "filesChanged": ["agents/committer.md"],
-    "commitHash": "a3dc4f0",
-    "timestamp": "2026-03-12T10:15:30Z"
+    "commitHash": "a3dc4f0"
   }'
 ```
 
