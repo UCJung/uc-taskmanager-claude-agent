@@ -16,10 +16,14 @@ execution-mode 판정이 애매할 때 (direct vs pipeline, pipeline vs full 경
 ```
 판정 기준이 명확한 경우 → 즉시 결정 (sequential-thinking 불필요)
 판정 기준이 애매한 경우 → sequential-thinking으로 단계별 분석:
-  1. 수정 대상 파일 수 추정
-  2. 변경 규모(줄 수) 추정
-  3. TASK 의존성 유무 확인
-  4. 최종 mode 결정
+  config 존재 시:
+    1. config의 각 mode 조건 항목을 순서대로 평가
+    2. 최초로 충족되는 mode로 결정
+  config 없을 시:
+    1. 수정 대상 파일 수 추정
+    2. 변경 규모(줄 수) 추정
+    3. TASK 의존성 유무 확인
+    4. 최종 mode 결정
 ```
 
 ### Serena — direct 모드 코드 수정 시 사용
@@ -59,8 +63,9 @@ else
 fi
 ```
 
-config 파일이 존재하는 경우 해당 파일의 `rules` 필드를 읽어 각 mode 판정에 사용한다.
-config 파일이 없는 경우 아래 내장 기본값(Routing Criteria)을 사용한다.
+**CRITICAL: config 파일이 존재하는 경우, 아래 §3의 내장 기본값(파일 수, 줄 수 기반 기준표)은 완전히 무시한다. config의 `rules` 필드만을 유일한 판정 기준으로 사용한다.**
+
+config 파일이 없는 경우에만 아래 내장 기본값(Routing Criteria)을 사용한다.
 
 ---
 
@@ -72,25 +77,20 @@ After detecting `[]` tag, assess complexity and route to one of three execution 
 [] tag detected
      │
      ▼
-  Assess complexity
+  .agent/router_rule_config.json 존재?
      │
-     ├─ Trivial (1 file, ≤10 lines changed)
-     │   ▼
-     │  direct ── router handles entirely (no subagents)
+     ├─ YES → config의 rules 기준만 사용하여 mode 판정 (내장 기준 무시)
      │
-     ├─ Simple (2~3 files, or >10 lines, 1~2 steps)
-     │   ▼
-     │  pipeline ── builder → verifier → committer
-     │
-     └─ Complex (4+ files, 3+ steps, dependencies)
-         ▼
-        full ── planner → scheduler → [builder → verifier → committer] × N
+     └─ NO  → 내장 기본값으로 판정 (아래 Routing Criteria 참조)
+                    │
+                    ├─ Trivial (1 file, ≤10 lines changed) → direct
+                    ├─ Simple (2~3 files, or >10 lines, 1~2 steps) → pipeline
+                    └─ Complex (4+ files, 3+ steps, dependencies) → full
 ```
 
 ### Routing Criteria
 
-> **내장 기본값 (config 파일이 없을 때 적용):**
-> 실제 운용 시에는 `.agent/router_rule_config.json`의 `rules` 값이 우선 적용된다.
+> **내장 기본값 — config 파일이 없을 때만 적용:**
 
 | Criterion | direct | pipeline | full |
 |-----------|:---:|:---:|:---:|
@@ -105,11 +105,11 @@ After detecting `[]` tag, assess complexity and route to one of three execution 
 
 ### direct 모드 — Router 단독 수행 (서브에이전트 없음)
 
-Router가 PLAN.md를 직접 생성하고 자신의 세션 내에서 다음 단계를 순차 수행한다:
+Router가 자신의 세션 내에서 다음 단계를 순차 수행한다:
 
 ```
 1.  WORK ID 결정 (§3 파일시스템 스캔 + WORK-LIST 검증)
-2.  mkdir tasks/multi-tasks/WORK-NN/
+2.  mkdir works/WORK-NN/
 3.  PLAN.md 생성 (Execution-Mode: direct)
 4.  WORK-NN-TASK-00.md 생성
 5.  WORK-NN-TASK-00-progress.md 생성 (Status: PENDING)
@@ -175,7 +175,7 @@ Router가 PLAN.md를 직접 생성하고 자신의 세션 내에서 다음 단�
 
 ### pipeline 모드 — Builder → Verifier → Committer
 
-Router가 PLAN.md + TASK 파일을 직접 생성한 후 서브에이전트를 순차 dispatch한다.
+Router가 PLAN + TASK 파일 생성 후 서브에이전트를 순차 dispatch한다.
 
 ```
 router: PLAN 생성 → Builder dispatch → Verifier dispatch → Committer dispatch
@@ -214,10 +214,10 @@ Router가 stage 콜백을 대행한다 (BUILDER/VERIFIER/COMMITTER START/DONE).
   <context>
     <project>{detected project name}</project>
     <language>{resolved lang_code}</language>
-    <plan-file>tasks/multi-tasks/{WORK-NN}/PLAN.md</plan-file>
+    <plan-file>works/{WORK-NN}/PLAN.md</plan-file>
   </context>
   <task-spec>
-    <file>tasks/multi-tasks/{WORK-NN}/{WORK-NN}-TASK-00.md</file>
+    <file>works/{WORK-NN}/TASK-00.md</file>
     <title>{task title from user request}</title>
     <action>implement</action>
     <description>{parsed requirement}</description>
@@ -254,7 +254,7 @@ Router dispatches to planner for new WORK creation, or directly to scheduler for
 <dispatch to="scheduler" work="{WORK_ID}" execution-mode="full">
   <context>
     <language>{resolved lang_code}</language>
-    <plan-file>tasks/multi-tasks/{WORK_ID}/PLAN.md</plan-file>
+    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
   </context>
   <cache-hint sections="output-language-rule"/>
 </dispatch>
@@ -272,11 +272,11 @@ Router performs validation before dispatching planner or scheduler.
 
 ```bash
 # Step 1: Scan filesystem for existing WORK directories
-WORK_FS=$(ls -d tasks/multi-tasks/WORK-* 2>/dev/null | grep -oP 'WORK-\K\d+' | sort -n | tail -1)
+WORK_FS=$(ls -d works/WORK-* 2>/dev/null | grep -oP 'WORK-\K\d+' | sort -n | tail -1)
 WORK_FS=${WORK_FS:-0}
 
 # Step 2: Check WORK-LIST.md for max WORK number
-WORK_LIST=$(grep -oP '^WORK-\K\d+' tasks/multi-tasks/WORK-LIST.md 2>/dev/null | sort -n | tail -1)
+WORK_LIST=$(grep -oP '^WORK-\K\d+' works/WORK-LIST.md 2>/dev/null | sort -n | tail -1)
 WORK_LIST=${WORK_LIST:-0}
 
 # Step 3: Use maximum of the two sources + 1
@@ -296,7 +296,7 @@ fi
 
 ### 4.2 Standard WORK Assignment Flow
 
-1. **Read `tasks/multi-tasks/WORK-LIST.md`** — check for IN_PROGRESS WORKs
+1. **Read `works/WORK-LIST.md`** — check for IN_PROGRESS WORKs
 2. Perform WORK ID validation (as per 3.1) to ensure consistency
 3. If IN_PROGRESS exists → ask user:
    > "현재 진행 중인 WORK-XX ({title})가 있습니다. 이 WORK에 추가 TASK로 진행할까요, 아니면 새 WORK를 생성할까요?"
@@ -307,7 +307,7 @@ fi
 
 ## 5. WORK-LIST.md Management
 
-`tasks/multi-tasks/WORK-LIST.md` is the master list of all WORKs.
+`works/WORK-LIST.md` is the master list of all WORKs.
 
 | Status | Meaning |
 |--------|---------|
@@ -337,7 +337,7 @@ See `agents/shared-prompt-sections.md` § 1 for full specification with cache_co
 <!-- CACHE_CONTROL_EPHEMERAL: shared-prompt-sections.md § 1 -->
 
 - **Priority**: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en` (default)
-- Read `> Language:` from `tasks/multi-tasks/{WORK_ID}/PLAN.md` first
+- Read `> Language:` from `works/{WORK_ID}/PLAN.md` first
 - If not found, read `Language:` from CLAUDE.md
 - If neither exists, use `en`
 - Pass the language code to planner/scheduler/builder/verifier/committer in dispatch `<context><language>` field
