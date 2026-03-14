@@ -19,214 +19,6 @@
 
 ---
 
-## 개념: 세 가지 실행 모드 (execution-mode)
-
-**router**가 모든 `[]` 태그 요청을 분석하여 `execution-mode`를 결정합니다:
-
-```
-사용자 요청
-     │
-     ▼
-  ┌────────┐
-  │ router │ ── [] 태그 없음 ──▶ 직접 처리 (파이프라인 없음)
-  └───┬────┘
-      │ [] 태그 감지
-      ▼
-  복잡도 판단 → execution-mode 결정
-  (.agent/router_rule_config.json 파일이 있으면 해당 기준 우선 적용)
-      │
-      ├─ direct  (빌드/테스트 검증 불필요)
-      │   ▼
-      │  Router가 모든 것을 직접 처리 — 추가 세션 0개
-      │  WORK-NN 디렉토리 + PLAN + result.md + commit
-      │
-      ├─ pipeline  (빌드/테스트 필요, 단일 도메인, 순차 처리)
-      │   ▼
-      │  router → builder → verifier → committer
-      │  Router가 PLAN 생성 후 3개 서브에이전트 순차 dispatch
-      │
-      └─ full  (멀티 도메인 / 복잡 DAG / 신규 모듈 / 5+ TASK)
-          ▼
-         router → planner → scheduler → [builder → verifier → committer] × N
-                 (전체 계획 + 다중 작업 파이프라인)
-```
-
-3가지 모드 모두 `tasks/multi-tasks/WORK-NN/`에 동일한 산출물 구조(PLAN.md + result.md + COMMITTER DONE 콜백)를 생성합니다.
-
-### WORK (다중 작업, full 모드)
-
-복잡한 기능을 위한 2단계 계층 구조:
-
-```
-WORK (일)                 하나의 목표. 사용자가 요청한 단위.
-└── TASK (작업)           WORK를 달성하기 위한 개별 실행 단위.
-    └── result            완료 증빙. 검증 통과 후 자동 생성.
-```
-
-### pipeline 모드 (단일 작업, 위임)
-
-중간 규모 단일 작업을 서브에이전트에 위임. router 컨텍스트를 깨끗하게 유지합니다.
-
-```
-router → builder(sonnet) → verifier(haiku) → committer(haiku)
-```
-
-### direct 모드 (초단순)
-
-router가 자체 세션에서 모든 것을 처리. 추가 서브에이전트 세션 없음.
-
-```
-router: 분석 → 구현 → self-check → 커밋 → result.md
-```
-
----
-
-## 파이프라인
-
-### WORK 파이프라인 (복잡한 작업)
-
-```
-  router           planner          scheduler         builder          verifier         committer
- ┌────────┐      ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │요청     │────▶│WORK 생성 │────▶│의존성 DAG │────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
- │분석     │     │TASK 분해 │     │실행 순서  │     │파일 생성  │     │검증 실행  │     │→ git커밋 │
- └────────┘     └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
-                                                       │                │                │
-                                                       └── 실패 시 재시도 ┘                │
-                                                          (최대 3회)                      │
-                                                                          다음 TASK로 반복 ◀┘
-```
-
-### pipeline 모드 (단순 → 위임)
-
-```
-  router            builder          verifier         committer
- ┌────────┐       ┌──────────┐     ┌──────────┐     ┌──────────┐
- │PLAN    │─────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
- │+TASK생성│      │파일 생성  │     │검증 실행  │     │→ git커밋 │
- └────────┘      └──────────┘     └──────────┘     └──────────┘
-  (컨텍스트 유지)   (sonnet)         (haiku)           (haiku)
-```
-
-### direct 모드 (초단순)
-
-```
-  router
- ┌────────────────────────────────────────────────┐
- │ 분석 → 구현 → self-check → 커밋 → result.md    │
- └────────────────────────────────────────────────┘
-  (빌드/테스트 불필요 — 추가 서브에이전트 세션 0개)
-```
-
-### 에이전트
-
-| 에이전트 | 역할 | 모델 | 권한 | MCP |
-|----------|------|------|------|-----|
-| **router** | `[]` 태그 감지, execution-mode 판정(direct/pipeline/full), PLAN 생성, WORK-LIST 관리 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
-| **planner** | WORK 생성 + TASK 분해 + PLAN.md(Execution-Mode:full) + progress 템플릿 선생성 | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
-| **scheduler** | 특정 WORK의 DAG 관리 + [B→V→C]×N 파이프라인 실행 | **haiku** | read + dispatch | — |
-| **builder** | 코드 구현 + progress.md 체크포인트 기록 | **sonnet** | full access | Serena(심볼단위탐색/편집) |
-| **verifier** | progress gate 검사 → 빌드/린트/테스트 검증 (읽기 전용) | **haiku** | read + execute | — |
-| **committer** | gate 검사 → result.md 생성 → git commit → COMMITTER DONE 콜백 | **haiku** | read + write + git | — |
-
----
-
-## `[]` 태그 시스템
-
-요청에 `[]` 태그를 붙이면 파이프라인이 트리거됩니다:
-
-| 태그 | 의미 |
-|------|------|
-| `[추가기능]` | 새 기능 추가 |
-| `[기능개선]` | 기존 기능 개선 |
-| `[오류수정]` / `[버그수정]` | 버그 수정 |
-| `[WORK 시작]` | 항상 새 WORK 생성 (복잡도 판단 생략) |
-
-`[]` 태그 없음 = 파이프라인 없이 직접 처리.
-
----
-
-## 파일 구조
-
-```
-tasks/
-├── multi-tasks/
-│   ├── WORK-LIST.md                    ← 전체 WORK 마스터 목록 (router가 관리)
-│   ├── WORK-01/                        ← "사용자 인증 기능"
-│   │   ├── PLAN.md                     ← 계획 + 의존성 그래프
-│   │   ├── PROGRESS.md                 ← 진행 상황 (자동 업데이트)
-│   │   ├── WORK-01-TASK-00.md          ← 작업 명세
-│   │   ├── WORK-01-TASK-00-result.md   ← 완료 보고서 (= 완료 증거)
-│   │   ├── WORK-01-TASK-01.md
-│   │   └── ...
-│   └── WORK-02/
-│       └── ...                        ← direct/pipeline/full 모두 여기에 출력
-```
-
-### WORK-LIST.md
-
-router가 `tasks/multi-tasks/WORK-LIST.md`를 마스터 인덱스로 관리합니다:
-
-| WORK ID | Title | Status | Created |
-|---------|-------|--------|---------|
-| WORK-01 | 사용자 인증 기능 | COMPLETED | 2026-03-01 |
-| WORK-02 | 결제 기능 추가 | IN_PROGRESS | 2026-03-05 |
-
-| 상태 | 의미 |
-|------|------|
-| `IN_PROGRESS` | TASK 진행 중 — 아직 push 안 됨 |
-| `COMPLETED` | 모든 TASK 커밋 완료 + git push 완료 |
-
-- **IN_PROGRESS**: 새 WORK 생성 전 router가 확인
-- **COMPLETED**: `git push` 시점에 갱신 — **Agent가 갱신하지 않음**
-
-#### git push 절차
-
-Claude에게 push를 요청하면 (`"push 해줘"`, `"git push"`), Claude가 아래 순서를 자동으로 처리합니다:
-
-```
-1. tasks/multi-tasks/WORK-LIST.md 열기
-2. IN_PROGRESS 상태인 WORK 전체 확인
-3. 해당 WORK 상태 → COMPLETED, 날짜 업데이트
-4. git add tasks/multi-tasks/WORK-LIST.md
-5. git commit -m "chore: WORK-LIST 갱신 — WORK-XX COMPLETED"
-6. git push
-```
-
-> **Agent(builder / committer / scheduler)는 WORK-LIST를 COMPLETED로 갱신하지 않습니다.**
-> COMPLETED 갱신은 오직 push 시점에만 수행합니다. Agent가 `🎉 WORK 완료!` 메시지를 출력하더라도 WORK-LIST 갱신은 하지 않습니다.
-
----
-
-## 설치
-
-### 전역 설치 (모든 프로젝트에서 사용)
-
-```bash
-git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git
-cp uc-taskmanager-claude-agent/agents/*.md ~/.claude/agents/
-```
-
-### 프로젝트별 설치
-
-```bash
-git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
-mkdir -p .claude/agents
-cp /tmp/uc-tm/agents/*.md .claude/agents/
-rm -rf /tmp/uc-tm
-git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
-```
-
-### 설치 확인
-
-```bash
-claude
-> /agents
-# router, planner, scheduler, builder, verifier, committer → 6개 확인
-```
-
----
-
 ## 사용법
 
 ### 초단순 수정 (direct 모드)
@@ -353,6 +145,214 @@ scheduler가 `PROGRESS.md`와 `result.md` 파일을 읽어 현재 상태를 보�
 
 ---
 
+## `[]` 태그 시스템
+
+요청에 `[]` 태그를 붙이면 파이프라인이 트리거됩니다:
+
+| 태그 | 의미 |
+|------|------|
+| `[추가기능]` | 새 기능 추가 |
+| `[기능개선]` | 기존 기능 개선 |
+| `[오류수정]` / `[버그수정]` | 버그 수정 |
+| `[WORK 시작]` | 항상 새 WORK 생성 (복잡도 판단 생략) |
+
+`[]` 태그 없음 = 파이프라인 없이 직접 처리.
+
+---
+
+## 설치
+
+### 전역 설치 (모든 프로젝트에서 사용)
+
+```bash
+git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git
+cp uc-taskmanager-claude-agent/agents/*.md ~/.claude/agents/
+```
+
+### 프로젝트별 설치
+
+```bash
+git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
+mkdir -p .claude/agents
+cp /tmp/uc-tm/agents/*.md .claude/agents/
+rm -rf /tmp/uc-tm
+git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
+```
+
+### 설치 확인
+
+```bash
+claude
+> /agents
+# router, planner, scheduler, builder, verifier, committer → 6개 확인
+```
+
+---
+
+## 개념: 세 가지 실행 모드 (execution-mode)
+
+**router**가 모든 `[]` 태그 요청을 분석하여 `execution-mode`를 결정합니다:
+
+```
+사용자 요청
+     │
+     ▼
+  ┌────────┐
+  │ router │ ── [] 태그 없음 ──▶ 직접 처리 (파이프라인 없음)
+  └───┬────┘
+      │ [] 태그 감지
+      ▼
+  복잡도 판단 → execution-mode 결정
+  (.agent/router_rule_config.json 파일이 있으면 해당 기준 우선 적용)
+      │
+      ├─ direct  (빌드/테스트 검증 불필요)
+      │   ▼
+      │  Router가 모든 것을 직접 처리 — 추가 세션 0개
+      │  WORK-NN 디렉토리 + PLAN + result.md + commit
+      │
+      ├─ pipeline  (빌드/테스트 필요, 단일 도메인, 순차 처리)
+      │   ▼
+      │  router → builder → verifier → committer
+      │  Router가 PLAN 생성 후 3개 서브에이전트 순차 dispatch
+      │
+      └─ full  (멀티 도메인 / 복잡 DAG / 신규 모듈 / 5+ TASK)
+          ▼
+         router → planner → scheduler → [builder → verifier → committer] × N
+                 (전체 계획 + 다중 작업 파이프라인)
+```
+
+3가지 모드 모두 `tasks/multi-tasks/WORK-NN/`에 동일한 산출물 구조(PLAN.md + result.md + COMMITTER DONE 콜백)를 생성합니다.
+
+### WORK (다중 작업, full 모드)
+
+복잡한 기능을 위한 2단계 계층 구조:
+
+```
+WORK (일)                 하나의 목표. 사용자가 요청한 단위.
+└── TASK (작업)           WORK를 달성하기 위한 개별 실행 단위.
+    └── result            완료 증빙. 검증 통과 후 자동 생성.
+```
+
+### pipeline 모드 (단일 작업, 위임)
+
+중간 규모 단일 작업을 서브에이전트에 위임. router 컨텍스트를 깨끗하게 유지합니다.
+
+```
+router → builder(sonnet) → verifier(haiku) → committer(haiku)
+```
+
+### direct 모드 (초단순)
+
+router가 자체 세션에서 모든 것을 처리. 추가 서브에이전트 세션 없음.
+
+```
+router: 분석 → 구현 → self-check → 커밋 → result.md
+```
+
+---
+
+## 파이프라인
+
+### WORK 파이프라인 (복잡한 작업)
+
+```
+  router           planner          scheduler         builder          verifier         committer
+ ┌────────┐      ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │요청     │────▶│WORK 생성 │────▶│의존성 DAG │────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
+ │분석     │     │TASK 분해 │     │실행 순서  │     │파일 생성  │     │검증 실행  │     │→ git커밋 │
+ └────────┘     └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
+                                                       │                │                │
+                                                       └── 실패 시 재시도 ┘                │
+                                                          (최대 3회)                      │
+                                                                          다음 TASK로 반복 ◀┘
+```
+
+### pipeline 모드 (단순 → 위임)
+
+```
+  router            builder          verifier         committer
+ ┌────────┐       ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │PLAN    │─────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
+ │+TASK생성│      │파일 생성  │     │검증 실행  │     │→ git커밋 │
+ └────────┘      └──────────┘     └──────────┘     └──────────┘
+  (컨텍스트 유지)   (sonnet)         (haiku)           (haiku)
+```
+
+### direct 모드 (초단순)
+
+```
+  router
+ ┌────────────────────────────────────────────────┐
+ │ 분석 → 구현 → self-check → 커밋 → result.md    │
+ └────────────────────────────────────────────────┘
+  (빌드/테스트 불필요 — 추가 서브에이전트 세션 0개)
+```
+
+### 에이전트
+
+| 에이전트 | 역할 | 모델 | 권한 | MCP |
+|----------|------|------|------|-----|
+| **router** | `[]` 태그 감지, execution-mode 판정(direct/pipeline/full), PLAN 생성, WORK-LIST 관리 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
+| **planner** | WORK 생성 + TASK 분해 + PLAN.md(Execution-Mode:full) + progress 템플릿 선생성 | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
+| **scheduler** | 특정 WORK의 DAG 관리 + [B→V→C]×N 파이프라인 실행 | **haiku** | read + dispatch | — |
+| **builder** | 코드 구현 + progress.md 체크포인트 기록 | **sonnet** | full access | Serena(심볼단위탐색/편집) |
+| **verifier** | progress gate 검사 → 빌드/린트/테스트 검증 (읽기 전용) | **haiku** | read + execute | — |
+| **committer** | gate 검사 → result.md 생성 → git commit → COMMITTER DONE 콜백 | **haiku** | read + write + git | — |
+
+---
+
+## 파일 구조
+
+```
+tasks/
+├── multi-tasks/
+│   ├── WORK-LIST.md                    ← 전체 WORK 마스터 목록 (router가 관리)
+│   ├── WORK-01/                        ← "사용자 인증 기능"
+│   │   ├── PLAN.md                     ← 계획 + 의존성 그래프
+│   │   ├── PROGRESS.md                 ← 진행 상황 (자동 업데이트)
+│   │   ├── WORK-01-TASK-00.md          ← 작업 명세
+│   │   ├── WORK-01-TASK-00-result.md   ← 완료 보고서 (= 완료 증거)
+│   │   ├── WORK-01-TASK-01.md
+│   │   └── ...
+│   └── WORK-02/
+│       └── ...                        ← direct/pipeline/full 모두 여기에 출력
+```
+
+### WORK-LIST.md
+
+router가 `tasks/multi-tasks/WORK-LIST.md`를 마스터 인덱스로 관리합니다:
+
+| WORK ID | Title | Status | Created |
+|---------|-------|--------|---------|
+| WORK-01 | 사용자 인증 기능 | COMPLETED | 2026-03-01 |
+| WORK-02 | 결제 기능 추가 | IN_PROGRESS | 2026-03-05 |
+
+| 상태 | 의미 |
+|------|------|
+| `IN_PROGRESS` | TASK 진행 중 — 아직 push 안 됨 |
+| `COMPLETED` | 모든 TASK 커밋 완료 + git push 완료 |
+
+- **IN_PROGRESS**: 새 WORK 생성 전 router가 확인
+- **COMPLETED**: `git push` 시점에 갱신 — **Agent가 갱신하지 않음**
+
+#### git push 절차
+
+Claude에게 push를 요청하면 (`"push 해줘"`, `"git push"`), Claude가 아래 순서를 자동으로 처리합니다:
+
+```
+1. tasks/multi-tasks/WORK-LIST.md 열기
+2. IN_PROGRESS 상태인 WORK 전체 확인
+3. 해당 WORK 상태 → COMPLETED, 날짜 업데이트
+4. git add tasks/multi-tasks/WORK-LIST.md
+5. git commit -m "chore: WORK-LIST 갱신 — WORK-XX COMPLETED"
+6. git push
+```
+
+> **Agent(builder / committer / scheduler)는 WORK-LIST를 COMPLETED로 갱신하지 않습니다.**
+> COMPLETED 갱신은 오직 push 시점에만 수행합니다. Agent가 `🎉 WORK 완료!` 메시지를 출력하더라도 WORK-LIST 갱신은 하지 않습니다.
+
+---
+
 ## 팁
 
 ### CLAUDE.md를 최신 상태로 유지
@@ -462,6 +462,103 @@ scheduler's context after 5 TASKs:
 | 실패 복구 | 처음부터 다시 | 마지막 result 파일부터 재개 |
 | 추적 | 채팅 히스토리 스크롤 | 파일 기반 (PLAN.md, result.md) |
 | 검증 | 수동 | 자동 (build/lint/test) |
+
+### Router 판정 기준 config (`.agent/router_rule_config.json`)
+
+router는 프로젝트 루트의 `.agent/router_rule_config.json`을 읽어 라우팅 판정 기준을 결정합니다. 파일이 없으면 router의 내장 기본값을 사용합니다.
+
+**파일 위치:**
+```
+{프로젝트-루트}/.agent/router_rule_config.json
+```
+
+**JSON 구조:**
+```json
+{
+  "$schema": "http://uc-taskmanager.local/schemas/router-rules/v1.0.json",
+  "version": "1.1.0",
+  "description": "Router execution-mode 판정 기준 설정. 프로젝트별로 커스터마이즈.",
+  "decision_flow": [
+    "1. build_test_required 여부 판단 → false이면 direct",
+    "2. single_domain + sequential DAG → pipeline",
+    "3. full_conditions 중 하나라도 해당 → full"
+  ],
+  "rules": {
+    "direct": {
+      "criteria": {
+        "build_test_required": false,
+        "note": "파일 수·줄 수 무관. 검증 없이 끝나는 작업이면 direct (텍스트 편집, 설정 변경, 단순 치환 등)"
+      }
+    },
+    "pipeline": {
+      "criteria": {
+        "build_test_required": true,
+        "single_domain_only": true,
+        "max_tasks": 5,
+        "dag_complexity": "sequential"
+      }
+    },
+    "full": {
+      "criteria": {
+        "any_of": [
+          "task_count > 5",
+          "dag_complexity == complex (TASK 간 의존성이 2레벨 이상)",
+          "multi_domain == true (BE + FE 동시 변경)",
+          "new_module == true (신규 모듈/기능 — 설계→구현→검증 다단계)",
+          "partial_rollback_needed == true (TASK 실패 시 부분 롤백 필요)"
+        ]
+      }
+    }
+  },
+  "customization_guide": {
+    "문서 중심 프로젝트 (md 편집)": "direct 범위를 넓게. build_test_required=false인 경우 대부분 direct",
+    "코드 개발 중심 프로젝트": "pipeline/full 중심. 단순 버그 수정은 pipeline, 멀티도메인은 full",
+    "max_tasks 조정": "팀 규모나 컨텍스트 한계에 따라 3~7 사이로 조정 가능"
+  }
+}
+```
+
+**주요 필드 설명:**
+| 필드 | 설명 |
+|------|------|
+| `rules.direct.criteria.build_test_required` | `false` → 서브에이전트 없이 router가 직접 처리 |
+| `rules.pipeline.criteria.max_tasks` | pipeline에서 full로 에스컬레이션하는 최대 TASK 수 (기본: 5) |
+| `rules.pipeline.criteria.dag_complexity` | `sequential`만 허용; complex DAG → full로 에스컬레이션 |
+| `rules.full.criteria.any_of` | 조건 목록 — 하나라도 해당하면 full 모드 트리거 |
+
+**Fallback 동작:** `.agent/router_rule_config.json`이 없거나 파싱 오류 시 router의 내장 기본값으로 폴백합니다 (위 구조와 동일).
+
+**프로젝트별 커스터마이즈 예시:**
+
+문서 편집 중심 프로젝트 (대부분 텍스트 수정):
+```json
+{
+  "rules": {
+    "direct": {
+      "criteria": { "build_test_required": false }
+    },
+    "pipeline": {
+      "criteria": { "max_tasks": 3, "single_domain_only": true, "dag_complexity": "sequential" }
+    }
+  }
+}
+```
+
+엄격한 빌드 검증이 필요한 모노레포:
+```json
+{
+  "rules": {
+    "pipeline": {
+      "criteria": { "max_tasks": 7 }
+    },
+    "full": {
+      "criteria": {
+        "any_of": ["task_count > 7", "multi_domain == true"]
+      }
+    }
+  }
+}
+```
 
 ### 세 가지 실행 모드
 

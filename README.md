@@ -19,215 +19,6 @@ Six subagents work across any project and any language, automatically handling *
 
 ---
 
-## Concept: Three Execution Modes
-
-The **router** analyzes every `[]`-tagged request and selects one of three `execution-mode` values:
-
-```
-User Request
-     │
-     ▼
-  ┌────────┐
-  │ router │ ── no [] tag ──▶ handle directly (no pipeline)
-  └───┬────┘
-      │ [] tag detected
-      ▼
-  Assess complexity → execution-mode
-  (reads .agent/router_rule_config.json if present)
-      │
-      ├─ direct  (no build/test required)
-      │   ▼
-      │  Router handles everything — no subagent overhead
-      │  Creates WORK-NN/PLAN.md + result.md + commit (0 extra sessions)
-      │
-      ├─ pipeline  (build/test required, single domain, sequential)
-      │   ▼
-      │  router → builder → verifier → committer
-      │  Router creates PLAN, dispatches 3 subagents
-      │
-      └─ full  (multi-domain / complex DAG / new module / 5+ tasks)
-          ▼
-         router → planner → scheduler → [builder → verifier → committer] × N
-                 (full planning + multi-task pipeline)
-```
-
-All three modes output to `tasks/multi-tasks/WORK-NN/` and guarantee `result.md` + `COMMITTER DONE` callback.
-
-### WORK (Multi-Task, full mode)
-
-A two-level hierarchy for complex features:
-
-```
-WORK (unit of work)       A single goal. The unit requested by the user.
-└── TASK (unit of task)   An individual execution unit to achieve the WORK.
-    └── result            Completion proof. Auto-generated after verification.
-```
-
-### pipeline mode (Single Task, Delegated)
-
-Subagent-delegated path for moderate single tasks. Router stays clean.
-
-```
-router → builder(sonnet) → verifier(haiku) → committer(haiku)
-```
-
-### direct mode (Trivial)
-
-Router handles everything in its own context. No subagent sessions spawned.
-
-```
-router: Analyze → Implement → Self-verify → Commit → result.md
-```
-
----
-
-## Pipeline
-
-### WORK Pipeline (Complex)
-
-```
-  router           planner          scheduler         builder          verifier         committer
- ┌────────┐      ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │Request  │────▶│Create    │────▶│Dependency │────▶│Code      │────▶│Build/Test│────▶│Result    │
- │Analysis │     │WORK/TASK │     │DAG + Order│     │Implement │     │Verify    │     │→ git     │
- └────────┘     └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
-                                                       │                │                │
-                                                       └── Retry on fail┘                │
-                                                          (max 3 times)                  │
-                                                                         Next TASK loop ◀┘
-```
-
-### pipeline mode (Simple → Delegated)
-
-```
-  router            builder          verifier         committer
- ┌────────┐       ┌──────────┐     ┌──────────┐     ┌──────────┐
- │PLAN    │─────▶│Code      │────▶│Build/Test│────▶│Result    │
- │+TASK   │      │Implement │     │Verify    │     │→ git     │
- └────────┘      └──────────┘     └──────────┘     └──────────┘
-  (context clean)  (sonnet)         (haiku)           (haiku)
-```
-
-### direct mode (Trivial)
-
-```
-  router
- ┌──────────────────────────────────────────────────┐
- │ Analyze → Implement → Self-check → Commit → result│
- └──────────────────────────────────────────────────┘
-  (no build/test required — no subagent overhead, 0 extra sessions)
-```
-
-### Agents
-
-| Agent | Role | Model | Permission | MCP |
-|-------|------|-------|------------|-----|
-| **router** | `[]` tag detection, execution-mode판정(direct/pipeline/full), PLAN생성, WORK-LIST관리 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
-| **planner** | Create WORK + decompose TASKs + generate PLAN.md(Execution-Mode:full) + pre-create progress templates | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
-| **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch | — |
-| **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena(심볼단위탐색/편집) |
-| **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification (read-only) | **haiku** | read + execute | — |
-| **committer** | Gate check (progress.md) → write result.md → git commit → COMMITTER DONE callback | **haiku** | read + write + git | — |
-
----
-
-## The `[]` Tag System
-
-Prefix your request with a `[]` tag to trigger the pipeline:
-
-| Tag | Meaning |
-|-----|---------|
-| `[추가기능]` | New feature |
-| `[기능개선]` | Enhancement |
-| `[오류수정]` / `[버그수정]` | Bug fix |
-| `[WORK 시작]` | Always create new WORK (skip complexity check) |
-
-No `[]` tag = handled directly without pipeline.
-
----
-
-## File Structure
-
-```
-tasks/
-├── multi-tasks/
-│   ├── WORK-LIST.md                      ← Master list of all WORKs (managed by router)
-│   ├── WORK-01/                          ← "User Authentication"
-│   │   ├── PLAN.md                       ← Plan + dependency graph
-│   │   ├── PROGRESS.md                   ← Progress tracking (auto-updated)
-│   │   ├── WORK-01-TASK-00.md            ← Task specification
-│   │   ├── WORK-01-TASK-00-progress.md   ← Real-time checkpoint (builder writes)
-│   │   ├── WORK-01-TASK-00-result.md     ← Completion report (committer writes)
-│   │   ├── WORK-01-TASK-01.md
-│   │   └── ...
-│   └── WORK-02/
-│       └── ...
-```
-
-### WORK-LIST.md
-
-The router maintains `tasks/multi-tasks/WORK-LIST.md` as the master index:
-
-| WORK ID | Title | Status | Created |
-|---------|-------|--------|---------|
-| WORK-01 | User Authentication | COMPLETED | 2026-03-01 |
-| WORK-02 | Payment Integration | IN_PROGRESS | 2026-03-05 |
-
-| Status | Meaning |
-|--------|---------|
-| `IN_PROGRESS` | TASKs in progress — not yet pushed |
-| `COMPLETED` | All TASKs committed + git push done |
-
-- **IN_PROGRESS**: router checks this before creating new WORKs
-- **COMPLETED**: updated at `git push` time — **not by agents**
-
-#### git push Procedure
-
-When you ask Claude to push (`"push this"`, `"git push"`), Claude handles the full sequence automatically:
-
-```
-1. Open tasks/multi-tasks/WORK-LIST.md
-2. Find all IN_PROGRESS WORKs
-3. Change status → COMPLETED, update date
-4. git add tasks/multi-tasks/WORK-LIST.md
-5. git commit -m "chore: update WORK-LIST — WORK-XX COMPLETED"
-6. git push
-```
-
-> **Agents (builder / committer / scheduler) never update WORK-LIST to COMPLETED.**
-> COMPLETED is only set at push time. If an agent outputs `🎉 WORK complete!`, that is a status message — not a WORK-LIST update.
-
----
-
-## Installation
-
-### Global (available across all projects)
-
-```bash
-git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git
-cp uc-taskmanager-claude-agent/agents/*.md ~/.claude/agents/
-```
-
-### Per-Project
-
-```bash
-git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
-mkdir -p .claude/agents
-cp /tmp/uc-tm/agents/*.md .claude/agents/
-rm -rf /tmp/uc-tm
-git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
-```
-
-### Verify
-
-```bash
-claude
-> /agents
-# router, planner, scheduler, builder, verifier, committer → confirm all 6
-```
-
----
-
 ## Usage
 
 ### Trivial Fix (direct mode)
@@ -354,6 +145,215 @@ The scheduler reads `PROGRESS.md` and `result.md` files to report current state.
 
 ---
 
+## The `[]` Tag System
+
+Prefix your request with a `[]` tag to trigger the pipeline:
+
+| Tag | Meaning |
+|-----|---------|
+| `[추가기능]` | New feature |
+| `[기능개선]` | Enhancement |
+| `[오류수정]` / `[버그수정]` | Bug fix |
+| `[WORK 시작]` | Always create new WORK (skip complexity check) |
+
+No `[]` tag = handled directly without pipeline.
+
+---
+
+## Installation
+
+### Global (available across all projects)
+
+```bash
+git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git
+cp uc-taskmanager-claude-agent/agents/*.md ~/.claude/agents/
+```
+
+### Per-Project
+
+```bash
+git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
+mkdir -p .claude/agents
+cp /tmp/uc-tm/agents/*.md .claude/agents/
+rm -rf /tmp/uc-tm
+git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
+```
+
+### Verify
+
+```bash
+claude
+> /agents
+# router, planner, scheduler, builder, verifier, committer → confirm all 6
+```
+
+---
+
+## Concept: Three Execution Modes
+
+The **router** analyzes every `[]`-tagged request and selects one of three `execution-mode` values:
+
+```
+User Request
+     │
+     ▼
+  ┌────────┐
+  │ router │ ── no [] tag ──▶ handle directly (no pipeline)
+  └───┬────┘
+      │ [] tag detected
+      ▼
+  Assess complexity → execution-mode
+  (reads .agent/router_rule_config.json if present)
+      │
+      ├─ direct  (no build/test required)
+      │   ▼
+      │  Router handles everything — no subagent overhead
+      │  Creates WORK-NN/PLAN.md + result.md + commit (0 extra sessions)
+      │
+      ├─ pipeline  (build/test required, single domain, sequential)
+      │   ▼
+      │  router → builder → verifier → committer
+      │  Router creates PLAN, dispatches 3 subagents
+      │
+      └─ full  (multi-domain / complex DAG / new module / 5+ tasks)
+          ▼
+         router → planner → scheduler → [builder → verifier → committer] × N
+                 (full planning + multi-task pipeline)
+```
+
+All three modes output to `tasks/multi-tasks/WORK-NN/` and guarantee `result.md` + `COMMITTER DONE` callback.
+
+### WORK (Multi-Task, full mode)
+
+A two-level hierarchy for complex features:
+
+```
+WORK (unit of work)       A single goal. The unit requested by the user.
+└── TASK (unit of task)   An individual execution unit to achieve the WORK.
+    └── result            Completion proof. Auto-generated after verification.
+```
+
+### pipeline mode (Single Task, Delegated)
+
+Subagent-delegated path for moderate single tasks. Router stays clean.
+
+```
+router → builder(sonnet) → verifier(haiku) → committer(haiku)
+```
+
+### direct mode (Trivial)
+
+Router handles everything in its own context. No subagent sessions spawned.
+
+```
+router: Analyze → Implement → Self-verify → Commit → result.md
+```
+
+---
+
+## Pipeline
+
+### WORK Pipeline (Complex)
+
+```
+  router           planner          scheduler         builder          verifier         committer
+ ┌────────┐      ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │Request  │────▶│Create    │────▶│Dependency │────▶│Code      │────▶│Build/Test│────▶│Result    │
+ │Analysis │     │WORK/TASK │     │DAG + Order│     │Implement │     │Verify    │     │→ git     │
+ └────────┘     └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
+                                                       │                │                │
+                                                       └── Retry on fail┘                │
+                                                          (max 3 times)                  │
+                                                                         Next TASK loop ◀┘
+```
+
+### pipeline mode (Simple → Delegated)
+
+```
+  router            builder          verifier         committer
+ ┌────────┐       ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │PLAN    │─────▶│Code      │────▶│Build/Test│────▶│Result    │
+ │+TASK   │      │Implement │     │Verify    │     │→ git     │
+ └────────┘      └──────────┘     └──────────┘     └──────────┘
+  (context clean)  (sonnet)         (haiku)           (haiku)
+```
+
+### direct mode (Trivial)
+
+```
+  router
+ ┌──────────────────────────────────────────────────┐
+ │ Analyze → Implement → Self-check → Commit → result│
+ └──────────────────────────────────────────────────┘
+  (no build/test required — no subagent overhead, 0 extra sessions)
+```
+
+### Agents
+
+| Agent | Role | Model | Permission | MCP |
+|-------|------|-------|------------|-----|
+| **router** | `[]` tag detection, execution-mode판정(direct/pipeline/full), PLAN생성, WORK-LIST관리 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
+| **planner** | Create WORK + decompose TASKs + generate PLAN.md(Execution-Mode:full) + pre-create progress templates | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
+| **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch | — |
+| **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena(심볼단위탐색/편집) |
+| **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification (read-only) | **haiku** | read + execute | — |
+| **committer** | Gate check (progress.md) → write result.md → git commit → COMMITTER DONE callback | **haiku** | read + write + git | — |
+
+---
+
+## File Structure
+
+```
+tasks/
+├── multi-tasks/
+│   ├── WORK-LIST.md                      ← Master list of all WORKs (managed by router)
+│   ├── WORK-01/                          ← "User Authentication"
+│   │   ├── PLAN.md                       ← Plan + dependency graph
+│   │   ├── PROGRESS.md                   ← Progress tracking (auto-updated)
+│   │   ├── WORK-01-TASK-00.md            ← Task specification
+│   │   ├── WORK-01-TASK-00-progress.md   ← Real-time checkpoint (builder writes)
+│   │   ├── WORK-01-TASK-00-result.md     ← Completion report (committer writes)
+│   │   ├── WORK-01-TASK-01.md
+│   │   └── ...
+│   └── WORK-02/
+│       └── ...
+```
+
+### WORK-LIST.md
+
+The router maintains `tasks/multi-tasks/WORK-LIST.md` as the master index:
+
+| WORK ID | Title | Status | Created |
+|---------|-------|--------|---------|
+| WORK-01 | User Authentication | COMPLETED | 2026-03-01 |
+| WORK-02 | Payment Integration | IN_PROGRESS | 2026-03-05 |
+
+| Status | Meaning |
+|--------|---------|
+| `IN_PROGRESS` | TASKs in progress — not yet pushed |
+| `COMPLETED` | All TASKs committed + git push done |
+
+- **IN_PROGRESS**: router checks this before creating new WORKs
+- **COMPLETED**: updated at `git push` time — **not by agents**
+
+#### git push Procedure
+
+When you ask Claude to push (`"push this"`, `"git push"`), Claude handles the full sequence automatically:
+
+```
+1. Open tasks/multi-tasks/WORK-LIST.md
+2. Find all IN_PROGRESS WORKs
+3. Change status → COMPLETED, update date
+4. git add tasks/multi-tasks/WORK-LIST.md
+5. git commit -m "chore: update WORK-LIST — WORK-XX COMPLETED"
+6. git push
+```
+
+> **Agents (builder / committer / scheduler) never update WORK-LIST to COMPLETED.**
+> COMPLETED is only set at push time. If an agent outputs `🎉 WORK complete!`, that is a status message — not a WORK-LIST update.
+
+---
+
 ## Tips
 
 ### Keep CLAUDE.md Up to Date
@@ -463,6 +463,103 @@ scheduler's context after 5 TASKs:
 | Failure recovery | Start over | Resume from last result file |
 | Tracking | Scroll chat history | File-based (PLAN.md, result.md) |
 | Verification | Manual | Automated (build/lint/test) |
+
+### Router Rule Config (`.agent/router_rule_config.json`)
+
+The router reads `.agent/router_rule_config.json` from the project root to determine routing criteria. If the file is absent, the router uses its built-in defaults.
+
+**File location:**
+```
+{project-root}/.agent/router_rule_config.json
+```
+
+**JSON structure:**
+```json
+{
+  "$schema": "http://uc-taskmanager.local/schemas/router-rules/v1.0.json",
+  "version": "1.1.0",
+  "description": "Router execution-mode decision criteria. Customize per project.",
+  "decision_flow": [
+    "1. build_test_required? → false → direct",
+    "2. single_domain + sequential DAG → pipeline",
+    "3. any full_conditions met → full"
+  ],
+  "rules": {
+    "direct": {
+      "criteria": {
+        "build_test_required": false,
+        "note": "File/line count irrelevant. If no build/test needed → direct (text edits, config changes, simple substitutions)"
+      }
+    },
+    "pipeline": {
+      "criteria": {
+        "build_test_required": true,
+        "single_domain_only": true,
+        "max_tasks": 5,
+        "dag_complexity": "sequential"
+      }
+    },
+    "full": {
+      "criteria": {
+        "any_of": [
+          "task_count > 5",
+          "dag_complexity == complex (2+ dependency levels)",
+          "multi_domain == true (BE + FE simultaneously)",
+          "new_module == true (design → implement → verify multi-phase)",
+          "partial_rollback_needed == true"
+        ]
+      }
+    }
+  },
+  "customization_guide": {
+    "doc-heavy projects (md edits)": "Widen direct scope. Most build_test_required=false cases → direct",
+    "code-heavy projects": "Center on pipeline/full. Simple bug fixes → pipeline, multi-domain → full",
+    "max_tasks tuning": "Adjust pipeline max_tasks between 3–7 based on team size or context limits"
+  }
+}
+```
+
+**Key fields:**
+| Field | Description |
+|-------|-------------|
+| `rules.direct.criteria.build_test_required` | `false` → router handles entirely without spawning subagents |
+| `rules.pipeline.criteria.max_tasks` | Max task count before escalating to full (default: 5) |
+| `rules.pipeline.criteria.dag_complexity` | `sequential` only; complex DAG → escalates to full |
+| `rules.full.criteria.any_of` | List of conditions — any match triggers full mode |
+
+**Fallback behavior:** If `.agent/router_rule_config.json` is absent or malformed, the router falls back to its built-in defaults (equivalent to the structure above).
+
+**Per-project customization example:**
+
+For a documentation-heavy project where most changes are text edits:
+```json
+{
+  "rules": {
+    "direct": {
+      "criteria": { "build_test_required": false }
+    },
+    "pipeline": {
+      "criteria": { "max_tasks": 3, "single_domain_only": true, "dag_complexity": "sequential" }
+    }
+  }
+}
+```
+
+For a monorepo with strict build requirements:
+```json
+{
+  "rules": {
+    "pipeline": {
+      "criteria": { "max_tasks": 7 }
+    },
+    "full": {
+      "criteria": {
+        "any_of": ["task_count > 7", "multi_domain == true"]
+      }
+    }
+  }
+}
+```
 
 ### Three Execution Modes
 
