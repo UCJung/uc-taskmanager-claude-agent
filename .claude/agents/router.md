@@ -43,7 +43,28 @@ If user request starts with a `[]` tag → **trigger pipeline**.
 - No `[]` tag → handle directly without pipeline
 - `[WORK 시작]` tag → always create new WORK (skip question, start planner immediately)
 
-## 2. Three-Path Routing (execution-mode)
+## 2. Config 읽기 절차
+
+판정 기준은 `.agent/router_rule_config.json`에서 읽는다.
+
+```bash
+# config 로드 시도
+CONFIG_FILE=".agent/router_rule_config.json"
+if [ -f "$CONFIG_FILE" ]; then
+  # config 파일의 rules 섹션을 판정에 사용
+  echo "Config loaded: $CONFIG_FILE"
+else
+  # Fallback: 내장 기본값 사용 (하위 호환)
+  echo "Config not found. Using built-in defaults."
+fi
+```
+
+config 파일이 존재하는 경우 해당 파일의 `rules` 필드를 읽어 각 mode 판정에 사용한다.
+config 파일이 없는 경우 아래 내장 기본값(Routing Criteria)을 사용한다.
+
+---
+
+## 3. Three-Path Routing (execution-mode)
 
 After detecting `[]` tag, assess complexity and route to one of three execution modes:
 
@@ -67,6 +88,9 @@ After detecting `[]` tag, assess complexity and route to one of three execution 
 ```
 
 ### Routing Criteria
+
+> **내장 기본값 (config 파일이 없을 때 적용):**
+> 실제 운용 시에는 `.agent/router_rule_config.json`의 `rules` 값이 우선 적용된다.
 
 | Criterion | direct | pipeline | full |
 |-----------|:---:|:---:|:---:|
@@ -238,9 +262,9 @@ Router dispatches to planner for new WORK creation, or directly to scheduler for
 
 ---
 
-## 3. WORK Assignment Process (Required)
+## 4. WORK Assignment Process (Required)
 
-### 3.1 WORK ID Assignment with Validation
+### 4.1 WORK ID Assignment with Validation
 
 **Two-Source Validation Rule:**
 
@@ -267,10 +291,10 @@ fi
 ```
 
 **Important**:
-- Planner MUST use filesystem-only source (as per WORK-02-TASK-00), so router's two-source validation serves as a consistency check before dispatching.
+- Planner MUST use filesystem-only source (as per WORK-02-TASK-00), so router's 4.1 two-source validation serves as a consistency check before dispatching.
 - If mismatch detected, router should inform user but continue with max(FS, LIST) + 1 strategy.
 
-### 3.2 Standard WORK Assignment Flow
+### 4.2 Standard WORK Assignment Flow
 
 1. **Read `tasks/multi-tasks/WORK-LIST.md`** — check for IN_PROGRESS WORKs
 2. Perform WORK ID validation (as per 3.1) to ensure consistency
@@ -281,7 +305,7 @@ fi
    - **Add to existing WORK** → create TASK MD → builder → verifier → committer (skip planner/scheduler)
    - **New WORK** → full pipeline (planner → scheduler → builder → verifier → committer)
 
-## 4. WORK-LIST.md Management
+## 5. WORK-LIST.md Management
 
 `tasks/multi-tasks/WORK-LIST.md` is the master list of all WORKs.
 
@@ -299,14 +323,14 @@ fi
 - Creating WORK directory without updating WORK-LIST.md
 - Leaving IN_PROGRESS after push
 
-## 5. Approval Rules
+## 6. Approval Rules
 
 - **Default mode**: After planner generates PLAN.md + TASK MDs + PROGRESS.md, **present plan to user and request approval** before builder phase
 - **Auto mode**: Only when user explicitly says "자동으로 진행", "auto", etc.
 - Auto mode is valid only within current WORK scope. New WORK resets to default mode.
 - direct / pipeline 모드는 승인 불필요 — 즉시 실행.
 
-## 6. Output Language Rule
+## 7. Output Language Rule
 
 See `agents/shared-prompt-sections.md` § 1 for full specification with cache_control markers.
 
@@ -318,7 +342,7 @@ See `agents/shared-prompt-sections.md` § 1 for full specification with cache_co
 - If neither exists, use `en`
 - Pass the language code to planner/scheduler/builder/verifier/committer in dispatch `<context><language>` field
 
-## 7. XML Schema Reference
+## 8. XML Schema Reference
 
 This agent dispatches to builder, verifier, committer, planner, and scheduler using the XML format defined in `agents/xml-schema.md`. Key elements:
 - `<dispatch>` attributes: `to`, `work`, `task`, `execution-mode`
