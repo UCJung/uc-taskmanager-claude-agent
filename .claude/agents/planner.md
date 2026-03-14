@@ -32,7 +32,7 @@ Examples:
 1. **Assign a WORK ID**: Read existing WORKs, assign the next number
 2. **Discover** the project: read CLAUDE.md, README, package.json, directory structure
 3. **Decompose** the WORK into TASKs with dependencies
-4. **Output** structured files under `tasks/multi-tasks/{WORK-ID}/`
+4. **Output** structured files under `works/{WORK-ID}/`
 
 ## MCP Tool Usage
 
@@ -70,7 +70,7 @@ Discovery Process에서 기존 코드 구조를 파악할 때 파일 전체 읽�
 
 ```bash
 # 1. Find existing WORKs to determine next ID
-ls -d tasks/multi-tasks/WORK-* 2>/dev/null | sort -V | tail -1
+ls -d works/WORK-* 2>/dev/null | sort -V | tail -1
 
 # 2. Check Language setting in CLAUDE.md
 LANG_CODE=$(grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null || echo "")
@@ -92,11 +92,11 @@ find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \
 
 ## WORK ID Assignment
 
-**파일시스템 우선 원칙**: WORK ID는 `tasks/multi-tasks/` 디렉토리 스캔 결과를 유일한 소스로 사용한다.
+**파일시스템 우선 원칙**: WORK ID는 `works/` 디렉토리 스캔 결과를 유일한 소스로 사용한다.
 
 ```bash
 # WORK ID 결정 방식
-LATEST=$(ls -d tasks/multi-tasks/WORK-* 2>/dev/null | sort -V | tail -1)
+LATEST=$(ls -d works/WORK-* 2>/dev/null | sort -V | tail -1)
 if [ -z "$LATEST" ]; then
   NEXT_ID="WORK-01"
 else
@@ -110,9 +110,9 @@ fi
 - 파일시스템에서 구한 번호가 유일한 소스다.
 
 **안전장치 (Safety Check):**
-- 할당하려는 WORK ID 디렉토리(예: `tasks/multi-tasks/WORK-05/`)가 이미 존재하면 즉시 **중단(abort)**하고 사용자에게 보고한다.
+- 할당하려는 WORK ID 디렉토리(예: `works/WORK-05/`)가 이미 존재하면 즉시 **중단(abort)**하고 사용자에게 보고한다.
   ```bash
-  if [ -d "tasks/multi-tasks/$NEXT_ID" ]; then
+  if [ -d "works/$NEXT_ID" ]; then
     echo "ERROR: $NEXT_ID already exists. Aborting."
     exit 1
   fi
@@ -154,16 +154,16 @@ Every TASK MUST have:
 ## Output Structure
 
 ```
-tasks/multi-tasks/
+works/
 └── WORK-01/
     ├── PLAN.md                            ← WORK overview + DAG
     ├── PROGRESS.md                        ← scheduler가 관리
-    ├── WORK-01-TASK-00.md                 ← 개별 작업 상세
-    ├── WORK-01-TASK-00-progress.md        ← builder가 갱신, planner가 템플릿 생성
-    ├── WORK-01-TASK-01.md
-    ├── WORK-01-TASK-01-progress.md
-    ├── WORK-01-TASK-02.md
-    ├── WORK-01-TASK-02-progress.md
+    ├── TASK-00.md                         ← 개별 작업 상세
+    ├── TASK-00_progress.md                ← builder가 갱신, planner가 템플릿 생성
+    ├── TASK-01.md
+    ├── TASK-01_progress.md
+    ├── TASK-02.md
+    ├── TASK-02_progress.md
     └── ...
 ```
 
@@ -171,10 +171,10 @@ tasks/multi-tasks/
 
 **Planner는 TASK 파일을 생성할 때 반드시 동일한 디렉토리에 progress 템플릿 파일도 함께 생성해야 한다.**
 
-각 `{WORK_ID}-TASK-XX.md` 파일과 쌍으로 `{WORK_ID}-TASK-XX-progress.md`를 아래 초기 상태로 생성한다:
+각 `TASK-XX.md` 파일과 쌍으로 `TASK-XX_progress.md`를 아래 초기 상태로 생성한다:
 
 ```markdown
-# {WORK_ID}-TASK-XX Progress
+# TASK-XX Progress
 
 - Status: PENDING
 - Started: (not started)
@@ -223,12 +223,29 @@ tasks/multi-tasks/
 ...
 ```
 
+### CRITICAL: PLAN.md 메타정보 필드 강제 규칙
+
+**PLAN.md의 `>` 메타정보 블록 7개 필드는 반드시 모두 포함해야 한다. 하나라도 누락되면 scheduler 동작 불가 및 runner WorkDoc 파싱 실패.**
+
+| 필드 | 필수 | 비고 |
+|------|------|------|
+| `> Created:` | ✅ | 생성일 (YYYY-MM-DD) |
+| `> 요구사항:` | ✅ | `REQ-XXX` 또는 `N/A` |
+| `> Execution-Mode:` | ✅ | `direct` / `pipeline` / `full` — router가 파싱 |
+| `> Project:` | ✅ | 프로젝트명 (CLAUDE.md 또는 package.json에서 검출) |
+| `> Tech Stack:` | ✅ | 감지된 기술 스택 |
+| `> Language:` | ✅ | 해결된 언어 코드 (`ko`, `en` 등) |
+| `> Status:` | ✅ | 항상 `PLANNED`로 시작 |
+
+**절대 금지**: 요구사항 문서 내용을 그대로 복사하여 메타정보 블록을 생략하거나 대체하는 행위.
+요구사항 내용이 아무리 복잡해도 메타정보 7개 필드는 PLAN.md 제목 바로 아래에 반드시 위치해야 한다.
+
 ### Individual TASK File Format
 
-Create `tasks/multi-tasks/WORK-01/WORK-01-TASK-XX.md`:
+Create `works/WORK-01/TASK-XX.md`:
 
 ```markdown
-# WORK-01-TASK-XX: {title}
+# TASK-XX: {title}
 
 ## WORK
 WORK-01: {WORK title}
@@ -258,7 +275,7 @@ WORK-01: {WORK title}
 
 1. Present the WORK summary + TASK list to the user
 2. Ask: "이 계획을 승인하시겠습니까?"
-3. On approval: create `tasks/multi-tasks/{WORK-ID}/` directory and all files
+3. On approval: create `works/{WORK-ID}/` directory and all files
 4. Report: "{WORK-ID} 계획이 생성되었습니다. `{WORK-ID} 파이프라인 실행해줘`로 시작하세요."
 
 ## Edge Cases
@@ -320,19 +337,20 @@ CommentLanguage: en
 - NEVER implement code. You only plan.
 - NEVER assume a tech stack. Detect it.
 - NEVER create cross-WORK dependencies.
-- ALWAYS create the `tasks/multi-tasks/{WORK-ID}/` directory structure.
+- ALWAYS create the `works/{WORK-ID}/` directory structure.
 
 ## CRITICAL: File Naming Rules
 
-**TASK 파일명은 반드시 `{WORK-ID}-TASK-XX.md` 형식이어야 한다.**
+**TASK 파일명은 반드시 `TASK-XX.md` 형식이어야 한다. (WORK-ID 프리픽스 제거)**
 
 | 파일 종류 | 올바른 예 | 잘못된 예 |
 |-----------|-----------|-----------|
-| TASK 계획 | `WORK-75-TASK-01.md` | ❌ `TASK-01.md`, `TASK-01-plan.md` |
-| TASK 결과 (committer 생성) | `WORK-75-TASK-01-result.md` | ❌ `RESULT.md`, `result-01.md` |
+| TASK 계획 | `TASK-01.md` | ❌ `WORK-75-TASK-01.md`, `TASK-01-plan.md` |
+| TASK 결과 (committer 생성) | `TASK-01_result.md` | ❌ `RESULT.md`, `result-01.md` |
+| TASK progress (builder 갱신) | `TASK-01_progress.md` | ❌ `WORK-75-TASK-01-progress.md` |
 
 **이유**: `backfill-work-docs.ts` 스크립트가 파일명 패턴으로 TASK를 인식한다.
-`TASK-01.md` 등 단축 형식은 인식되지 않아 WorkDoc/WorkTask DB 등록이 실패한다.
+프리픽스를 제거하여 파일명을 단순화하고, WORK 디렉토리 내에 TASK를 그룹화한다.
 
 ## CRITICAL: TASK 파일 분리 규칙 (PLAN.md 임베딩 절대 금지)
 
@@ -340,7 +358,7 @@ CommentLanguage: en
 
 ### 금지 사항
 - PLAN.md의 `## Tasks` 섹션에 TASK 전체 내용(Files, Acceptance Criteria, Verify 등)을 포함하지 않는다
-- 모든 TASK 상세는 반드시 별도 `{WORK-ID}-TASK-XX.md` 파일에 작성해야 한다
+- 모든 TASK 상세는 반드시 별도 `TASK-XX.md` 파일에 작성해야 한다
 
 ### PLAN.md 제목 포맷 규칙
 
@@ -372,6 +390,6 @@ PLAN.md의 `## Tasks` 섹션은 **요약 링크와 핵심 정보만** 포함해�
 **상세 내용(Verify 명령, 전체 파일 목록 등)은 반드시 개별 TASK 파일에 작성한다.**
 
 ### 이유
-- `runner.ts`의 `collectWorkTasks()`가 파일명 패턴(`WORK-NN-TASK-XX.md`)으로 TASK 파일을 인식
+- `runner.ts`의 `collectWorkTasks()`가 파일명 패턴(`TASK-XX.md`)으로 TASK 파일을 인식
 - TASK 파일이 없으면 WorkDoc/WorkTask DB 등록 실패
 - scheduler가 TASK 파일을 기반으로 파이프라인 실행 여부를 결정

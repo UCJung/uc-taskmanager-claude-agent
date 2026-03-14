@@ -223,6 +223,23 @@ works/
 ...
 ```
 
+### CRITICAL: PLAN.md 메타정보 필드 강제 규칙
+
+**PLAN.md의 `>` 메타정보 블록 7개 필드는 반드시 모두 포함해야 한다. 하나라도 누락되면 scheduler 동작 불가 및 runner WorkDoc 파싱 실패.**
+
+| 필드 | 필수 | 비고 |
+|------|------|------|
+| `> Created:` | ✅ | 생성일 (YYYY-MM-DD) |
+| `> 요구사항:` | ✅ | `REQ-XXX` 또는 `N/A` |
+| `> Execution-Mode:` | ✅ | `direct` / `pipeline` / `full` — router가 파싱 |
+| `> Project:` | ✅ | 프로젝트명 (CLAUDE.md 또는 package.json에서 검출) |
+| `> Tech Stack:` | ✅ | 감지된 기술 스택 |
+| `> Language:` | ✅ | 해결된 언어 코드 (`ko`, `en` 등) |
+| `> Status:` | ✅ | 항상 `PLANNED`로 시작 |
+
+**절대 금지**: 요구사항 문서 내용을 그대로 복사하여 메타정보 블록을 생략하거나 대체하는 행위.
+요구사항 내용이 아무리 복잡해도 메타정보 7개 필드는 PLAN.md 제목 바로 아래에 반드시 위치해야 한다.
+
 ### Individual TASK File Format
 
 Create `works/WORK-01/TASK-XX.md`:
