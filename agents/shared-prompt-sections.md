@@ -61,34 +61,38 @@ Korean (ko)
 
 **Applies to**: builder, verifier (2 agents)
 
-**Description**: Standard self-check and verification commands used across the codebase.
+**Description**: 프로젝트 타입을 자동 감지하여 실행하는 표준 빌드/린트 명령어.
 
 **Content**:
 
 ```
 ## Build and Lint Commands
 
-The agents use the following standard commands for validation:
-
-### Build Command
+### 자동 감지 빌드 (Auto-detect Build)
 ```bash
-cd /c/rnd/agent/uc-taskmanager
-npm run build 2>&1 || true
+if [ -f "package.json" ]; then
+  npm run build 2>&1 || bun run build 2>&1 || yarn build 2>&1
+elif [ -f "Cargo.toml" ]; then
+  cargo build 2>&1
+elif [ -f "go.mod" ]; then
+  go build ./... 2>&1
+elif [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then
+  python -m py_compile $(find . -name "*.py" -not -path "*/venv/*" | head -20) 2>&1
+elif [ -f "Makefile" ]; then
+  make build 2>&1 || make 2>&1
+fi
 ```
 
-### Lint Command
+### 자동 감지 린트 (Auto-detect Lint)
 ```bash
-cd /c/rnd/agent/uc-taskmanager
-npm run lint 2>&1 || true
+if [ -f "package.json" ]; then
+  npm run lint 2>&1 || bun run lint 2>&1 || true
+elif [ -f "pyproject.toml" ]; then
+  ruff check . 2>&1 || python -m flake8 . 2>&1 || true
+fi
 ```
 
-### Test Command (if applicable)
-```bash
-cd /c/rnd/agent/uc-taskmanager
-npm test 2>&1 || true
-```
-
-These commands must be executed by the agent to validate implementation quality before advancing to the next phase.
+빌드 또는 린트 실패 시 보고 전에 반드시 수정한다.
 ```
 
 **Cache Control Marker**:
@@ -447,9 +451,116 @@ curl -s -X POST "$PROGRESS_CALLBACK" \
 
 ---
 
+---
+
+## 7. PLAN.md Required Meta Fields
+
+**Applies to**: planner, router, scheduler, builder (4 agents)
+
+**Description**: PLAN.md 생성 시 반드시 포함해야 하는 7개 메타필드. 하나라도 누락되면 scheduler 동작 불가 및 runner `parsePlanMd()` 파싱 실패.
+
+→ **`agents/file-content-schema.md` § 1** 참조 (전체 포맷 + 파싱 규칙)
+
+**Content**:
+
+```
+## PLAN.md Required Meta Fields (CRITICAL)
+
+PLAN.md 제목(`# WORK-NN: 제목`) 바로 아래 `>` 블록에 다음 7개 필드가 모두 있어야 한다:
+
+| 필드 | 필수 | 예시 |
+|------|------|------|
+| `> Created:` | ✅ | `2026-03-15` |
+| `> 요구사항:` | ✅ | `REQ-XXX` 또는 `N/A` |
+| `> Execution-Mode:` | ✅ | `direct` / `pipeline` / `full` |
+| `> Project:` | ✅ | 프로젝트명 |
+| `> Tech Stack:` | ✅ | 감지된 기술 스택 |
+| `> Language:` | ✅ | `ko`, `en`, `ja` 등 |
+| `> Status:` | ✅ | 항상 `PLANNED`로 시작 |
+
+### PLAN.md 제목 파싱 규칙
+
+runner.ts `parsePlanMd()`는 `# WORK-NN: 제목` 패턴을 파싱한다.
+
+```
+# WORK-01: 제목      ← 올바른 형식
+# PLAN WORK-01: 제목 ← 금지 (PLAN 키워드 포함 시 parsePlanMd() 오류)
+```
+```
+
+**Cache Control Marker**:
+
+```json
+{
+  "type": "text",
+  "text": "[content of PLAN.md Required Meta Fields section]",
+  "cache_control": {
+    "type": "ephemeral"
+  }
+}
+```
+
+---
+
+## 8. WORK-LIST.md Management Rules
+
+**Applies to**: router, planner, scheduler, committer (4 agents)
+
+**Description**: `works/WORK-LIST.md` 갱신 규칙 — 누가 언제 어떤 상태로 변경하는지 명시.
+
+**Content**:
+
+```
+## WORK-LIST.md Management Rules (CRITICAL)
+
+`works/WORK-LIST.md`는 모든 WORK의 마스터 목록이다.
+
+### 포맷
+
+| WORK | 제목 | 상태 | 생성일 | 완료일 |
+|------|------|------|--------|--------|
+| WORK-01 | 제목 | COMPLETED | YYYY-MM-DD | YYYY-MM-DD |
+| WORK-02 | 제목 | IN_PROGRESS | YYYY-MM-DD | - |
+
+### 상태값
+
+| 상태 | 의미 |
+|------|------|
+| `IN_PROGRESS` | 현재 진행 중 (WORK 생성 시 초기값) |
+| `COMPLETED` | 완료 (git push 시 변경) |
+
+### 갱신 규칙
+
+| 시점 | 주체 | 동작 |
+|------|------|------|
+| WORK 디렉토리 생성 시 | router / planner | IN_PROGRESS 행 추가 |
+| git push 시 | Claude (사용자 요청) | IN_PROGRESS → COMPLETED, 완료일 기입 |
+
+### CRITICAL 금지 사항
+
+- committer는 WORK-LIST.md를 절대 COMPLETED로 변경하지 않는다
+- scheduler는 WORK-LIST.md를 절대 COMPLETED로 변경하지 않는다
+- WORK 디렉토리 생성 시 WORK-LIST.md 갱신 누락 금지
+- git push 후 IN_PROGRESS 행 방치 금지
+```
+
+**Cache Control Marker**:
+
+```json
+{
+  "type": "text",
+  "text": "[content of WORK-LIST.md Management Rules section]",
+  "cache_control": {
+    "type": "ephemeral"
+  }
+}
+```
+
+---
+
 ## Version
 
 - **Created**: 2026-03-10
 - **Purpose**: WORK-03 — Agent간 프롬프트 전달 시 데이터 구조화로 토큰 절감
-- **Referenced by**: scheduler.md, router.md, builder.md, verifier.md, committer.md
-- **Updated**: 2026-03-12 (TASK-00) — Added Section 6: Task Callbacks for external system integration
+- **Referenced by**: scheduler.md, router.md, builder.md, verifier.md, committer.md, planner.md
+- **Updated**: 2026-03-15 — Added § 7 PLAN.md Required Meta Fields, § 8 WORK-LIST.md Management Rules

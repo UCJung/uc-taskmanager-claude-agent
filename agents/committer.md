@@ -303,6 +303,8 @@ If all TASKs in this WORK are done:
 > WORK-LIST status is updated to COMPLETED only when the user performs `git push`.
 > This agent's responsibility ends at commit. Push and WORK-LIST finalization are the user's action.
 > When the user asks Claude to push, Claude will update WORK-LIST first, then commit and push.
+>
+> → **`agents/shared-prompt-sections.md` § 8** 참조 (WORK-LIST.md 전체 갱신 규칙)
 
 ## Output Language Rule
 

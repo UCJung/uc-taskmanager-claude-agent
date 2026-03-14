@@ -317,6 +317,8 @@ fi
 
 ## 5. WORK-LIST.md Management
 
+→ **`agents/shared-prompt-sections.md` § 8** 참조 (전체 규칙 + 금지 사항)
+
 `works/WORK-LIST.md` is the master list of all WORKs.
 
 | Status | Meaning |

@@ -346,6 +346,8 @@ When all TASKs in the WORK are done:
 > **IMPORTANT**: Do NOT update WORK-LIST.md to COMPLETED.
 > WORK-LIST status is updated to COMPLETED only when the user performs `git push`.
 > Scheduler's responsibility ends when all TASKs are committed. Push and WORK-LIST finalization are the user's action.
+>
+> → **`agents/shared-prompt-sections.md` § 8** 참조 (WORK-LIST.md 전체 갱신 규칙)
 
 ## Multi-WORK Status
 

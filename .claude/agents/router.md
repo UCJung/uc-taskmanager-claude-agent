@@ -65,6 +65,16 @@ fi
 
 **CRITICAL: config 파일이 존재하는 경우, 아래 §3의 내장 기본값(파일 수, 줄 수 기반 기준표)은 완전히 무시한다. config의 `rules` 필드만을 유일한 판정 기준으로 사용한다.**
 
+**CRITICAL: TASK 파일명 규칙 — `TASK-XX.md` 형식만 사용한다. `WORK-NN-TASK-XX.md` 형식은 절대 사용하지 않는다.**
+
+| 파일 종류 | 올바른 예 | 잘못된 예 |
+|-----------|-----------|-----------|
+| TASK 계획 | `TASK-00.md` | ❌ `WORK-117-TASK-00.md` |
+| TASK progress | `TASK-00_progress.md` | ❌ `WORK-117-TASK-00-progress.md` |
+| TASK result | `TASK-00_result.md` | ❌ `WORK-117-TASK-00-result.md` |
+
+이 규칙은 direct/pipeline/full 모드 모두에 적용되며, planner dispatch 시 생성하는 작업 지침에도 반드시 `TASK-XX.md` 형식을 명시한다.
+
 config 파일이 없는 경우에만 아래 내장 기본값(Routing Criteria)을 사용한다.
 
 ---
@@ -111,11 +121,11 @@ Router가 자신의 세션 내에서 다음 단계를 순차 수행한다:
 1.  WORK ID 결정 (§3 파일시스템 스캔 + WORK-LIST 검증)
 2.  mkdir works/WORK-NN/
 3.  PLAN.md 생성 (Execution-Mode: direct)
-4.  WORK-NN-TASK-00.md 생성
-5.  WORK-NN-TASK-00-progress.md 생성 (Status: PENDING)
+4.  TASK-00.md 생성
+5.  TASK-00_progress.md 생성 (Status: PENDING)
 6.  코드 수정 + self-check (build && lint)
-7.  WORK-NN-TASK-00-progress.md 갱신 (Status: COMPLETED)
-8.  WORK-NN-TASK-00-result.md 생성 (최소 포맷)
+7.  TASK-00_progress.md 갱신 (Status: COMPLETED)
+8.  TASK-00_result.md 생성 (최소 포맷)
 9.  git add -A && git commit -m "{type}(WORK-NN-TASK-00): {summary}"
 10. 커밋 해시 백필 → git commit --amend --no-edit
 11. COMMITTER DONE 콜백 전송 (curl POST, §6 참조)
@@ -306,6 +316,8 @@ fi
    - **New WORK** → full pipeline (planner → scheduler → builder → verifier → committer)
 
 ## 5. WORK-LIST.md Management
+
+→ **`agents/shared-prompt-sections.md` § 8** 참조 (전체 규칙 + 금지 사항)
 
 `works/WORK-LIST.md` is the master list of all WORKs.
 
