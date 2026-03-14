@@ -269,7 +269,7 @@ EOF
   # Prepare authorization header
   CURL_HEADER_AUTH=""
   if [ -n "$CALLBACK_TOKEN" ] && [ "$CALLBACK_TOKEN" != "CallbackToken:" ]; then
-    CURL_HEADER_AUTH="-H \"Authorization: Bearer ${CALLBACK_TOKEN}\""
+    CURL_HEADER_AUTH="-H \"X-Runner-Api-Key: ${CALLBACK_TOKEN}\""
   fi
 
   # Execute curl POST request

@@ -382,7 +382,7 @@ Invoked by committer after result.md is created and git commit is completed:
 
 ```bash
 curl -s -X POST "$TASK_CALLBACK" \
-  -H "Authorization: Bearer $CALLBACK_TOKEN" \
+  -H "X-Runner-Api-Key: $CALLBACK_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "workId": "{WORK_ID}",
@@ -400,7 +400,7 @@ Invoked by builder at key checkpoints (e.g., after files are created, before ver
 
 ```bash
 curl -s -X POST "$PROGRESS_CALLBACK" \
-  -H "Authorization: Bearer $CALLBACK_TOKEN" \
+  -H "X-Runner-Api-Key: $CALLBACK_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "workId": "{WORK_ID}",
