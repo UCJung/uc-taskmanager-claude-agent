@@ -66,6 +66,37 @@ router가 단독으로 처리 완료. Main Claude 추가 호출 없음.
 
 ---
 
+## Bash CLI 실행 (서버 자동화)
+
+대화 세션 없이 파이프라인을 독립 실행하는 방법. `claude -p`가 Main Claude 역할을 수행한다.
+
+```bash
+env -u CLAUDECODE -u ANTHROPIC_API_KEY claude -p \
+  "[WORK 시작] {작업 내용}" \
+  --dangerously-skip-permissions \
+  --output-format stream-json \
+  --verbose \
+  2>&1 | tee /tmp/pipeline.log
+```
+
+| 옵션 | 목적 |
+|------|------|
+| `env -u CLAUDECODE` | 중첩 실행 차단 우회 |
+| `env -u ANTHROPIC_API_KEY` | API 키 대신 구독 인증(Max) 사용 |
+| `--dangerously-skip-permissions` | 무인 실행 시 권한 프롬프트 스킵 |
+| `--output-format stream-json --verbose` | 실시간 모니터링용 스트리밍 |
+
+중단된 파이프라인 재개:
+```bash
+env -u CLAUDECODE -u ANTHROPIC_API_KEY claude -p \
+  "WORK-XX 파이프라인을 이어서 실행하라." \
+  --dangerously-skip-permissions
+```
+
+검증 결과 (WORK-24): `claude -p` → Task tool 9회 호출 → router/planner/scheduler/builder/verifier/committer 전체 자동 완주 확인됨.
+
+---
+
 ## 컨텍스트 전달 (슬라이딩 윈도우)
 
 | 거리 | Level | 내용 |
