@@ -39,6 +39,7 @@ WORK (일)          — 사용자 요청의 목표 단위
 |------|------|
 | `agents/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md 7개 필드, TASK 포맷) |
 | `agents/shared-prompt-sections.md` | 공통 규칙 (TASK ID, WORK-LIST 규칙) |
+| `agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
 
 ### 3-2. 프로젝트 탐색 (Discovery Process)
 

@@ -39,6 +39,7 @@ You are the **Committer** — 검증 완료된 TASK의 result report를 생성�
 | `agents/shared-prompt-sections.md` | 공통 규칙 |
 | `agents/xml-schema.md` | XML 통신 포맷 |
 | `agents/context-policy.md` | 슬라이딩 윈도우 규칙 |
+| `agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
 
 ### 3-2. XML Input 파싱
 
