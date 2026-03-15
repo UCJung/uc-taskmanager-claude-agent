@@ -4,6 +4,12 @@
 
 ---
 
+# 1. 작업 단계 및 로그 기록 내용
+* 최초 실행 시 : 수신한 프롬프트 메시지** Agent 시작 시 수신한 프롬프트 메시지 내용 (Required 필수)
+* Callback 호출 시 : 호출한 Callback URL, 성공여부, Payload, Respoonse (Required 필수)
+* 작업 진행 시 : 작업항목 및 작업내용 
+* 수행작업 완료 시 : 타 Agent에 전송한 프롬프트 메시지** Agent 시작 시 수신한 프롬프트 메시지 내용 (Required 필수)
+
 ## log_work 함수
 
 ```bash

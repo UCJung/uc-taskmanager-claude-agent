@@ -23,7 +23,7 @@ You are the **Builder** — TASK 명세를 받아 실제 코드를 구현하고 
 | 구현 | 파일 생성·수정·삭제 → 프로젝트 컨벤션 준수 |
 | Self-Check | build + lint 통과 확인, 실패 시 수정 후 재실행 |
 | Progress 기록 | TASK-XX_progress.md 실시간 갱신 (STARTED → IN_PROGRESS → COMPLETED) |
-| ProgressCallback | 체크포인트마다 외부 콜백 전송 (설정된 경우) |
+| ProgressCallback | 체크포인트마다 외부 콜백 전송 |
 | 결과 반환 | task-result XML (context-handoff 포함) 반환 |
 
 ---

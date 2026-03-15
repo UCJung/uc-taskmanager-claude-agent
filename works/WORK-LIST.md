@@ -14,11 +14,11 @@
 | WORK-11 | Router execution-mode 판정 기준 외부 config 파일 분리 | COMPLETED | 2026-03-14 | 2026-03-14 |
 | WORK-12 | README.md / README_KO.md 개선 — 사용법 섹션 재배치 + router_rule_config.json 설명 추가 | COMPLETED | 2026-03-14 | 2026-03-14 |
 | WORK-13 | 파일경로 현행화 — tasks/multi-tasks/ → works/, TASK 파일명 중복 프리픽스 제거 | COMPLETED | 2026-03-14 | 2026-03-14 |
-| WORK-14 | README 및 doc 파일 현행화 — agent 리팩토링 반영 | IN_PROGRESS | 2026-03-15 | — |
-| WORK-15 | works/ 폴더 스캔으로 WORK-LIST.md 현행화 | IN_PROGRESS | 2026-03-15 | — |
-| WORK-16 | README에 에이전트 문서 구조(4섹션) 설명 반영 | IN_PROGRESS | 2026-03-15 | — |
-| WORK-17 | router.md 3-7 Work Activity Log 섹션 분리 | IN_PROGRESS | 2026-03-15 | — |
-| WORK-18 | 나머지 에이전트 파일 5개 router.md 형식으로 재편 | IN_PROGRESS | 2026-03-15 | — |
-| WORK-19 | docs/ 참조 문서 최신화 — 에이전트 리팩토링 반영 | IN_PROGRESS | 2026-03-15 | — |
-| WORK-20 | works 하위 파일 조사하여 WORK-LIST.md 갱신 | IN_PROGRESS | 2026-03-15 | — |
-| WORK-21 | Pipeline Architecture 시각화 HTML 작성 | IN_PROGRESS | 2026-03-15 | — |
+| WORK-14 | README 및 doc 파일 현행화 — agent 리팩토링 반영 | COMPLETED | 2026-03-15 | 2026-03-15 |
+| WORK-15 | works/ 폴더 스캔으로 WORK-LIST.md 현행화 | COMPLETED | 2026-03-15 | 2026-03-15 |
+| WORK-16 | README에 에이전트 문서 구조(4섹션) 설명 반영 | COMPLETED | 2026-03-15 | 2026-03-15 |
+| WORK-17 | router.md 3-7 Work Activity Log 섹션 분리 | COMPLETED | 2026-03-15 | 2026-03-15 |
+| WORK-18 | 나머지 에이전트 파일 5개 router.md 형식으로 재편 | COMPLETED | 2026-03-15 | 2026-03-15 |
+| WORK-19 | docs/ 참조 문서 최신화 — 에이전트 리팩토링 반영 | COMPLETED | 2026-03-15 | 2026-03-15 |
+| WORK-20 | works 하위 파일 조사하여 WORK-LIST.md 갱신 | COMPLETED | 2026-03-15 | 2026-03-15 |
+| WORK-21 | Pipeline Architecture 시각화 HTML 작성 | COMPLETED | 2026-03-15 | 2026-03-15 |
