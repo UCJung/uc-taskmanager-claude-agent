@@ -302,7 +302,7 @@ router: Analyze → Implement → Self-verify → Commit → result.md
 
 | Agent | Role | Model | Permission | MCP |
 |-------|------|-------|------------|-----|
-| **router** | `[]` tag detection, execution-mode판정(direct/pipeline/full), PLAN생성, WORK-LIST관리 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
+| **router** | `[]` tag detection, execution-mode판정(direct/pipeline/full), PLAN생성, WORK-LIST관리 | **opus** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
 | **planner** | Create WORK + decompose TASKs + generate PLAN.md(Execution-Mode:full) + pre-create progress templates | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
 | **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch | — |
 | **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena(심볼단위탐색/편집) |
@@ -799,14 +799,19 @@ uc-taskmanager/
 │   ├── builder.md           ← Code implementation + progress.md checkpoint
 │   ├── verifier.md          ← Verification based on context-handoff (read-only)
 │   ├── committer.md         ← Gate check → result.md → git commit
+│   ├── agent-flow.md        ← Main Claude orchestration flow (direct/pipeline/full)
 │   ├── context-policy.md    ← Sliding window context transfer policy
 │   ├── xml-schema.md        ← Agent communication XML schema
 │   ├── shared-prompt-sections.md  ← Cacheable common sections (output language, build commands)
-│   └── file-content-schema.md     ← File format schema (PLAN.md, TASK.md, result.md)
+│   ├── file-content-schema.md     ← File format schema (PLAN.md, TASK.md, result.md)
+│   └── work-activity-log.md      ← Activity log rules (log_work function, STAGE table)
 ├── docs/                    ← Design specifications
-│   ├── spec_pipeline-architecture.md   ← Pipeline structure & agent roles
-│   ├── spec_sliding-window-context.md  ← Sliding window context design
-│   └── spec_callback-integration.md    ← External system callback integration
+│   ├── spec_pipeline-architecture.md       ← Pipeline structure & agent roles (v1.2)
+│   ├── spec_pipeline-architecture_v1.1.md  ← Pipeline architecture spec v1.1
+│   ├── spec_sliding-window-context.md      ← Sliding window context design
+│   └── spec_callback-integration.md        ← External system callback integration
+├── _TODO/                   ← Pending tasks and experiments
+│   └── bash-cli-pipeline-automation.md ← Server automation via claude -p (verified)
 └── works/                   ← WORK directories (auto-generated)
     ├── WORK-LIST.md          ← Master index
     ├── WORK-01/              ← all modes output here (direct/pipeline/full)
