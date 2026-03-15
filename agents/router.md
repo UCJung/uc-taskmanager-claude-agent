@@ -129,13 +129,9 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 ```
 1.  WORK ID 결정
 2.  log_work INIT "WORK-NN 생성 — Execution-Mode: full"
-3.  아래 XML을 prompt로 하여 Task 도구로 planner 호출 (REQUIRED)
-    → Task(subagent_type="planner", prompt=<dispatch XML>)
-4.  log_work DISPATCH "Planner dispatch"
+3.  아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
+4.  log_work DISPATCH "Planner dispatch XML 반환"
 ```
-
-> ⚠️ dispatch XML 출력만으로는 planner가 실행되지 않는다.
-> 반드시 Task 도구를 호출해야 별도 에이전트 세션이 생성된다.
 
 ```xml
 <dispatch to="planner" work="{WORK-NN}" execution-mode="full">
@@ -154,12 +150,8 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 **기존 WORK 실행 — Scheduler dispatch:** subagent 실행 후 메시지 디스패치
 
 ```
-1.  아래 XML을 prompt로 하여 Task 도구로 scheduler 호출 (REQUIRED)
-    → Task(subagent_type="scheduler", prompt=<dispatch XML>)
+1.  아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
 ```
-
-> ⚠️ dispatch XML 출력만으로는 scheduler가 실행되지 않는다.
-> 반드시 Task 도구를 호출해야 별도 에이전트 세션이 생성된다.
 
 ```xml
 <dispatch to="scheduler" work="{WORK_ID}" execution-mode="full">

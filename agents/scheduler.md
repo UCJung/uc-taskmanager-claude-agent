@@ -92,11 +92,7 @@ WORK 내 TASK만 처리. 다른 WORK 접근 금지.
 
 각 단계 시작 전 Pipeline Stage Callback 전송 (§ 3-6 참조).
 
-아래 XML을 prompt로 하여 Task 도구로 builder 호출 (REQUIRED):
-→ `Task(subagent_type="builder", prompt=<dispatch XML>)`
-
-> ⚠️ dispatch XML 출력만으로는 builder가 실행되지 않는다.
-> 반드시 Task 도구를 호출해야 별도 에이전트 세션이 생성된다.
+아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
 
 ```xml
 <dispatch to="builder" work="{WORK_ID}" task="TASK-XX" execution-mode="full">
@@ -136,11 +132,7 @@ curl -s -X POST "$CALLBACK_URL" \
 
 FAIL → builder 재시도 (최대 3회). 3회 실패 → 파이프라인 중단.
 
-아래 XML을 prompt로 하여 Task 도구로 verifier 호출 (REQUIRED):
-→ `Task(subagent_type="verifier", prompt=<dispatch XML>)`
-
-> ⚠️ dispatch XML 출력만으로는 verifier가 실행되지 않는다.
-> 반드시 Task 도구를 호출해야 별도 에이전트 세션이 생성된다.
+아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
 
 ```xml
 <dispatch to="verifier" work="{WORK_ID}" task="TASK-XX" execution-mode="full">
@@ -167,11 +159,7 @@ FAIL → builder 재시도 (최대 3회). 3회 실패 → 파이프라인 중단
 
 ### 3-8. Committer Dispatch
 
-아래 XML을 prompt로 하여 Task 도구로 committer 호출 (REQUIRED):
-→ `Task(subagent_type="committer", prompt=<dispatch XML>)`
-
-> ⚠️ dispatch XML 출력만으로는 committer가 실행되지 않는다.
-> 반드시 Task 도구를 호출해야 별도 에이전트 세션이 생성된다.
+아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
 
 ```xml
 <dispatch to="committer" work="{WORK_ID}" task="TASK-XX" execution-mode="full">
