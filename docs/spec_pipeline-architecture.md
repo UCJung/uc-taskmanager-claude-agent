@@ -106,10 +106,12 @@ works/
   WORK-NN/
     PLAN.md                     # WORK 개요 + DAG (mini 또는 full)
     PROGRESS.md                 # scheduler 진행 상태 (full 모드만)
-    TASK-XX.md          # TASK 명세
-    WORK-NN-TASK-XX-progress.md # 실시간 체크포인트 (builder/router 작성)
-    WORK-NN-TASK-XX-result.md   # 완료 보고서 (committer/router 작성)
+    TASK-XX.md                  # TASK 명세 (WORK prefix 없음)
+    TASK-XX_progress.md         # 실시간 체크포인트 (builder/router 작성)
+    TASK-XX_result.md           # 완료 보고서 (committer/router 작성)
 ```
+
+파일명 규칙 상세는 `agents/file-content-schema.md` § 7 참조.
 
 ### 불변 보장 항목
 
@@ -120,7 +122,7 @@ works/
 | `works/WORK-NN/` 디렉토리 | Router | Router / Planner |
 | `PLAN.md` (mini 또는 full) | Router | Router / Planner |
 | `TASK-XX.md` 파일 | Router | Router / Planner |
-| `WORK-NN-TASK-XX-result.md` 생성 | **Router** | **Committer** |
+| `TASK-XX_result.md` 생성 | **Router** | **Committer** |
 | COMMITTER DONE 콜백 전송 | **Router** | **Committer** |
 | `WORK-LIST.md` IN_PROGRESS 추가 | Router | Router |
 
@@ -255,6 +257,7 @@ TASK-03, TASK-04 (TASK-00 의존) → TASK-00 완료 후 병렬 실행 가능
 |------|------|------|
 | XML 스키마 | `agents/xml-schema.md` | 에이전트 간 통신 포맷 상세 (execution-mode 속성 포함) |
 | 컨텍스트 정책 | `agents/context-policy.md` | 슬라이딩 윈도우 정책 상세 |
+| 파이프라인 산출물 포맷 | `agents/file-content-schema.md` | PLAN.md / TASK 파일 / progress.md / result.md 포맷 단일 정의 |
 | 슬라이딩 윈도우 설계 | `docs/spec_sliding-window-context.md` | 토큰 절감 설계 |
 | 콜백 통합 | `docs/spec_callback-integration.md` | 외부 시스템 콜백 연동 |
 
@@ -262,3 +265,4 @@ TASK-03, TASK-04 (TASK-00 의존) → TASK-00 완료 후 병렬 실행 가능
 
 *최초 작성: 2026-03-12 | WORK-07 기반*
 *갱신: 2026-03-14 | WORK-10 — SDD v1.3 execution-mode 3종 체계 반영 (S-TASK 폐지)*
+*갱신: 2026-03-15 | WORK-19 — 파일명 규칙 현행화 (TASK-XX_progress.md / TASK-XX_result.md), file-content-schema.md 참조 추가*

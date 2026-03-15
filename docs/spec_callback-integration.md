@@ -513,15 +513,17 @@ curl -X POST "http://127.0.0.1:3000/task-result" \
   - execution-mode별 콜백 전송 주체 명시 (direct: Router, pipeline/full: Builder/Committer)
   - 불변 보장: 모든 모드에서 COMMITTER DONE 콜백(TaskCallback) 전송 보장
   - Sequence diagram을 direct 모드 / pipeline+full 모드로 분리
-- **Referenced by**: CLAUDE.md, agents/shared-prompt-sections.md (Section 6), agents/builder.md (ProgressCallback), agents/committer.md (Step 4.5), agents/router.md (direct 모드 콜백)
+- **Updated**: 2026-03-15 — WORK-19: Related Documents 갱신 (file-content-schema.md 추가, 섹션 참조 현행화)
+- **Referenced by**: CLAUDE.md, agents/builder.md (ProgressCallback), agents/committer.md, agents/router.md (direct 모드 콜백)
 
 ---
 
 ## Related Documents
 
-- `agents/shared-prompt-sections.md` § 6: Task Callbacks configuration guide
-- `agents/router.md` → direct 모드 12단계: Router가 직접 콜백 전송
-- `agents/builder.md` → ProgressCallback section: Builder implementation (pipeline/full)
-- `agents/committer.md` → Step 4.5: Committer implementation (pipeline/full)
-- `agents/xml-schema.md`: Agent communication format + execution-mode attribute (SDD v1.3)
+- `agents/shared-prompt-sections.md` § 6: Task Callbacks configuration guide (현재 § 미존재 → CLAUDE.md 직접 참조)
+- `agents/router.md` → direct 모드: Router가 직접 콜백 전송
+- `agents/builder.md` → ProgressCallback: Builder implementation (pipeline/full)
+- `agents/committer.md` → Committer implementation (pipeline/full)
+- `agents/xml-schema.md`: Agent communication format + execution-mode attribute
+- `agents/file-content-schema.md`: 파이프라인 산출물 포맷 단일 정의
 - `docs/spec_pipeline-architecture.md`: 전체 파이프라인 구조 및 불변 보장 항목

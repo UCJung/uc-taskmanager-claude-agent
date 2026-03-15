@@ -195,24 +195,24 @@ TASK-03 builder가 받는 컨텍스트:
 
 ### 구조
 
+상세 포맷은 `agents/file-content-schema.md` § 3 참조.
+
 ```markdown
-# WORK-NN-TASK-XX Progress
+# TASK-XX Progress
 
-## Status
-IN_PROGRESS | COMPLETED | FAILED
-
-## Checkpoint
-- [x] 파일 분석 완료
-- [x] 핵심 로직 구현 완료
-- [ ] 엣지 케이스 처리
-- [ ] 최종 확인
-
-## Files Changed
-- path/to/file.ts (created|modified)
-
-## Current Reasoning
-현재까지의 작업 내용과 다음 단계 계획
+- Status: {PENDING | STARTED | IN_PROGRESS | COMPLETED}
+- Started: {ISO 8601}
+- Updated: {ISO 8601}
+- Files changed:
+  - `path/to/file.ts` — {CREATE | MODIFY | DELETE}
 ```
+
+| 시점 | Status |
+|------|--------|
+| planner 템플릿 | `PENDING` |
+| builder 착수 | `STARTED` |
+| 파일 변경 중 | `IN_PROGRESS` |
+| 완료 | `COMPLETED` |
 
 ### 재시작 시 활용
 
@@ -253,33 +253,39 @@ direct 모드에서는 Router가 self-check로 동등한 검증을 수행한다.
 
 committer가 builder + verifier의 context-handoff를 종합해 작성한다.
 
+상세 포맷은 `agents/file-content-schema.md` § 4 (full/pipeline) 및 § 5 (direct) 참조.
+
 ```markdown
-# WORK-NN-TASK-XX Result
+# TASK-XX Result
 
-## Status
-SUCCESS | PARTIAL | FAILED
+> WORK: {WORK_ID} — {title}
+> Completed: {YYYY-MM-DD HH:MM}
+> Status: **DONE**
 
-## What
-builder와 verifier의 context-handoff를 종합한 변경 내용 요약
+## 요약
+{1-2줄}
 
-## Why
-구현 의사결정 근거
+## 완료 체크리스트
+- [x] {item}
 
-## Caution
-다음 TASK 또는 후속 작업 시 주의할 점
+## 검증 결과
+- Build: ✅
+- Lint: ✅
 
-## Incomplete
-미완료 사항 (없으면 "없음")
+## 변경 파일
+### Created
+- `path` — {description}
 
-## Files Changed
-| Path | Action |
-|------|--------|
-| path/to/file | created |
+## 컨텍스트 핸드오프
 
-## Commit
-{hash}: {message}
+### Builder Context (SUMMARY)
+{builder what 필드 1-3줄}
+
+### Verifier Context (FULL)
+{verifier context-handoff 4개 필드}
 ```
 
+섹션 헤더는 PLAN.md의 `Language:` 설정에 따라 다국어로 작성된다 (en/ko/ja).
 direct 모드에서는 Router가 최소 포맷의 result.md를 직접 작성한다 (`Execution-Mode: direct` 필드 포함).
 
 ---
@@ -306,6 +312,7 @@ direct 모드의 경우 서브에이전트 세션 초기화 비용(~12,500 토�
 
 | 파일 | 역할 |
 |------|------|
+| `agents/file-content-schema.md` | 파이프라인 산출물 포맷 단일 정의 (PLAN.md / TASK / progress.md / result.md) |
 | `agents/context-policy.md` | 슬라이딩 윈도우 정책 상세 규칙 |
 | `agents/xml-schema.md` | context-handoff XML 요소 스키마 + execution-mode 속성 |
 | `agents/router.md` | direct/pipeline/full 모드 판정 + 직접 실행 로직 |
@@ -318,3 +325,4 @@ direct 모드의 경우 서브에이전트 세션 초기화 비용(~12,500 토�
 
 *최초 작성: 2026-03-12 | WORK-07 구현 기반 | WORK-08 테스트 검증 완료*
 *갱신: 2026-03-14 | WORK-10 — SDD v1.3 execution-mode 3종 체계 반영 (direct/pipeline/full)*
+*갱신: 2026-03-15 | WORK-19 — progress.md / result.md 구조를 file-content-schema.md와 일치, file-content-schema.md 참조 추가*
