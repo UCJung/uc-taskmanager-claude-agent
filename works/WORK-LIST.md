@@ -23,3 +23,4 @@
 | WORK-20 | works 하위 파일 조사하여 WORK-LIST.md 갱신 | COMPLETED | 2026-03-15 | 2026-03-15 |
 | WORK-21 | Pipeline Architecture 시각화 HTML 작성 | COMPLETED | 2026-03-15 | 2026-03-15 |
 | WORK-22 | Sliding Window Context Transfer 시각화 HTML 작성 | COMPLETED | 2026-03-15 | 2026-03-15 |
+| WORK-23 | agents 파일 분석 기반 Pipeline Architecture 스펙 문서 v1.1 생성 | IN_PROGRESS | 2026-03-15 | - |

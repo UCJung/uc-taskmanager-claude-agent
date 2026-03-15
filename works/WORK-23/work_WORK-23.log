@@ -1,0 +1,4 @@
+[2026-03-15T23:22:35]_ROUTER_INIT_WORK-23 생성 — Execution-Mode: pipeline
+[2026-03-15T23:22:42]_ROUTER_REF_참조: agents/router.md, agents/planner.md, agents/scheduler.md, agents/builder.md, agents/verifier.md, agents/committer.md, agents/agent-flow.md, agents/context-policy.md, agents/xml-schema.md, agents/file-content-schema.md, agents/shared-prompt-sections.md, agents/work-activity-log.md
+[2026-03-15T23:22:43]_ROUTER_PLAN_PLAN.md, TASK-00.md 생성 완료
+[2026-03-15T23:22:54]_ROUTER_DISPATCH_Builder dispatch — TASK-00
