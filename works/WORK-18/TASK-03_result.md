@@ -3,6 +3,7 @@
 > WORK: WORK-18 — 나머지 에이전트 파일 5개 router.md 형식으로 재편
 > Completed: 2026-03-15 10:32
 > Status: **DONE**
+> Commit: 5dfc0d6
 
 ## 요약
 
