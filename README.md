@@ -447,14 +447,23 @@ Claude: [scheduler → auto mode]
 
 All agent files (`agents/*.md`) are written with a single principle: **core content only, no decoration**. Descriptions, emphasis markers, and redundant examples have been removed. The result is ~1,600 lines total across all agents — less than half the original size — while covering the same functional scope.
 
-Each agent file follows a consistent structure:
+Each agent file follows a consistent four-section structure:
 
 ```
-STARTUP — required files to read on boot
-Role declaration
-Core logic (routing / planning / scheduling / building / verifying / committing)
-File format references → file-content-schema.md (single source of truth)
-XML communication → xml-schema.md
+## 1. 역할 (Role)
+   Agent's purpose and responsibility declaration.
+
+## 2. 수행업무 (Responsibilities)
+   Table of tasks: | Task | Description |
+
+## 3. 업무수행단계 및 내용 (Execution Steps)
+   Step-by-step procedure for each task.
+   Includes STARTUP (required files to read on boot), core logic,
+   file format references → file-content-schema.md (single source of truth),
+   XML communication → xml-schema.md.
+
+## 4. 제약사항 및 금지사항 (Constraints and Prohibitions)
+   Rules that must always be followed.
 ```
 
 `file-content-schema.md` is the single authoritative definition for all file formats (PLAN.md, TASK.md, progress.md, result.md). Agents reference it instead of embedding format specs inline — eliminating duplication across 6 agent files.
