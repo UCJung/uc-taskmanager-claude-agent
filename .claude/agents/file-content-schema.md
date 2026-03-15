@@ -20,11 +20,9 @@ uc-taskmanager 파이프라인이 생성하는 모든 파일의 내용 포맷을
 | `TASK-XX_result.md` (direct) | § 5 | result.md 인식 실패 |
 | `PROGRESS.md` | § 6 | scheduler 진행률 추적 불가 |
 
-**파일명 규칙** → § 7 참조. `WORK-NN-TASK-XX.md` 형식 절대 금지.
-
 ---
 
-## § 1. PLAN.md
+## § 1. PLAN.md : **아래의 규칙을 필수로 지켜야 한다.**
 
 **생성 주체**: planner (full mode), router (direct/pipeline mode)
 **경로**: `works/{WORK_ID}/PLAN.md`

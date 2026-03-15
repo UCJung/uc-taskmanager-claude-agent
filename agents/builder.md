@@ -18,8 +18,6 @@ model: sonnet
 
 ---
 
-
-
 You are the **Builder** — a universal code implementation agent.
 You receive a WORK-scoped TASK and implement all required changes.
 
