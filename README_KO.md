@@ -304,19 +304,29 @@ router: 분석 → 구현 → self-check → 커밋 → result.md
 ## 파일 구조
 
 ```
-tasks/
-├── multi-tasks/
-│   ├── WORK-LIST.md                    ← 전체 WORK 마스터 목록 (router가 관리)
-│   ├── WORK-01/                        ← "사용자 인증 기능"
-│   │   ├── PLAN.md                     ← 계획 + 의존성 그래프
-│   │   ├── PROGRESS.md                 ← 진행 상황 (자동 업데이트)
-│   │   ├── WORK-01: TASK-00.md          ← 작업 명세
-│   │   ├── WORK-01: TASK-00-result.md   ← 완료 보고서 (= 완료 증거)
-│   │   ├── WORK-01: TASK-01.md
-│   │   └── ...
-│   └── WORK-02/
-│       └── ...                        ← direct/pipeline/full 모두 여기에 출력
+works/
+├── WORK-LIST.md                      ← 전체 WORK 마스터 목록 (router가 관리)
+├── WORK-01/                          ← "사용자 인증 기능"
+│   ├── PLAN.md                       ← 계획 + 의존성 그래프
+│   ├── PROGRESS.md                   ← 진행 상황 (자동 업데이트)
+│   ├── TASK-00.md                    ← 작업 명세
+│   ├── TASK-00_progress.md           ← 실시간 체크포인트 (builder 기록)
+│   ├── TASK-00_result.md             ← 완료 보고서 (committer 생성)
+│   ├── TASK-01.md
+│   └── ...
+└── WORK-02/
+    └── ...                           ← direct/pipeline/full 모두 여기에 출력
 ```
+
+### 파일 명명 규칙
+
+| 파일 | 명명 규칙 |
+|------|-----------|
+| 작업 명세 | `TASK-NN.md` (prefix 없음) |
+| 진행 체크포인트 | `TASK-NN_progress.md` (언더스코어 구분자) |
+| 완료 보고서 | `TASK-NN_result.md` |
+| 계획 | `PLAN.md` |
+| WORK 진행 상황 | `PROGRESS.md` |
 
 ### WORK-LIST.md
 
@@ -575,10 +585,11 @@ router가 복잡도에 맞는 `execution-mode`를 선택합니다:
 
 **디스패치 포맷** (호출자 → 수신자):
 ```xml
-<dispatch to="builder" work="WORK-03" task="WORK-03-TASK-00">
+<dispatch to="builder" work="WORK-03" task="TASK-00" execution-mode="pipeline">
   <context>
     <project>uc-taskmanager</project>
     <language>ko</language>
+    <plan-file>works/WORK-03/PLAN.md</plan-file>
   </context>
   <task-spec>
     <file>works/WORK-03/TASK-00.md</file>
@@ -591,7 +602,7 @@ router가 복잡도에 맞는 `execution-mode`를 선택합니다:
 
 **결과 포맷** (수신자 → 호출자):
 ```xml
-<task-result work="WORK-03" task="WORK-03-TASK-00" agent="builder" status="PASS">
+<task-result work="WORK-03" task="TASK-00" agent="builder" status="PASS">
   <summary>shared-prompt-sections.md와 xml-schema.md 생성</summary>
   <files-changed>
     <file action="created" path="agents/shared-prompt-sections.md">cache_control이 포함된 공통 섹션</file>
@@ -609,6 +620,33 @@ router가 복잡도에 맞는 `execution-mode`를 선택합니다:
 - **확장성**: 캐시 히트율이 WORK 개수에 따라 향상 (5 TASK 시 ~0.03 tokens/token vs 캐시 없이 2K+ tokens)
 
 전체 포맷은 `agents/xml-schema.md`를, 캐시 가능한 섹션은 `agents/shared-prompt-sections.md`를 참고하세요.
+
+### 슬라이딩 윈도우 컨텍스트 전달
+
+각 서브에이전트는 빈 컨텍스트에서 시작합니다 — 격리의 비용입니다. **슬라이딩 윈도우** 시스템은 에이전트 간, 의존 TASK 간 컨텍스트 전달 시 토큰 낭비를 최소화합니다.
+
+**규칙**: 멀수록 덜 상세하게:
+
+| 단계 거리 | Detail Level | 내용 |
+|----------|-------------|---------|
+| 직전 단계 | `FULL` | what + why + caution + incomplete |
+| 2단계 전 | `SUMMARY` | what만 (1-3줄) |
+| 3단계 이상 | `DROP` | 전달하지 않음 |
+
+각 에이전트는 **context-handoff**를 출력합니다 — 단순 결과 로그가 아닌 구조화된 추론 문서입니다:
+
+```xml
+<context-handoff from="builder" detail-level="FULL">
+  <what>auth.ts 수정 — JWT 자동 갱신 로직 추가</what>
+  <why>기존 코드는 만료 즉시 401 반환. 자동 갱신으로 UX 개선.</why>
+  <caution>session.ts의 setSession()과 결합되어 있음. 변경 시 부작용 주의.</caution>
+  <incomplete>단위 테스트 미작성. Verifier 확인 필요.</incomplete>
+</context-handoff>
+```
+
+**예상 토큰 절감**: 3-TASK 의존 체인에서 전체 결과를 전달하는 방식 대비 ~48%.
+
+자세한 설계는 `docs/spec_sliding-window-context.md` 참조.
 
 ---
 
@@ -694,19 +732,27 @@ CommentLanguage: en
 uc-taskmanager/
 ├── README.md                ← English (기본)
 ├── README_KO.md             ← 한국어
+├── CLAUDE.md                ← 프로젝트 지침 (push 절차, 언어, 에이전트 호출 규칙)
 ├── LICENSE
 ├── agents/                  ← 배포용: 이 파일들을 복사하여 설치
 │   ├── router.md            ← execution-mode 판정 (direct/pipeline/full)
-│   ├── planner.md           ← WORK 생성 + TASK 분해 (full 모드)
-│   ├── scheduler.md         ← WORK별 파이프라인 실행 (full 모드)
-│   ├── builder.md           ← 코드 구현
-│   ├── verifier.md          ← 검증 (read-only)
-│   └── committer.md         ← 결과 보고서 → git commit → 콜백
-└── tasks/
-    └── multi-tasks/         ← 모든 모드의 산출물 디렉토리
-        ├── WORK-LIST.md     ← 마스터 인덱스
-        ├── WORK-01/
-        └── ...
+│   ├── planner.md           ← WORK 생성 + TASK 분해
+│   ├── scheduler.md         ← WORK별 파이프라인 실행 (슬라이딩 윈도우 dispatch)
+│   ├── builder.md           ← 코드 구현 + progress.md 체크포인트 기록
+│   ├── verifier.md          ← 검증 (context-handoff 기반, read-only)
+│   ├── committer.md         ← gate 검사 → result.md → git commit
+│   ├── context-policy.md    ← 슬라이딩 윈도우 컨텍스트 전달 정책
+│   ├── xml-schema.md        ← 에이전트 간 XML 통신 스키마
+│   ├── shared-prompt-sections.md  ← 캐시 가능 공통 섹션 (출력 언어, 빌드 명령어)
+│   └── file-content-schema.md     ← 파일 포맷 스키마 (PLAN.md, TASK.md, result.md)
+├── docs/                    ← 설계 명세
+│   ├── spec_pipeline-architecture.md   ← 파이프라인 구조 및 에이전트 역할
+│   ├── spec_sliding-window-context.md  ← 슬라이딩 윈도우 컨텍스트 설계
+│   └── spec_callback-integration.md    ← 외부 시스템 콜백 연동 가이드
+└── works/                   ← WORK 디렉토리 (자동 생성)
+    ├── WORK-LIST.md          ← 마스터 인덱스
+    ├── WORK-01/              ← 모든 모드의 산출물 (direct/pipeline/full)
+    └── ...
 ```
 
 ---

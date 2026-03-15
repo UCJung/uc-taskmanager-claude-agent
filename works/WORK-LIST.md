@@ -15,3 +15,4 @@
 | WORK-11 | Router execution-mode 판정 기준 외부 config 파일 분리 | COMPLETED | 2026-03-14 | 2026-03-14 |
 | WORK-12 | README.md / README_KO.md 개선 — 사용법 섹션 재배치 + router_rule_config.json 설명 추가 | COMPLETED | 2026-03-14 | 2026-03-14 |
 | WORK-13 | 파일경로 현행화 — tasks/multi-tasks/ → works/, TASK 파일명 중복 프리픽스 제거 | COMPLETED | 2026-03-14 | 2026-03-14 |
+| WORK-14 | README 및 doc 파일 현행화 — agent 리팩토링 반영 | IN_PROGRESS | 2026-03-15 | — |

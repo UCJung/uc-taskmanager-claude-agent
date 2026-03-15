@@ -611,13 +611,14 @@ Instead of ambiguous natural language prompts, agents communicate using structur
 
 **Dispatch Format** (Caller → Receiver):
 ```xml
-<dispatch to="builder" work="WORK-03" task="WORK-03: TASK-00">
+<dispatch to="builder" work="WORK-03" task="TASK-00" execution-mode="pipeline">
   <context>
     <project>uc-taskmanager</project>
     <language>ko</language>
+    <plan-file>works/WORK-03/PLAN.md</plan-file>
   </context>
   <task-spec>
-    <file>works/WORK-03/WORK-03: TASK-00.md</file>
+    <file>works/WORK-03/TASK-00.md</file>
     <title>공통 시스템 프롬프트 섹션 식별 및 XML 스키마 설계</title>
     <action>implement</action>
   </task-spec>
@@ -627,7 +628,7 @@ Instead of ambiguous natural language prompts, agents communicate using structur
 
 **Result Format** (Receiver → Caller):
 ```xml
-<task-result work="WORK-03" task="WORK-03: TASK-00" agent="builder" status="PASS">
+<task-result work="WORK-03" task="TASK-00" agent="builder" status="PASS">
   <summary>Created shared-prompt-sections.md and xml-schema.md</summary>
   <files-changed>
     <file action="created" path="agents/shared-prompt-sections.md">Common sections with cache_control</file>
