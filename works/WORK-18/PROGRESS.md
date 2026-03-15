@@ -8,7 +8,7 @@
 |------|------|------|------|---------|
 | TASK-00 | planner.md router.md 형식으로 재편 | ✅ 완료 | — | 10m |
 | TASK-01 | scheduler.md router.md 형식으로 재편 | ✅ 완료 | — | 4m |
-| TASK-02 | builder.md router.md 형식으로 재편 | ⏳ 대기 | — | — |
+| TASK-02 | builder.md router.md 형식으로 재편 | ✅ 완료 | — | 3m |
 | TASK-03 | verifier.md router.md 형식으로 재편 | ✅ 완료 | — | 2m |
 | TASK-04 | committer.md router.md 형식으로 재편 | ✅ 완료 | — | 6m |
 
