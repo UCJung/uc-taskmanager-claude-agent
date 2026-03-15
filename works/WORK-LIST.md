@@ -24,3 +24,4 @@
 | WORK-21 | Pipeline Architecture 시각화 HTML 작성 | COMPLETED | 2026-03-15 | 2026-03-15 |
 | WORK-22 | Sliding Window Context Transfer 시각화 HTML 작성 | COMPLETED | 2026-03-15 | 2026-03-15 |
 | WORK-23 | Callback Integration 시각화 HTML 작성 | IN_PROGRESS | 2026-03-15 | — |
+| WORK-24 | agents 파일 분석 기반 Pipeline Architecture Spec v1.1 문서 생성 | IN_PROGRESS | 2026-03-15 | — |
