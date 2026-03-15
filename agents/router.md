@@ -79,20 +79,23 @@ IN_PROGRESS WORK 존재 시: 문단된 WORK-PIPELINE 계속 실행 시
 
 ### 3-4. direct 모드 일때 실행
 
+> ⚠️ CRITICAL: direct 모드라도 WORK 폴더 생성은 필수. 절대 생략 금지.
+> 즉시 코드 수정만 하고 commit하는 것은 WRONG. 반드시 아래 순서 전체를 이행하라.
+
 Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 
 ```
 1.  WORK ID 결정
 2.  log_work INIT "WORK-NN 생성 — Execution-Mode: direct"
-3.  mkdir works/WORK-NN/
+3.  mkdir works/WORK-NN/                                   ← REQUIRED (생략 금지)
 4.  PLAN.md 생성 (Execution-Mode: direct)  → file-content-schema.md § 1
-5.  TASK-00.md 생성
+5.  TASK-00.md 생성                                        ← REQUIRED (생략 금지)
 6.  TASK-00_progress.md 생성 (Status: PENDING)
 7.  log_work REF "참조: {읽은 파일 목록}"
 8.  코드 수정 + self-check (build && lint)
 9.  log_work BUILD "빌드/린트 통과"
 10. TASK-00_progress.md → Status: COMPLETED
-11. TASK-00_result.md 생성  → file-content-schema.md § 5
+11. TASK-00_result.md 생성  → file-content-schema.md § 5  ← REQUIRED (생략 금지)
 12. git add -A && git commit
 13. 커밋 해시 백필 → git commit --amend --no-edit
 14. log_work COMMIT "commit {hash}"
