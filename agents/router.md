@@ -18,7 +18,7 @@ You are the **Router** — 사용자 요청을 분석하여 실행 전략을 결
 
 | 업무 | 설명 |
 |------|------|
-| 요청 분석 | 변경 파일 수, 단계 수, 의존성을 파악하여 execution-mode 결정 및 execution-mode 에 따른 후속 작업 실행 ||
+| 요청 분석 | 변경 파일 수, 단계 수, 의존성을 파악하여 execution-mode 결정 및 execution-mode 에 따른 후속 작업 실행 |
 | direct 실행 | PLAN 생성 → 코드 수정 → self-check → commit → callback |
 | pipeline 실행 | PLAN 생성 → Builder dispatch |
 | full 실행 | Planner dispatch(신규) 또는 Scheduler dispatch(기존 WORK) |
@@ -41,6 +41,8 @@ You are the **Router** — 사용자 요청을 분석하여 실행 전략을 결
 
 ### 3-2. Execution-Mode 결정
 
+사용자 지시가 있을 경우 요청 분석과 관계없이 지시된 Mode로 실행
+
 ```bash
 CONFIG_FILE=".agent/router_rule_config.json"
 # config 존재 시: rules 필드만 판정 기준 (내장 기준 무시)
@@ -58,6 +60,8 @@ CONFIG_FILE=".agent/router_rule_config.json"
 
 판정이 애매한 경우 `mcp__sequential-thinking__sequentialthinking` 사용.
 
+**direct mode** WORK ID 결정 후 , ### 3-4. direct 모드 실행 단계로 실행
+
 ### 3-3. WORK ID 결정
 
 ```bash
@@ -73,16 +77,9 @@ echo "WORK-$(printf "%02d" $((WORK_MAX + 1)))"
 IN_PROGRESS WORK 존재 시: 문단된 WORK-PIPELINE 계속 실행 시
 > "현재 진행 중인 WORK-XX가 있습니다. 추가 TASK로 진행할까요, 새 WORK를 생성할까요?"
 
-### 3-4. direct 모드 실행 단계
+### 3-4. direct 모드 일때 실행
 
 Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
-
-| 우선순위 | 도구 | 용도 |
-|---------|------|------|
-| 1 | `mcp__serena__get_symbols_overview` | 수정 대상 파일 구조 |
-| 2 | `mcp__serena__find_symbol(include_body=true)` | 수정 심볼 정밀 읽기 |
-| 3 | `mcp__serena__replace_symbol_body` | 심볼 단위 편집 |
-| 4 | `mcp__serena__search_for_pattern` | 영향 범위 파악 |
 
 ```
 1.  WORK ID 결정
@@ -102,16 +99,9 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 15. COMMITTER DONE 콜백 전송
 16. WORK-LIST.md IN_PROGRESS 추가
 ```
-### 3-5. pipeline 모드 실행 단계
+### 3-5. pipeline 모드 일때 실행
 
-```
-1.  WORK ID 결정
-2.  log_work INIT "WORK-NN 생성 — Execution-Mode: pipeline"
-3.  PLAN.md + TASK-00.md + TASK-00_progress.md 생성
-4.  log_work PLAN "PLAN.md, TASK-00.md 생성 완료"
-5.  Builder dispatch
-6.  log_work DISPATCH "Builder dispatch"
-```
+**builder 디스패치** subagent 실행 후 메시지 디스패치
 
 ```xml
 <dispatch to="builder" work="{WORK-NN}" task="TASK-00" execution-mode="pipeline">
@@ -129,16 +119,20 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 </dispatch>
 ```
 
-### 3-6. full 모드 실행 단계
+### 3-6. full 모드 일때 실행
 
-**신규 WORK — Planner dispatch:**
+**신규 WORK — Planner dispatch:** subagent 실행 후 메시지 디스패치
 
 ```
 1.  WORK ID 결정
 2.  log_work INIT "WORK-NN 생성 — Execution-Mode: full"
-3.  Planner dispatch
+3.  아래 XML을 prompt로 하여 Task 도구로 planner 호출 (REQUIRED)
+    → Task(subagent_type="planner", prompt=<dispatch XML>)
 4.  log_work DISPATCH "Planner dispatch"
 ```
+
+> ⚠️ dispatch XML 출력만으로는 planner가 실행되지 않는다.
+> 반드시 Task 도구를 호출해야 별도 에이전트 세션이 생성된다.
 
 ```xml
 <dispatch to="planner" work="{WORK-NN}" execution-mode="full">
@@ -154,7 +148,15 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 </dispatch>
 ```
 
-**기존 WORK 실행 — Scheduler dispatch:**
+**기존 WORK 실행 — Scheduler dispatch:** subagent 실행 후 메시지 디스패치
+
+```
+1.  아래 XML을 prompt로 하여 Task 도구로 scheduler 호출 (REQUIRED)
+    → Task(subagent_type="scheduler", prompt=<dispatch XML>)
+```
+
+> ⚠️ dispatch XML 출력만으로는 scheduler가 실행되지 않는다.
+> 반드시 Task 도구를 호출해야 별도 에이전트 세션이 생성된다.
 
 ```xml
 <dispatch to="scheduler" work="{WORK_ID}" execution-mode="full">
@@ -164,12 +166,6 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
   </context>
 </dispatch>
 ```
-
-### 3-7. Work Activity Log
-
-→ `agents/work-activity-log.md` 참조
-
----
 
 ## 4. 제약사항 및 금지사항
 
