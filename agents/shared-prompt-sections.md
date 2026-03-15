@@ -1,6 +1,6 @@
 # Shared Prompt Sections
 
-공통 재사용 섹션. 각 에이전트가 `cache_control` 마커로 참조한다.
+공통 재사용 섹션. 각 에이전트가 참조한다.
 
 ---
 
@@ -8,9 +8,8 @@
 
 ```
 우선순위: PLAN.md > Language: → CLAUDE.md ## Language → en (default)
-
 dispatch 시: <context><language> 필드에 resolved language code 전달
-섹션 헤더(##)도 resolved language로 작성 (언어별 매핑 테이블 참조)
+섹션 헤더(##)도 resolved language로 작성
 ```
 
 ---
@@ -49,9 +48,9 @@ fi
 works/{WORK_ID}/
   ├─ PLAN.md
   ├─ PROGRESS.md
-  ├─ TASK-00.md               # WORK prefix 없음
-  ├─ TASK-00_progress.md      # 구분자: 언더스코어
-  ├─ TASK-00_result.md        # 구분자: 언더스코어
+  ├─ TASK-00.md
+  ├─ TASK-00_progress.md
+  ├─ TASK-00_result.md
   └─ TASK-01.md ...
 ```
 
@@ -63,16 +62,13 @@ works/{WORK_ID}/
 ## § 4. File System Discovery Scripts
 
 ```bash
-# 미완료 TASK가 있는 최신 WORK 찾기
+# 미완료 TASK가 있는 최신 WORK
 for dir in $(ls -d works/WORK-* 2>/dev/null | sort -V -r); do
   WORK_ID=$(basename $dir)
   TOTAL=$(ls $dir/TASK-*.md 2>/dev/null | grep -v result | wc -l)
   DONE=$(ls $dir/TASK-*_result.md 2>/dev/null | wc -l)
   [ "$DONE" -lt "$TOTAL" ] && echo "$WORK_ID" && break
 done
-
-# 전체 WORK 목록
-ls -d works/WORK-* 2>/dev/null | sort -V
 
 # TASK 완료 현황
 TOTAL=$(ls works/${WORK_ID}/TASK-*.md 2>/dev/null | grep -v result | wc -l)
@@ -103,15 +99,15 @@ echo "$DONE / $TOTAL"
 
 → `agents/file-content-schema.md` § 1 참조
 
-| 필드 | 필수 | 설명 |
-|------|------|------|
-| `> Created:` | ✅ | YYYY-MM-DD |
-| `> 요구사항:` | ✅ | `REQ-XXX` 또는 `N/A` |
-| `> Execution-Mode:` | ✅ | `direct` / `pipeline` / `full` |
-| `> Project:` | ✅ | 프로젝트명 |
-| `> Tech Stack:` | ✅ | 감지된 기술 스택 |
-| `> Language:` | ✅ | 언어 코드 (`ko`, `en` 등) |
-| `> Status:` | ✅ | 항상 `PLANNED`로 시작 |
+| 필드 | 설명 |
+|------|------|
+| `> Created:` | YYYY-MM-DD |
+| `> 요구사항:` | `REQ-XXX` 또는 `N/A` |
+| `> Execution-Mode:` | `direct` / `pipeline` / `full` |
+| `> Project:` | 프로젝트명 |
+| `> Tech Stack:` | 기술 스택 |
+| `> Language:` | 언어 코드 |
+| `> Status:` | 항상 `PLANNED`로 시작 |
 
 ---
 
@@ -125,12 +121,4 @@ echo "$DONE / $TOTAL"
 | `COMPLETED` | git push 시에만 변경 |
 
 - committer / scheduler → COMPLETED 변경 금지
-- WORK 디렉토리 생성 시 반드시 IN_PROGRESS 추가
 - push 후 IN_PROGRESS 방치 금지
-
----
-
-## Version
-
-- Created: 2026-03-10
-- Updated: 2026-03-15

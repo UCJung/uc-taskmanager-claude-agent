@@ -14,55 +14,21 @@
 
 | 필드 | FULL | SUMMARY | 내용 |
 |------|:----:|:-------:|------|
-| `what` | ✅ | ✅ | 변경/검증 사항 요약 (2-5줄) |
-| `why` | ✅ | ❌ | 의사결정 근거 (2-4줄) |
-| `caution` | ✅ | ❌ | 주의사항, 조건부 완료 (1-3줄) |
-| `incomplete` | ✅ | ❌ | 미완료 사항 (1-2줄, 없으면 "None") |
+| `what` | O | O | 변경/검증 사항 요약 (2-5줄) |
+| `why` | O | - | 의사결정 근거 (2-4줄) |
+| `caution` | O | - | 주의사항, 조건부 완료 (1-3줄) |
+| `incomplete` | O | - | 미완료 사항 (1-2줄, 없으면 "None") |
 
 ## 파이프라인 단계별 입/출력
 
-### Builder
+| 에이전트 | 입력 | 출력 |
+|---------|------|------|
+| Builder | TASK spec + 의존 TASK result.md context-handoff (윈도우 적용) | context-handoff FULL |
+| Verifier | TASK spec + Builder context-handoff (FULL) | context-handoff FULL |
+| Committer | Verifier FULL + Builder SUMMARY + progress.md (gate) | result.md + git commit |
 
-입력: TASK spec + 의존 TASK result.md context-handoff (슬라이딩 윈도우)
-
-출력:
-```xml
-<task-result status="PASS|FAIL">
-  <context-handoff from="builder" detail-level="FULL">
-    <what>변경 사항</what><why>근거</why><caution>주의</caution><incomplete>미완료</incomplete>
-  </context-handoff>
-</task-result>
-```
-
-### Verifier
-
-입력: TASK spec + Builder context-handoff (FULL)
-
-출력:
-```xml
-<task-result status="PASS|FAIL">
-  <context-handoff from="verifier" detail-level="FULL">
-    <what>검증 결과</what><why>판정 근거</why><caution>수동 확인</caution><incomplete>검증 불가 항목</incomplete>
-  </context-handoff>
-</task-result>
-```
-
-### Committer
-
-입력: Verifier context-handoff (FULL) + Builder context-handoff (SUMMARY) + progress.md (gate)
-
-처리:
-1. progress.md gate: 존재 + Status=COMPLETED + Files changed 비어있지 않음
-2. Gate 통과 → result.md 작성 + git commit
-3. Gate 실패 → FAIL 반환 (scheduler 재시도 트리거)
-
-출력: → `agents/file-content-schema.md` § 4 참조
-
-## TASK 간 의존성 전달
-
-- 직전 의존 TASK: context-handoff **FULL** (4개 필드)
-- 2단계 전: **SUMMARY** (what만)
-- 3단계 이상: **DROP**
+Committer gate: progress.md 존재 + Status=COMPLETED + Files changed 비어있지 않음
+- Gate 실패 시 builder 재디스패치, 최대 2회 재시도 (총 3회). 3회 실패 시 TASK FAILED
 
 ## Scheduler 디스패치
 
@@ -77,18 +43,11 @@
   <context-handoff from="verifier" detail-level="FULL">...</context-handoff>
   <context-handoff from="builder" detail-level="SUMMARY"><what>...</what></context-handoff>
 </dispatch>
-
-<!-- 다음 TASK Builder: 의존성 거리 적용 -->
-<dispatch to="builder" task="TASK-YY">
-  <previous-results>
-    <context-handoff from="prev-task" task="TASK-XX" detail-level="FULL">...</context-handoff>
-    <context-handoff from="prev-prev-task" task="TASK-WW" detail-level="SUMMARY"><what>...</what></context-handoff>
-  </previous-results>
-</dispatch>
 ```
 
-## Committer 재시도
+## TASK 간 의존성 전달
 
-1. 실패 원인: progress.md 미존재 / Status≠COMPLETED / Files changed 없음
-2. 기존 progress.md 포함하여 builder 재디스패치
-3. 최대 2회 재시도 (총 3회). 3회 실패 → TASK FAILED, 파이프라인 중단
+의존 TASK 거리에 따라 슬라이딩 윈도우 적용:
+- 직전 의존 TASK: context-handoff **FULL**
+- 2단계 전: **SUMMARY** (what만)
+- 3단계 이상: **DROP**

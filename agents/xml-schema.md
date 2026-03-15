@@ -1,10 +1,10 @@
 # Agent Communication XML Schema
 
-uc-taskmanager 에이전트 간 XML 통신 포맷 정의.
+에이전트 간 XML 통신 포맷 정의.
 
 ---
 
-## 1. Dispatch Format (Dispatcher → Receiver)
+## § 1. Dispatch Format (Dispatcher → Receiver)
 
 ```xml
 <dispatch to="{receiver}" work="{WORK_ID}" task="{TASK_ID}" execution-mode="{direct|pipeline|full}">
@@ -22,7 +22,6 @@ uc-taskmanager 에이전트 간 XML 통신 포맷 정의.
   <previous-results>
     <result task="{TASK_ID}" status="{PASS|FAIL|SKIP}">{summary}</result>
   </previous-results>
-  <cache-hint sections="{section1},{section2}"/>
 </dispatch>
 ```
 
@@ -30,11 +29,11 @@ uc-taskmanager 에이전트 간 XML 통신 포맷 정의.
 |------|----|
 | `to` | builder, verifier, committer, planner, scheduler, router |
 | `task` | `TASK-NN` — WORK prefix 포함 금지 |
-| `execution-mode` | direct / pipeline / full (생략 시 full로 간주) |
+| `execution-mode` | direct / pipeline / full (생략 시 full) |
 
 ---
 
-## 2. Task Result Format (Receiver → Dispatcher)
+## § 2. Task Result Format (Receiver → Dispatcher)
 
 ```xml
 <task-result work="{WORK_ID}" task="{TASK_ID}" agent="{agent}" status="{PASS|FAIL}">
@@ -51,23 +50,38 @@ uc-taskmanager 에이전트 간 XML 통신 포맷 정의.
 
 ---
 
-## 3. Dispatcher-Receiver 매핑
+## § 3. Execution-Mode별 에이전트 역할
 
-| Dispatcher | Receiver | execution-mode | 설명 |
-|------------|----------|:--------------:|------|
-| Router | (자기 자신) | `direct` | 서브에이전트 없음. Router가 직접 구현+commit+콜백 |
-| Router | Planner | `full` | 복잡 WORK 계획 |
-| Router | Scheduler | `full` | 계획된 WORK 실행 |
-| Router | Builder | `pipeline` | TASK 1개 구현 |
-| Router | Verifier | `pipeline` | TASK 1개 검증 |
-| Router | Committer | `pipeline` | TASK 1개 커밋 |
-| Scheduler | Builder | `full` | TASK N개 구현 |
-| Scheduler | Verifier | `full` | TASK N개 검증 |
-| Scheduler | Committer | `full` | TASK N개 커밋 |
+| 에이전트 | direct | pipeline | full |
+|---------|--------|----------|------|
+| Router | 구현+self-check+result.md+commit | PLAN 생성 후 B→V→C dispatch | Planner에 dispatch |
+| Planner | - | - | PLAN.md 생성 |
+| Scheduler | - | - | DAG 관리 + [B→V→C]xN |
+| Builder | - | 정상 실행 | 정상 실행 |
+| Verifier | - | 정상 실행 | 정상 실행 |
+| Committer | - | result.md+commit+콜백 | result.md+commit+콜백 |
+
+Dispatcher → Receiver 매핑:
+
+| Dispatcher | Receiver | mode |
+|------------|----------|:----:|
+| Router | Builder/Verifier/Committer | pipeline |
+| Router | Planner/Scheduler | full |
+| Scheduler | Builder/Verifier/Committer | full |
+
+모드 무관 불변 항목:
+
+| 항목 | direct | pipeline/full |
+|------|:---:|:---:|
+| `works/WORK-NN/` 디렉토리 | Router | Router/Planner |
+| `PLAN.md` | Router | Router/Planner |
+| `TASK-XX.md` | Router | Router/Planner |
+| `TASK-XX_result.md` | Router | Committer |
+| `WORK-LIST.md` IN_PROGRESS | Router | Router |
 
 ---
 
-## 4. Context-Handoff Element
+## § 4. Context-Handoff Element
 
 ```xml
 <context-handoff from="{agent}" detail-level="{FULL|SUMMARY|DROP}">
@@ -83,27 +97,3 @@ uc-taskmanager 에이전트 간 XML 통신 포맷 정의.
 | `FULL` | what, why, caution, incomplete |
 | `SUMMARY` | what만 (1-3줄) |
 | `DROP` | 요소 생략 |
-
----
-
-## 5. execution-mode별 에이전트 행동
-
-| 에이전트 | direct | pipeline | full |
-|---------|--------|----------|------|
-| Router | 구현+self-check+result.md+commit+콜백 직접 | PLAN 생성 후 B→V→C dispatch | Planner에 dispatch |
-| Planner | 호출 안 됨 | 호출 안 됨 | PLAN.md 생성 |
-| Scheduler | 호출 안 됨 | 호출 안 됨 | DAG 관리 + [B→V→C]×N |
-| Builder | 호출 안 됨 | 정상 실행 | 정상 실행 |
-| Verifier | 호출 안 됨 | 정상 실행 | 정상 실행 |
-| Committer | 호출 안 됨 | result.md+commit+콜백 | result.md+commit+콜백 |
-
-불변 항목 (모드 무관):
-
-| 항목 | direct | pipeline/full |
-|------|:---:|:---:|
-| `works/WORK-NN/` 디렉토리 | Router | Router/Planner |
-| `PLAN.md` | Router | Router/Planner |
-| `TASK-XX.md` | Router | Router/Planner |
-| `TASK-XX_result.md` | Router | Committer |
-| COMMITTER DONE 콜백 | Router | Committer |
-| `WORK-LIST.md` IN_PROGRESS | Router | Router |

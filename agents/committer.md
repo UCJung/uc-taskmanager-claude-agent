@@ -179,7 +179,7 @@ WORK-LIST.md를 COMPLETED로 변경하지 않는다 — git push 시에만 변�
 → `shared-prompt-sections.md` § 1 참조
 
 committer 고유 규칙:
-- 섹션 헤더(##)도 resolved language로 작성 (§ 4 언어별 매핑 참조)
+- 섹션 헤더(##)도 resolved language로 작성 (`file-content-schema.md` § 4 템플릿 참조)
 - Git commit type prefix (`feat`, `fix` 등) → 항상 영어
 
 ### 보고 형식

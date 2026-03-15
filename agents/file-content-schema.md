@@ -4,14 +4,14 @@
 
 ## COMPLIANCE
 
-| 생성 파일 | 준수 섹션 | 위반 시 결과 |
-|-----------|-----------|-------------|
-| `PLAN.md` | § 1 | `parsePlanMd()` 파싱 실패, scheduler 동작 불가 |
-| `TASK-XX.md` | § 2 | `parseTaskFilename()` DB 등록 누락 |
-| `TASK-XX_progress.md` | § 3 | committer gate FAIL |
-| `TASK-XX_result.md` | § 4 | context-handoff 누락 |
-| `TASK-XX_result.md` (direct) | § 5 | result.md 인식 실패 |
-| `PROGRESS.md` | § 6 | scheduler 진행률 추적 불가 |
+| 생성 파일 | 준수 섹션 |
+|-----------|-----------|
+| `PLAN.md` | § 1 |
+| `TASK-XX.md` | § 2 |
+| `TASK-XX_progress.md` | § 3 |
+| `TASK-XX_result.md` | § 4 |
+| `TASK-XX_result.md` (direct) | § 5 |
+| `PROGRESS.md` | § 6 |
 
 ---
 
@@ -43,9 +43,6 @@
 - **Scope**: {description}
 - **Files**:
   - `path/to/file` — {description}
-
-### TASK-01: {title}
-- **Depends on**: TASK-00
 ```
 
 제목 형식: `# WORK-NN: 제목` — `# PLAN WORK-NN:` 금지 (`parsePlanMd()` 오류)
@@ -100,12 +97,7 @@
   - `path/to/file` — {CREATE | MODIFY | DELETE}
 ```
 
-| 시점 | Status |
-|------|--------|
-| planner 템플릿 | `PENDING` |
-| builder 착수 | `STARTED` |
-| 파일 변경 중 | `IN_PROGRESS` |
-| 완료 | `COMPLETED` |
+Status 전이: `PENDING` → `STARTED` → `IN_PROGRESS` → `COMPLETED`
 
 committer gate: 파일 존재 + `Status: COMPLETED` + Files changed 비어있지 않음
 
@@ -115,6 +107,8 @@ committer gate: 파일 존재 + `Status: COMPLETED` + Files changed 비어있지
 
 경로: `works/{WORK_ID}/TASK-XX_result.md`
 
+섹션 헤더는 PLAN.md `> Language:` 기준으로 해당 언어로 작성.
+
 ```markdown
 # TASK-XX Result
 
@@ -122,28 +116,28 @@ committer gate: 파일 존재 + `Status: COMPLETED` + Files changed 비어있지
 > Completed: {YYYY-MM-DD HH:MM}
 > Status: **DONE**
 
-{## Summary | ## 요약 | ## サマリー}
+## Summary
 {1-2줄}
 
-{## Completed Checklist | ## 완료 체크리스트 | ## 完了チェックリスト}
+## Completed Checklist
 - [x] {item}
 
-{## Verification Results | ## 검증 결과 | ## 検証結果}
-- Build: ✅
-- Lint: ✅
-- Tests: ✅ (N passed)
+## Verification Results
+- Build: PASS
+- Lint: PASS
+- Tests: PASS (N passed)
 
-{## Files Changed | ## 변경 파일 | ## 変更ファイル}
+## Files Changed
 ### Created
 - `path` — {description}
 
-{## Issues Encountered | ## 발생 이슈 | ## 発生した問題}
+## Issues Encountered
 None
 
-{## Notes for Subsequent Tasks | ## 후속 TASK 참고사항 | ## 後続タスクへの注記}
+## Notes for Subsequent Tasks
 None
 
-{## Context Handoff | ## 컨텍스트 핸드오프 | ## コンテキスト引き継ぎ}
+## Context Handoff
 
 ### Builder Context (SUMMARY)
 {builder what 필드 1-3줄}
@@ -151,16 +145,6 @@ None
 ### Verifier Context (FULL)
 {verifier context-handoff 4개 필드}
 ```
-
-| 섹션 | en | ko | ja |
-|------|----|----|-----|
-| Summary | `## Summary` | `## 요약` | `## サマリー` |
-| Completed Checklist | `## Completed Checklist` | `## 완료 체크리스트` | `## 完了チェックリスト` |
-| Verification Results | `## Verification Results` | `## 검증 결과` | `## 検証結果` |
-| Files Changed | `## Files Changed` | `## 변경 파일` | `## 変更ファイル` |
-| Issues Encountered | `## Issues Encountered` | `## 발생 이슈` | `## 発生した問題` |
-| Notes for Subsequent Tasks | `## Notes for Subsequent Tasks` | `## 후속 TASK 참고사항` | `## 後続タスクへの注記` |
-| Context Handoff | `## Context Handoff` | `## 컨텍스트 핸드오프` | `## コンテキスト引き継ぎ` |
 
 ---
 
@@ -201,12 +185,11 @@ None
 
 | TASK | Title | Status | Commit | Duration |
 |------|-------|--------|--------|----------|
-| TASK-00 | {title} | ✅ Done | abc1234 | 12min |
-| TASK-01 | {title} | 🔄 In Progress | — | — |
+| TASK-00 | {title} | Done | abc1234 | 12min |
 
 ## Log
 - [10:00] TASK-00 started
-- [10:12] TASK-00 verified ✅, committed abc1234
+- [10:12] TASK-00 verified, committed abc1234
 ```
 
 ---
@@ -221,4 +204,4 @@ None
 | TASK 결과 | `TASK-NN_result.md` | committer / router(direct) |
 | WORK 진행 | `PROGRESS.md` | scheduler |
 
-`WORK-NN-TASK-NN.md` 형식 금지 → `parseTaskFilename()` 인식 불가.
+`WORK-NN-TASK-NN.md` 형식 금지 — `parseTaskFilename()` 인식 불가.
