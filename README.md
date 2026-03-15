@@ -452,18 +452,21 @@ Each agent file follows a consistent four-section structure:
 ```
 ## 1. 역할 (Role)
    Agent's purpose and responsibility declaration.
+   Single paragraph stating what the agent is and what it owns.
 
 ## 2. 수행업무 (Responsibilities)
-   Table of tasks: | Task | Description |
+   Flat table of owned tasks.
+   | 업무 (Task) | 설명 (Description) |
 
 ## 3. 업무수행단계 및 내용 (Execution Steps)
-   Step-by-step procedure for each task.
-   Includes STARTUP (required files to read on boot), core logic,
-   file format references → file-content-schema.md (single source of truth),
-   XML communication → xml-schema.md.
+   Step-by-step procedure for each task listed in § 2.
+   Always starts with a STARTUP block listing required files to read on boot.
+   References file formats via file-content-schema.md (single source of truth).
+   References inter-agent communication via xml-schema.md.
 
 ## 4. 제약사항 및 금지사항 (Constraints and Prohibitions)
-   Rules that must always be followed.
+   Immutable rules the agent must always follow.
+   Written as a flat prohibition/constraint list.
 ```
 
 `file-content-schema.md` is the single authoritative definition for all file formats (PLAN.md, TASK.md, progress.md, result.md). Agents reference it instead of embedding format specs inline — eliminating duplication across 6 agent files.

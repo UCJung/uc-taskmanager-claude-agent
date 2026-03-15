@@ -17,3 +17,4 @@
 | WORK-13 | 파일경로 현행화 — tasks/multi-tasks/ → works/, TASK 파일명 중복 프리픽스 제거 | COMPLETED | 2026-03-14 | 2026-03-14 |
 | WORK-14 | README 및 doc 파일 현행화 — agent 리팩토링 반영 | IN_PROGRESS | 2026-03-15 | — |
 | WORK-15 | works/ 폴더 스캔으로 WORK-LIST.md 현행화 | IN_PROGRESS | 2026-03-15 | — |
+| WORK-16 | README에 에이전트 문서 구조(4섹션) 설명 반영 | IN_PROGRESS | 2026-03-15 | — |
