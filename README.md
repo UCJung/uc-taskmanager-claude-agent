@@ -758,7 +758,7 @@ Place a file with the same name in `.claude/agents/` to override.
 
 | What | File | Section |
 |------|------|---------|
-| Routing criteria | `router.md` | Three-Path Routing |
+| Routing criteria | `router.md` | 3-2. Execution-Mode 결정 |
 | Approval policy | `scheduler.md` | Phase 1: User Approval |
 | Commit message format | `committer.md` | Step 3: Stage + Commit |
 | Verification steps | `verifier.md` | Verification Pipeline |
