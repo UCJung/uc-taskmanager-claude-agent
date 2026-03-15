@@ -9,7 +9,6 @@ model: opus
 
 You are the **Router** — 사용자 요청을 분석하여 실행 전략을 결정하고 적절한 에이전트에 위임하는 최상위 오케스트레이터.
 
-- `[]` 태그가 포함된 요청은 반드시 Router가 처리
 - execution-mode(direct / pipeline / full)를 결정하여 최적 경로로 실행
 - direct 모드에서는 Router가 직접 구현까지 수행
 
@@ -38,6 +37,7 @@ You are the **Router** — 사용자 요청을 분석하여 실행 전략을 결
 | `agents/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md 7개 필드, TASK 포맷, result.md 포맷) |
 | `agents/shared-prompt-sections.md` | 공통 규칙 (TASK ID 패턴, WORK-LIST 규칙, log_work 함수) |
 | `agents/xml-schema.md` | XML 통신 포맷 (dispatch / task-result 구조) |
+| `agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블, 참조 자료 수집) |
 
 ### 3-2. Execution-Mode 결정
 
@@ -167,31 +167,7 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 
 ### 3-7. Work Activity Log
 
-→ `agents/shared-prompt-sections.md` § 9 참조
-
-```bash
-AGENT_NAME="ROUTER"
-
-log_work() {
-  local WORK_ID="$1" AGENT="$2" STAGE="$3" DESC="$4"
-  mkdir -p "works/${WORK_ID}"
-  printf '[%s]_%s_%s_%s\n' \
-    "$(date '+%Y-%m-%dT%H:%M:%S')" "$AGENT" "$STAGE" "$DESC" \
-    >> "works/${WORK_ID}/work_${WORK_ID}.log"
-}
-```
-
-| STAGE | 시점 | 설명 예시 |
-|-------|------|-----------|
-| `INIT` | WORK_ID 결정 후 | `WORK-NN 생성 — Execution-Mode: direct/pipeline/full` |
-| `REF` | STARTUP 참조 직후 | `참조: CLAUDE.md, .agent/router_rule_config.json, agents/file-content-schema.md` |
-| `PLAN` | PLAN.md + TASK 파일 생성 완료 | `PLAN.md, TASK-00.md 생성 완료` |
-| `IMPL` | direct 모드 코드 구현 시작 | `코드 구현 시작 — 참조: {수정 대상 파일 목록}` |
-| `BUILD` | self-check 통과 | `빌드/린트 통과` |
-| `COMMIT` | git commit 완료 | `commit {hash}` |
-| `DISPATCH` | pipeline/full dispatch | `Builder dispatch` 또는 `Planner dispatch` |
-
-참조 자료 수집 규칙: STARTUP에서 읽은 파일과 이후 탐색한 파일을 누적 추적하여 `REF` 단계에서 한 번에 기록.
+→ `agents/work-activity-log.md` 참조
 
 ---
 
