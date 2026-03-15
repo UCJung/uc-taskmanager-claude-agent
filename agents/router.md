@@ -106,21 +106,7 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 
 **builder 디스패치** subagent 실행 후 메시지 디스패치
 
-```xml
-<dispatch to="builder" work="{WORK-NN}" task="TASK-00" execution-mode="pipeline">
-  <context>
-    <project>{project}</project>
-    <language>{lang_code}</language>
-    <plan-file>works/{WORK-NN}/PLAN.md</plan-file>
-  </context>
-  <task-spec>
-    <file>works/{WORK-NN}/TASK-00.md</file>
-    <title>{title}</title>
-    <action>implement</action>
-    <description>{requirement}</description>
-  </task-spec>
-</dispatch>
-```
+→ dispatch XML 포맷: `xml-schema.md` § 1 참조 (to="builder", task="TASK-00", execution-mode="pipeline")
 
 ### 3-6. full 모드 일때 실행
 
@@ -133,19 +119,7 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 4.  log_work DISPATCH "Planner dispatch XML 반환"
 ```
 
-```xml
-<dispatch to="planner" work="{WORK-NN}" execution-mode="full">
-  <context>
-    <project>{project}</project>
-    <language>{lang_code}</language>
-    <next-work-id>{WORK-XX}</next-work-id>
-  </context>
-  <request>
-    <original>{사용자 원문}</original>
-    <complexity>complex</complexity>
-  </request>
-</dispatch>
-```
+→ dispatch XML 포맷: `xml-schema.md` § 1 참조 (to="planner", execution-mode="full")
 
 **기존 WORK 실행 — Scheduler dispatch:** subagent 실행 후 메시지 디스패치
 
@@ -153,14 +127,7 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 1.  아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
 ```
 
-```xml
-<dispatch to="scheduler" work="{WORK_ID}" execution-mode="full">
-  <context>
-    <language>{lang_code}</language>
-    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
-  </context>
-</dispatch>
-```
+→ dispatch XML 포맷: `xml-schema.md` § 1 참조 (to="scheduler", execution-mode="full")
 
 ## 4. 제약사항 및 금지사항
 
@@ -179,5 +146,7 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 - TASK 파일명: `TASK-XX.md` 형식
 
 ### Output Language Rule
-- 우선순위: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en`
+→ `shared-prompt-sections.md` § 1 참조
+
+router 고유 규칙:
 - dispatch `<context><language>` 필드로 전달

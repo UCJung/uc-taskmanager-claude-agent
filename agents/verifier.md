@@ -42,61 +42,23 @@ Builder가 완료한 TASK 결과물을 검증하여 빌드, 린트, 테스트, A
 
 ### 3-2. XML 입력 파싱
 
-```xml
-<dispatch to="verifier" work="{WORK_ID}" task="{TASK_ID}" execution-mode="{pipeline|full}">
-  <context>
-    <language>{lang_code}</language>
-    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
-  </context>
-  <task-spec>
-    <file>works/{WORK_ID}/TASK-XX.md</file>
-    <title>{title}</title>
-    <action>verify</action>
-  </task-spec>
-  <builder-result><!-- builder task-result XML --></builder-result>
-</dispatch>
-```
+→ dispatch XML 포맷: `xml-schema.md` § 1 참조
 
 ### 3-3. Step 0: Progress File Gate (CRITICAL)
 
-```bash
-PROGRESS_FILE="works/${WORK_ID}/TASK-XX_progress.md"
-[ ! -f "$PROGRESS_FILE" ] && echo "CRITICAL FAIL: progress.md missing" && exit 1
-STATUS=$(grep "^- Status:" "$PROGRESS_FILE" | sed 's/^- Status: //' | tr -d '\r')
-[ "$STATUS" != "COMPLETED" ] && echo "CRITICAL FAIL: Status=$STATUS" && exit 1
-```
+→ Gate 조건: `file-content-schema.md` § 3 참조 (파일 존재 + Status=COMPLETED + Files changed)
 
 CRITICAL 실패 시 즉시 중단. 이후 Step 진행 불가.
 
 ### 3-4. Step 1: Build (CRITICAL)
 
-```bash
-if [ -f "package.json" ]; then
-  npm run build 2>&1 || bun run build 2>&1
-elif [ -f "Cargo.toml" ]; then
-  cargo build 2>&1
-elif [ -f "go.mod" ]; then
-  go build ./... 2>&1
-elif [ -f "pyproject.toml" ]; then
-  python -m py_compile $(find . -name "*.py" -not -path "*/venv/*" | head -20) 2>&1
-elif [ -f "Makefile" ]; then
-  make build 2>&1
-fi
-```
+→ Build 명령: `shared-prompt-sections.md` § 2 참조
 
 Exit ≠ 0 → CRITICAL FAIL.
 
 ### 3-5. Step 2: Lint
 
-```bash
-if [ -f "package.json" ]; then
-  npm run lint 2>&1 || bun run lint 2>&1 || echo "No lint"
-elif [ -f "pyproject.toml" ]; then
-  ruff check . 2>&1 || python -m flake8 . 2>&1 || echo "No linter"
-elif [ -f "Cargo.toml" ]; then
-  cargo clippy 2>&1 || echo "No clippy"
-fi
-```
+→ Lint 명령: `shared-prompt-sections.md` § 2 참조
 
 실패 시 WARN (CRITICAL 아님). 명령 없으면 N/A.
 
@@ -130,32 +92,28 @@ CLAUDE.md 또는 프로젝트 config에 명시된 컨벤션만 확인한다.
 
 ### 3-10. 결과 XML 출력
 
+→ task-result XML 기본 구조: `xml-schema.md` § 2 참조
+→ context-handoff 요소: `xml-schema.md` § 4 참조
+
+verifier 고유 추가 필드:
+
 ```xml
-<task-result work="{WORK_ID}" task="{TASK_ID}" agent="verifier" status="{PASS|FAIL}">
-  <summary>{검증 결과 요약}</summary>
-  <verification>
-    <check name="progress" status="{PASS|FAIL}"/>
-    <check name="build" status="{PASS|FAIL}"/>
-    <check name="lint" status="{PASS|FAIL|N/A}"/>
-    <check name="tests" status="{PASS|FAIL|N/A}" count="{N}"/>
-    <check name="task-specific" status="{PASS|FAIL}"/>
-    <check name="files" status="{PASS|FAIL}"/>
-    <check name="conventions" status="{PASS|FAIL|N/A}"/>
-  </verification>
-  <failure-details>
-    <failure check="{check name}">
-      <error>{error}</error>
-      <file>{path}</file>
-      <suggested-fix>{suggestion}</suggested-fix>
-    </failure>
-  </failure-details>
-  <context-handoff from="verifier" detail-level="FULL">
-    <what>{검증 결과 및 AC 충족 여부}</what>
-    <why>{pass/fail 판정 근거}</why>
-    <caution>{수동 확인 필요 사항, 조건부 통과}</caution>
-    <incomplete>{검증 불가 항목 또는 None}</incomplete>
-  </context-handoff>
-</task-result>
+<verification>
+  <check name="progress" status="{PASS|FAIL}"/>
+  <check name="build" status="{PASS|FAIL}"/>
+  <check name="lint" status="{PASS|FAIL|N/A}"/>
+  <check name="tests" status="{PASS|FAIL|N/A}" count="{N}"/>
+  <check name="task-specific" status="{PASS|FAIL}"/>
+  <check name="files" status="{PASS|FAIL}"/>
+  <check name="conventions" status="{PASS|FAIL|N/A}"/>
+</verification>
+<failure-details>
+  <failure check="{check name}">
+    <error>{error}</error>
+    <file>{path}</file>
+    <suggested-fix>{suggestion}</suggested-fix>
+  </failure>
+</failure-details>
 ```
 
 ---
@@ -172,5 +130,7 @@ CLAUDE.md 또는 프로젝트 config에 명시된 컨벤션만 확인한다.
 - 명령 없으면 N/A (FAIL 아님)
 
 ### Output Language Rule
-- 우선순위: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en`
+→ `shared-prompt-sections.md` § 1 참조
+
+verifier 고유 규칙:
 - 명령 출력은 원문 유지 (번역 금지)

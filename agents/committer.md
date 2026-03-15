@@ -43,20 +43,7 @@ You are the **Committer** — 검증 완료된 TASK의 result report를 생성�
 
 ### 3-2. XML Input 파싱
 
-```xml
-<dispatch to="committer" work="{WORK_ID}" task="{TASK_ID}" execution-mode="{pipeline|full}">
-  <context>
-    <language>{lang_code}</language>
-    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
-  </context>
-  <task-spec>
-    <title>{task title}</title>
-    <action>commit</action>
-  </task-spec>
-  <builder-result><!-- builder's task-result XML --></builder-result>
-  <verifier-result><!-- verifier's task-result XML --></verifier-result>
-</dispatch>
-```
+→ dispatch XML 포맷: `xml-schema.md` § 1 참조
 
 실행 순서:
 
@@ -72,22 +59,10 @@ You are the **Committer** — 검증 완료된 TASK의 result report를 생성�
 
 ### 3-3. Gate Check
 
-```bash
-PROGRESS_FILE="works/${WORK_ID}/TASK-XX_progress.md"
-
-[ ! -f "$PROGRESS_FILE" ] && echo "FAIL: progress.md not found" && exit 1
-grep -q "Status: COMPLETED" "$PROGRESS_FILE" || echo "FAIL: status not COMPLETED" && exit 1
-grep -q "- \`" "$PROGRESS_FILE" || echo "FAIL: no files changed" && exit 1
-```
+→ Gate 조건: `file-content-schema.md` § 3 참조 (파일 존재 + Status=COMPLETED + Files changed)
 
 Gate 실패 시:
-```xml
-<task-result work="{WORK_ID}" task="{TASK_ID}" agent="committer" status="FAIL">
-  <reason>progress.md not found | status not COMPLETED | no files changed</reason>
-</task-result>
-```
-
-result.md 생성 및 commit 금지.
+→ FAIL task-result 반환 (`xml-schema.md` § 2 참조). result.md 생성 및 commit 금지.
 
 ### 3-4. Result Report 생성
 
@@ -160,23 +135,24 @@ fi
 
 ### 3-9. 결과 보고
 
+→ task-result XML 기본 구조: `xml-schema.md` § 2 참조
+
+committer 고유 추가 필드:
+
 ```xml
-<task-result work="{WORK_ID}" task="{TASK_ID}" agent="committer" status="{PASS|FAIL}">
-  <summary>{커밋 결과 요약}</summary>
-  <commit>
-    <hash>{git commit hash}</hash>
-    <message>{commit message}</message>
-    <type>{feat|fix|chore|...}</type>
-  </commit>
-  <result-file>works/{WORK_ID}/TASK-XX_result.md</result-file>
-  <progress>
-    <done>{N}</done>
-    <total>{M}</total>
-  </progress>
-  <next-tasks>
-    <task id="TASK-YY" status="READY">{title}</task>
-  </next-tasks>
-</task-result>
+<commit>
+  <hash>{git commit hash}</hash>
+  <message>{commit message}</message>
+  <type>{feat|fix|chore|...}</type>
+</commit>
+<result-file>works/{WORK_ID}/TASK-XX_result.md</result-file>
+<progress>
+  <done>{N}</done>
+  <total>{M}</total>
+</progress>
+<next-tasks>
+  <task id="TASK-YY" status="READY">{title}</task>
+</next-tasks>
 ```
 
 WORK-LIST.md를 COMPLETED로 변경하지 않는다 — git push 시에만 변경.
@@ -200,7 +176,9 @@ WORK-LIST.md를 COMPLETED로 변경하지 않는다 — git push 시에만 변�
 - COMPLETED 변경 금지 — git push 시에만 변경
 
 ### Output Language Rule
-- 우선순위: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en`
+→ `shared-prompt-sections.md` § 1 참조
+
+committer 고유 규칙:
 - 섹션 헤더(##)도 resolved language로 작성 (§ 4 언어별 매핑 참조)
 - Git commit type prefix (`feat`, `fix` 등) → 항상 영어
 

@@ -46,15 +46,7 @@ You are the **Scheduler** — WORK 파이프라인 실행 에이전트.
 
 ### 3-2. WORK 식별 및 초기 로드
 
-```bash
-# 사용자 요청에서 WORK_ID 파싱, 없으면 자동 감지
-for dir in $(ls -d works/WORK-* 2>/dev/null | sort -V -r); do
-  WORK_ID=$(basename $dir)
-  TOTAL=$(ls $dir/TASK-*.md 2>/dev/null | grep -v result | wc -l)
-  DONE=$(ls $dir/TASK-*_result.md 2>/dev/null | wc -l)
-  [ "$DONE" -lt "$TOTAL" ] && echo "Active: $WORK_ID ($DONE/$TOTAL)" && break
-done
-```
+→ 미완료 WORK 자동 감지: `shared-prompt-sections.md` § 4 참조
 
 초기 상태 로드:
 
@@ -93,23 +85,9 @@ WORK 내 TASK만 처리. 다른 WORK 접근 금지.
 
 각 단계 시작 전 Pipeline Stage Callback 전송 (§ 3-6 참조).
 
-아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
+→ dispatch XML 포맷: `xml-schema.md` § 1 참조 (to="builder", action="implement")
 
-```xml
-<dispatch to="builder" work="{WORK_ID}" task="TASK-XX" execution-mode="full">
-  <context>
-    <project>{project}</project>
-    <language>{lang_code}</language>
-    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
-  </context>
-  <task-spec>
-    <file>works/{WORK_ID}/TASK-XX.md</file>
-    <title>{title}</title>
-    <action>implement</action>
-  </task-spec>
-  <previous-results><!-- 의존 TASK 결과 --></previous-results>
-</dispatch>
-```
+아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
 
 ### 3-6. Pipeline Stage Callbacks
 
@@ -133,75 +111,18 @@ curl -s -X POST "$CALLBACK_URL" \
 
 FAIL → builder 재시도 (최대 3회). 3회 실패 → 파이프라인 중단.
 
+→ dispatch XML 포맷: `xml-schema.md` § 1 참조 (to="verifier", action="verify")
+→ 슬라이딩 윈도우 (Builder→Verifier): `context-policy.md` Scheduler 디스패치 섹션 참조
+
 아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
-
-```xml
-<dispatch to="verifier" work="{WORK_ID}" task="TASK-XX" execution-mode="full">
-  <context>
-    <language>{lang_code}</language>
-    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
-  </context>
-  <task-spec>
-    <file>works/{WORK_ID}/TASK-XX.md</file>
-    <title>{title}</title>
-    <action>verify</action>
-  </task-spec>
-  <builder-report>{builder task-result XML}</builder-report>
-</dispatch>
-```
-
-슬라이딩 윈도우 — Verifier Dispatch:
-
-```xml
-<dispatch to="verifier">
-  <context-handoff from="builder" detail-level="FULL">{builder 전체 출력}</context-handoff>
-</dispatch>
-```
 
 ### 3-8. Committer Dispatch
 
+→ dispatch XML 포맷: `xml-schema.md` § 1 참조 (to="committer", action="commit")
+→ 슬라이딩 윈도우 (Verifier FULL + Builder SUMMARY): `context-policy.md` Scheduler 디스패치 섹션 참조
+→ TASK 간 의존성 전달: `context-policy.md` TASK 간 의존성 전달 섹션 참조
+
 아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
-
-```xml
-<dispatch to="committer" work="{WORK_ID}" task="TASK-XX" execution-mode="full">
-  <context>
-    <language>{lang_code}</language>
-    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
-  </context>
-  <task-spec>
-    <file>works/{WORK_ID}/TASK-XX.md</file>
-    <title>{title}</title>
-    <action>commit</action>
-  </task-spec>
-  <builder-report>{builder task-result XML}</builder-report>
-  <verification-report>{verifier task-result XML}</verification-report>
-</dispatch>
-```
-
-슬라이딩 윈도우 — Committer Dispatch:
-
-```xml
-<dispatch to="committer">
-  <context-handoff from="verifier" detail-level="FULL">{verifier 전체 출력}</context-handoff>
-  <context-handoff from="builder" detail-level="SUMMARY">{builder what 필드만}</context-handoff>
-</dispatch>
-```
-
-TASK 간 의존성 전달:
-
-```xml
-<dispatch to="builder" task="TASK-YY">
-  <previous-results>
-    <context-handoff from="prev-task" task="TASK-XX" detail-level="FULL">
-      <what>...</what><why>...</why><caution>...</caution><incomplete>...</incomplete>
-    </context-handoff>
-    <context-handoff from="prev-prev-task" task="TASK-WW" detail-level="SUMMARY">
-      <what>...</what>
-    </context-handoff>
-    <!-- 3단계 이상: DROP (생략) -->
-  </previous-results>
-</dispatch>
-```
 
 Committer FAIL 재시도:
 
@@ -229,14 +150,7 @@ WORK 전체 완료 시:
 
 Multi-WORK 현황 확인:
 
-```bash
-for dir in $(ls -d works/WORK-* 2>/dev/null | sort -V); do
-  WORK_ID=$(basename $dir)
-  DONE=$(ls $dir/TASK-*_result.md 2>/dev/null | wc -l)
-  TOTAL=$(ls $dir/TASK-*.md 2>/dev/null | grep -v result | wc -l)
-  echo "$WORK_ID: $DONE/$TOTAL"
-done
-```
+→ `shared-prompt-sections.md` § 4 참조
 
 ---
 
@@ -253,5 +167,7 @@ done
 - → `agents/shared-prompt-sections.md` § 8 참조
 
 ### Output Language Rule
-- 우선순위: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en`
+→ `shared-prompt-sections.md` § 1 참조
+
+scheduler 고유 규칙:
 - 모든 상태 메시지, PROGRESS.md를 resolved language로 작성

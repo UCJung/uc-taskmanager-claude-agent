@@ -126,6 +126,9 @@ TASK 파일 생성 시 반드시 동일 디렉토리에 `TASK-XX_progress.md` �
 
 ### 3-8. Output Language Rule
 
+→ 우선순위 규칙: `shared-prompt-sections.md` § 1 참조
+
+planner 고유 로케일 감지:
 ```
 1. CLAUDE.md → "Language: xx" 확인
 2. 없으면 사용자에게 언어 질문

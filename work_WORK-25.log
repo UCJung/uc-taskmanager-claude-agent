@@ -1,0 +1,51 @@
+
+================================================================================
+STAGE: VERIFIER | WORK: WORK-25 | TASK: TASK-03
+================================================================================
+Agent: verifier (Haiku 4.5)
+Timestamp: 2026-03-16 00:30
+Status: PASS
+
+Task: agents/scheduler.md 중복 제거 결과 검증
+
+Verification Steps:
+1. Progress File Gate: PASSED (Status=COMPLETED)
+2. § 3-2 WORK 식별 및 초기 로드: VERIFIED
+   - FS discovery 스크립트 제거 및 shared-prompt-sections.md § 4 참조
+   - 초기 상태 로드 유지
+3. § 3-5 Builder Dispatch: VERIFIED
+   - dispatch XML 코드 블록 제거 및 xml-schema.md § 1 참조
+   - "호출은 Main Claude" 문구 유지
+4. § 3-7 Verifier Dispatch: VERIFIED
+   - dispatch XML 및 슬라이딩 윈도우 참조로 대체
+   - FAIL → builder 재시도 로직 유지
+5. § 3-8 Committer Dispatch: VERIFIED
+   - 3개 dispatch XML 코드 블록 제거 및 참조로 대체
+   - context-policy.md 참조 추가
+   - Committer FAIL 재시도 로직 유지
+6. § 3-9 Multi-WORK 현황: VERIFIED
+   - multi-WORK 스크립트 제거 및 참조로 대체
+   - 진행 보고 텍스트 유지
+7. § 4 Output Language Rule: VERIFIED
+   - 공통 부분 참조로 대체
+   - scheduler 고유 규칙만 유지
+8. Unchanged Sections Check: VERIFIED
+   - § 3-1, 3-3, 3-4, 3-6 모두 변경 없음
+   - § 4 실행 범위, WORK-LIST.md 규칙 유지
+9. Reference Count Verification: PASSED
+   - grep "참조": 13
+   - grep "xml-schema.md": 4 (§ 3-5, 3-7, 3-8)
+   - grep "context-policy.md": 4 (§ 3-7, 3-8 x2, § 4)
+
+Acceptance Criteria: ALL MET ✅
+- FS discovery 스크립트가 참조로 대체됨 ✅
+- 3개 dispatch XML 코드 블록이 참조로 대체됨 ✅
+- 슬라이딩 윈도우 예시가 참조로 대체됨 ✅
+- Multi-WORK 스크립트가 참조로 대체됨 ✅
+- Output Language Rule이 참조 + 고유 규칙만 남음 ✅
+- scheduler 고유 로직(DAG, 재시도, 진행 보고) 변경 없음 ✅
+
+Conclusion: TASK-03 successfully completed. All duplicates removed and replaced
+with proper references to shared prompt sections while preserving scheduler-
+specific logic and unchanged sections.
+

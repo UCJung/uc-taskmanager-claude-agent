@@ -43,23 +43,7 @@ You are the **Builder** — TASK 명세를 받아 실제 코드를 구현하고 
 
 ### 3-2. XML Input 파싱
 
-```xml
-<dispatch to="builder" work="{WORK_ID}" task="{TASK_ID}" execution-mode="{pipeline|full}">
-  <context>
-    <project>{project name}</project>
-    <language>{lang_code}</language>
-    <plan-file>works/{WORK_ID}/PLAN.md</plan-file>
-  </context>
-  <task-spec>
-    <file>works/{WORK_ID}/TASK-XX.md</file>
-    <title>{task title}</title>
-    <action>implement</action>
-  </task-spec>
-  <previous-results>
-    <result task="{prev_TASK_ID}" status="PASS">{summary}</result>
-  </previous-results>
-</dispatch>
-```
+→ dispatch XML 포맷: `xml-schema.md` § 1 참조
 
 - `work`, `task`, `execution-mode` 속성 추출
 - `<language>`로 출력 언어 결정
@@ -98,25 +82,7 @@ ls works/${WORK_ID}/*_result.md 2>/dev/null
 
 ### 3-5. Self-Check
 
-```bash
-if [ -f "package.json" ]; then
-  npm run build 2>&1 || bun run build 2>&1
-elif [ -f "Cargo.toml" ]; then
-  cargo build 2>&1
-elif [ -f "go.mod" ]; then
-  go build ./... 2>&1
-elif [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then
-  python -m py_compile $(find . -name "*.py" -not -path "*/venv/*" | head -20) 2>&1
-elif [ -f "Makefile" ]; then
-  make build 2>&1
-fi
-
-if [ -f "package.json" ]; then
-  npm run lint 2>&1 || bun run lint 2>&1 || true
-elif [ -f "pyproject.toml" ]; then
-  ruff check . 2>&1 || python -m flake8 . 2>&1 || true
-fi
-```
+→ Build/Lint 명령: `shared-prompt-sections.md` § 2 참조
 
 빌드/린트 실패 시 보고 전에 반드시 수정.
 
@@ -161,25 +127,17 @@ fi
 
 ### 3-8. Context-Handoff Output 반환
 
+→ task-result XML 기본 구조: `xml-schema.md` § 2 참조
+→ context-handoff 요소: `xml-schema.md` § 4 참조
+
+builder 고유 추가 필드:
+
 ```xml
-<task-result work="{WORK_ID}" task="{TASK_ID}" agent="builder" status="{PASS|FAIL}">
-  <summary>{1-2줄 요약}</summary>
-  <files-changed>
-    <file action="created" path="path/to/file">{description}</file>
-    <file action="modified" path="path/to/file">{description}</file>
-  </files-changed>
-  <self-check>
-    <check name="build" status="PASS" />
-    <check name="lint" status="PASS" />
-  </self-check>
-  <context-handoff from="builder" detail-level="FULL">
-    <what>{변경 사항 요약}</what>
-    <why>{의사결정 근거}</why>
-    <caution>{주의사항, 조건부 완료}</caution>
-    <incomplete>{미완료 사항 또는 None}</incomplete>
-  </context-handoff>
-  <notes>{verifier 확인 사항}</notes>
-</task-result>
+<self-check>
+  <check name="build" status="PASS" />
+  <check name="lint" status="PASS" />
+</self-check>
+<notes>{verifier 확인 사항}</notes>
 ```
 
 ### 3-9. Retry Protocol
@@ -201,7 +159,9 @@ fi
 - ALWAYS return XML task-result format
 
 ### Output Language Rule
-- 우선순위: PLAN.md `> Language:` → CLAUDE.md `## Language` → `en`
+→ `shared-prompt-sections.md` § 1 참조
+
+builder 고유 규칙:
 - 코드 주석: resolved language (CLAUDE.md `CommentLanguage:` 로 override 가능)
 - 기존 코드에 특정 언어 주석이 있으면 해당 언어 따름
 - 파일명, 경로, 명령어 → 항상 영어
