@@ -19,3 +19,5 @@
 | WORK-15 | works/ 폴더 스캔으로 WORK-LIST.md 현행화 | IN_PROGRESS | 2026-03-15 | — |
 | WORK-16 | README에 에이전트 문서 구조(4섹션) 설명 반영 | IN_PROGRESS | 2026-03-15 | — |
 | WORK-17 | router.md 3-7 Work Activity Log 섹션 분리 | IN_PROGRESS | 2026-03-15 | — |
+| WORK-18 | 나머지 에이전트 파일 5개 router.md 형식으로 재편 | IN_PROGRESS | 2026-03-15 | — |
+| WORK-19 | docs/ 참조 문서 최신화 — 에이전트 리팩토링 반영 | IN_PROGRESS | 2026-03-15 | — |
