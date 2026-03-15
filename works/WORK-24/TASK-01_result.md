@@ -3,7 +3,7 @@
 > WORK: WORK-24 — agents 파일 분석 기반 Pipeline Architecture 스펙 문서 갱신
 > Completed: 2026-03-16 00:00
 > Status: **DONE**
-> Commit: —
+> Commit: 2aa5d0b
 
 ## 요약
 

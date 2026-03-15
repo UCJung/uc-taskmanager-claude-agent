@@ -7,10 +7,12 @@
 | TASK | Title | Status | Commit | Duration |
 |------|-------|--------|--------|----------|
 | TASK-00 | agents/ 파일 분석 및 v1.0 스펙과의 차이점 식별 | ✅ Done | ce8ed6d | — |
-| TASK-01 | spec_pipeline-architecture.md 전면 갱신 (v1.0 → v1.2) | 🔄 In Progress | — | — |
+| TASK-01 | spec_pipeline-architecture.md 전면 갱신 (v1.0 → v1.2) | ✅ Done | 2aa5d0b | — |
 
 ## Log
 - [23:48] WORK-24 created (full mode)
 - [23:50] TASK-00 and TASK-01 files created
 - [23:55] TASK-00 verified ✅, result.md generated
 - [23:58] TASK-00 committed ce8ed6d
+- [00:00] TASK-01 verified ✅, result.md generated
+- [00:05] TASK-01 committed 2aa5d0b
