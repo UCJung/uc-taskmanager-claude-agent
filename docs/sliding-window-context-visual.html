@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sliding Window Context Transfer - uc-taskmanager</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --bg-card: #1e293b;
+  --bg-card-hover: #334155;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent2: #818cf8;
+  --accent3: #34d399;
+  --accent4: #fb923c;
+  --accent5: #f472b6;
+  --accent6: #a78bfa;
+  --border: #334155;
+  --shadow: rgba(0,0,0,0.3);
+  --tab-active: #38bdf8;
+  --success: #34d399;
+  --fail: #f87171;
+  --warn: #fbbf24;
+  --full-color: #34d399;
+  --summary-color: #fbbf24;
+  --drop-color: #f87171;
+}
+[data-theme="light"] {
+  --bg: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --shadow: rgba(0,0,0,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+.header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+[data-theme="light"] .header {
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+}
+.header h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.header h1 span { color: var(--text-muted); font-weight: 400; font-size: 0.85rem; margin-left: 0.5rem; }
+.theme-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+.theme-toggle:hover { border-color: var(--accent); }
+.nav {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  position: sticky;
+  top: 60px;
+  z-index: 99;
+}
+.nav-btn {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-muted);
+  padding: 0.8rem 1.2rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.nav-btn:hover { color: var(--text); background: var(--bg-card-hover); }
+.nav-btn.active { color: var(--tab-active); border-bottom-color: var(--tab-active); font-weight: 600; }
+.content { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+.tab-panel { display: none; animation: fadeIn 0.3s ease; }
+.tab-panel.active { display: block; }
+@keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+
+.section-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--accent);
+}
+.section-desc {
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: all 0.2s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Comparison Diagram */
+.compare-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+@media (max-width: 768px) {
+  .compare-container { grid-template-columns: 1fr; }
+}
+.compare-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  position: relative;
+}
+.compare-box.good { border-color: var(--success); }
+.compare-box.bad { border-color: var(--fail); }
+.compare-label {
+  position: absolute;
+  top: -10px;
+  left: 16px;
+  background: var(--bg-card);
+  padding: 0 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 4px;
+}
+.compare-box.good .compare-label { color: var(--success); }
+.compare-box.bad .compare-label { color: var(--fail); }
+
+/* Flow nodes */
+.flow-horizontal {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 1rem 0;
+}
+.flow-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+.flow-node-box {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: center;
+  border: 2px solid;
+  min-width: 80px;
+  transition: all 0.2s;
+}
+.flow-node-box:hover { transform: scale(1.05); }
+.flow-node-label { font-size: 0.7rem; color: var(--text-muted); max-width: 120px; text-align: center; }
+.flow-arrow {
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.flow-arrow-down {
+  display: flex;
+  justify-content: center;
+  padding: 0.3rem 0;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+}
+
+/* Principle Cards */
+.principle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.2rem;
+  margin-bottom: 2rem;
+}
+.principle-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border-top: 4px solid;
+  transition: all 0.3s;
+}
+.principle-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px var(--shadow); }
+.principle-card .num {
+  font-size: 2rem;
+  font-weight: 800;
+  opacity: 0.3;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+.principle-card h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.principle-card p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* Detail Level Badges */
+.detail-badge {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.detail-badge.full { background: rgba(52,211,153,0.2); color: var(--full-color); }
+.detail-badge.summary { background: rgba(251,191,36,0.2); color: var(--summary-color); }
+.detail-badge.drop { background: rgba(248,113,113,0.2); color: var(--drop-color); }
+
+/* XML Code Block */
+.xml-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.2rem;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--text-muted);
+}
+.xml-block .tag { color: var(--accent); }
+.xml-block .attr { color: var(--accent4); }
+.xml-block .val { color: var(--accent3); }
+.xml-block .content-text { color: var(--text); }
+.xml-block .comment { color: var(--text-muted); font-style: italic; }
+
+/* Handoff Table */
+.handoff-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+.handoff-table th, .handoff-table td {
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.handoff-table th {
+  background: rgba(56,189,248,0.1);
+  font-weight: 600;
+  color: var(--accent);
+  text-align: center;
+}
+.handoff-table td:first-child { font-weight: 500; text-align: center; }
+.handoff-table tr:hover td { background: var(--bg-card-hover); }
+
+/* Mode Tabs */
+.mode-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+.mode-tab {
+  padding: 0.5rem 1.2rem;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.mode-tab:hover { border-color: var(--accent); color: var(--text); }
+.mode-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,0.1); }
+.mode-panel { display: none; }
+.mode-panel.active { display: block; }
+
+/* Vertical Pipeline */
+.pipeline-v {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 1rem 0;
+}
+.pipeline-step {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 700px;
+}
+.pipeline-step-node {
+  width: 180px;
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 2px solid;
+  flex-shrink: 0;
+}
+.pipeline-step-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.pipeline-arrow-down {
+  display: flex;
+  justify-content: center;
+  padding: 0.3rem 0;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  width: 100%;
+  max-width: 700px;
+}
+
+/* Sliding Window Visual */
+.sw-visual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 0;
+}
+.sw-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.sw-task-label {
+  width: 80px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+.sw-slots {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+}
+.sw-slot {
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  min-width: 100px;
+  border: 2px solid;
+  transition: all 0.3s;
+}
+.sw-slot.full { border-color: var(--full-color); color: var(--full-color); background: rgba(52,211,153,0.1); }
+.sw-slot.summary { border-color: var(--summary-color); color: var(--summary-color); background: rgba(251,191,36,0.1); }
+.sw-slot.drop { border-color: var(--drop-color); color: var(--drop-color); background: rgba(248,113,113,0.1); opacity: 0.5; }
+.sw-slot.empty { border-color: var(--border); color: var(--text-muted); opacity: 0.3; border-style: dashed; }
+.sw-slot.current { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,0.15); }
+
+/* Status Flow */
+.status-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 1.5rem 0;
+  flex-wrap: wrap;
+}
+.status-node {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  border: 2px solid;
+  text-align: center;
+}
+
+/* Gate Check */
+.gate-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 1rem 0;
+}
+.gate-check {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.3s;
+}
+.gate-check:hover { border-color: var(--accent); }
+.gate-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+.gate-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.gate-result {
+  margin-left: auto;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.gate-result.pass { background: rgba(52,211,153,0.2); color: var(--success); }
+.gate-result.fail { background: rgba(248,113,113,0.2); color: var(--fail); }
+
+/* Bar Chart */
+.chart-container {
+  padding: 1rem 0;
+}
+.chart-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.chart-label {
+  width: 120px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: right;
+  flex-shrink: 0;
+}
+.chart-bar-container {
+  flex: 1;
+  height: 32px;
+  background: var(--bg);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.chart-bar {
+  height: 100%;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  padding-left: 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+  transition: width 1s ease;
+  width: 0;
+}
+.chart-bar.old { background: linear-gradient(90deg, #f87171, #fb923c); }
+.chart-bar.new { background: linear-gradient(90deg, #34d399, #38bdf8); }
+.chart-value {
+  width: 80px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.saving-badge {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: rgba(52,211,153,0.2);
+  color: var(--success);
+}
+
+/* Accordion */
+.accordion {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.accordion-header {
+  background: var(--bg-card);
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: background 0.2s;
+  user-select: none;
+}
+.accordion-header:hover { background: var(--bg-card-hover); }
+.accordion-arrow {
+  transition: transform 0.3s;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.accordion.open .accordion-arrow { transform: rotate(180deg); }
+.accordion-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+}
+.accordion.open .accordion-body { max-height: 2000px; }
+.accordion-body-inner { padding: 1.2rem 1.5rem; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .header { padding: 1rem; }
+  .header h1 { font-size: 1.1rem; }
+  .header h1 span { display: none; }
+  .content { padding: 1rem; }
+  .nav { padding: 0 0.5rem; }
+  .nav-btn { padding: 0.6rem 0.8rem; font-size: 0.78rem; }
+  .pipeline-step { flex-direction: column; gap: 0.5rem; }
+  .pipeline-step-node { width: 100%; }
+  .sw-task-label { width: 60px; font-size: 0.75rem; }
+  .sw-slot { min-width: 70px; font-size: 0.7rem; padding: 0.3rem 0.5rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Sliding Window Context Transfer <span>uc-taskmanager</span></h1>
+  <button class="theme-toggle" onclick="toggleTheme()">Light / Dark</button>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showTab('overview')">1. Overview</button>
+  <button class="nav-btn" onclick="showTab('principles')">2. Design Principles</button>
+  <button class="nav-btn" onclick="showTab('handoff')">3. context-handoff</button>
+  <button class="nav-btn" onclick="showTab('modes')">4. Execution Modes</button>
+  <button class="nav-btn" onclick="showTab('sliding')">5. Task Sliding Window</button>
+  <button class="nav-btn" onclick="showTab('checkpoint')">6. Checkpoint & Gate</button>
+  <button class="nav-btn" onclick="showTab('tokens')">7. Token Savings</button>
+</nav>
+
+<div class="content">
+
+  <!-- TAB 1: Overview -->
+  <div id="tab-overview" class="tab-panel active">
+    <h2 class="section-title">Background & Problem</h2>
+    <p class="section-desc">
+      Claude Code's sub-agents start with <strong>empty context</strong> on every invocation.
+      Each agent must re-read files from scratch to understand previous work, wasting tokens and losing reasoning.
+    </p>
+
+    <div class="compare-container">
+      <div class="compare-box good">
+        <div class="compare-label">Single Session (Efficient)</div>
+        <div class="flow-horizontal" style="padding-top:1.5rem;">
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color:var(--accent3);color:var(--accent3);">Context Accumulated</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color:var(--accent3);color:var(--accent3);">No Rebuild</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color:var(--accent3);color:var(--accent3);">Efficient</div>
+          </div>
+        </div>
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-top:0.8rem;text-align:center;">
+          Context is continuously accumulated. No re-reading needed.
+        </p>
+      </div>
+
+      <div class="compare-box bad">
+        <div class="compare-label">Multi-Agent (Problem)</div>
+        <div class="flow-horizontal" style="padding-top:1.5rem;">
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color:var(--fail);color:var(--fail);">Empty Context</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color:var(--fail);color:var(--fail);">Re-read Files</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color:var(--fail);color:var(--fail);">Empty Context</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color:var(--fail);color:var(--fail);">Re-read</div>
+          </div>
+        </div>
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-top:0.8rem;text-align:center;">
+          Each agent starts fresh, wasting tokens on file re-reading.
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Core Problem: Missing Reasoning Transfer</div>
+      <p style="font-size:0.9rem;margin-bottom:1rem;">
+        Existing result.md recorded only <strong>"what was done"</strong>, not <strong>"why it was done that way"</strong>.
+      </p>
+      <div class="flow-horizontal">
+        <div class="flow-node">
+          <div class="flow-node-box" style="border-color:var(--accent3);color:var(--accent3);">Builder</div>
+          <div class="flow-node-label">Modifies auth.ts</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node">
+          <div class="flow-node-box" style="border-color:var(--accent4);color:var(--accent4);">Verifier</div>
+          <div class="flow-node-label">Reads auth.ts from scratch<br/>Must infer intent</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node">
+          <div class="flow-node-box" style="border-color:var(--fail);color:var(--fail);">Token Waste</div>
+          <div class="flow-node-label">Unnecessary re-reading &amp; inference</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Solution: Sliding Window Context Transfer</div>
+      <p style="font-size:0.9rem;">
+        Transfer <strong>reasoning context</strong> (why, caution, incomplete) between agents using a sliding window.
+        Recent context is detailed; older context is compressed or dropped.
+      </p>
+    </div>
+  </div>
+
+  <!-- TAB 2: Design Principles -->
+  <div id="tab-principles" class="tab-panel">
+    <h2 class="section-title">3 Design Principles</h2>
+    <p class="section-desc">The Sliding Window Context Transfer system is built on three core principles.</p>
+
+    <div class="principle-grid">
+      <div class="principle-card" style="border-top-color:var(--accent);">
+        <div class="num">01</div>
+        <h3>Sliding Window</h3>
+        <p>Recent agent info is detailed, older info is compressed or dropped.</p>
+        <table class="handoff-table" style="margin-top:1rem;">
+          <tr><th>Distance</th><th>Detail Level</th><th>Content</th></tr>
+          <tr><td>1 step back</td><td><span class="detail-badge full">FULL</span></td><td>what + why + caution + incomplete</td></tr>
+          <tr><td>2 steps back</td><td><span class="detail-badge summary">SUMMARY</span></td><td>what only (1-3 lines)</td></tr>
+          <tr><td>3+ steps back</td><td><span class="detail-badge drop">DROP</span></td><td>Not transferred</td></tr>
+        </table>
+      </div>
+
+      <div class="principle-card" style="border-top-color:var(--accent3);">
+        <div class="num">02</div>
+        <h3>Only Needed Context</h3>
+        <p>Each agent only needs context for the work it inherits.</p>
+        <div style="margin-top:1rem;font-size:0.82rem;color:var(--text-muted);line-height:1.8;">
+          <div>Verifier needs to know <strong>why</strong> Builder implemented it that way.</div>
+          <div>Verifier does <strong>not</strong> need to know why Planner created that TASK.</div>
+        </div>
+      </div>
+
+      <div class="principle-card" style="border-top-color:var(--accent5);">
+        <div class="num">03</div>
+        <h3>Separation of Concerns</h3>
+        <p>result.md writing responsibility moved from Builder to Committer.</p>
+        <div style="margin-top:1rem;font-size:0.82rem;color:var(--text-muted);line-height:1.8;">
+          <div><strong>Builder</strong>: Focus on implementation only. Record checkpoints in progress.md.</div>
+          <div><strong>Committer</strong>: Synthesize builder + verifier context-handoff into result.md.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: context-handoff -->
+  <div id="tab-handoff" class="tab-panel">
+    <h2 class="section-title">context-handoff Structure</h2>
+    <p class="section-desc">The core data structure for transferring reasoning between agents.</p>
+
+    <div class="card">
+      <div class="card-title">XML Structure</div>
+      <div class="xml-block"><span class="tag">&lt;context-handoff</span> <span class="attr">from</span>=<span class="val">"{agent}"</span> <span class="attr">detail-level</span>=<span class="val">"FULL|SUMMARY|DROP"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;what&gt;</span><span class="content-text">What was changed/verified</span><span class="tag">&lt;/what&gt;</span>
+  <span class="tag">&lt;why&gt;</span><span class="content-text">Why this approach was chosen</span><span class="tag">&lt;/why&gt;</span>         <span class="comment">&lt;!-- FULL only --&gt;</span>
+  <span class="tag">&lt;caution&gt;</span><span class="content-text">What to be careful about</span><span class="tag">&lt;/caution&gt;</span>    <span class="comment">&lt;!-- FULL only --&gt;</span>
+  <span class="tag">&lt;incomplete&gt;</span><span class="content-text">Unfinished items</span><span class="tag">&lt;/incomplete&gt;</span>  <span class="comment">&lt;!-- FULL only --&gt;</span>
+<span class="tag">&lt;/context-handoff&gt;</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Field Guide</div>
+      <table class="handoff-table">
+        <tr><th>Field</th><th>Length</th><th>Content</th></tr>
+        <tr><td><code>what</code></td><td>2-5 lines (FULL), 1-2 lines (SUMMARY)</td><td>File names, function names, change summary</td></tr>
+        <tr><td><code>why</code></td><td>2-4 lines</td><td>Technical rationale, alternatives considered, constraints</td></tr>
+        <tr><td><code>caution</code></td><td>1-3 lines</td><td>Linked code, side effects, manual verification needed</td></tr>
+        <tr><td><code>incomplete</code></td><td>1-2 lines</td><td>Unfinished items, what next agent should handle</td></tr>
+      </table>
+    </div>
+
+    <h3 style="font-size:1.1rem;font-weight:700;margin:1.5rem 0 1rem;color:var(--accent);">Detail Level Comparison</h3>
+
+    <div class="compare-container" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="card" style="border-top:3px solid var(--full-color);">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.8rem;">
+          <span class="detail-badge full">FULL</span>
+          <span style="font-size:0.82rem;color:var(--text-muted);">Direct predecessor</span>
+        </div>
+        <div class="xml-block" style="font-size:0.78rem;"><span class="tag">&lt;context-handoff</span> <span class="attr">detail-level</span>=<span class="val">"FULL"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;what&gt;</span><span class="content-text">auth.ts modified - JWT auto-refresh
+        refreshToken() added (60 lines)</span><span class="tag">&lt;/what&gt;</span>
+  <span class="tag">&lt;why&gt;</span><span class="content-text">Original code returned 401 immediately.
+       Applied silent refresh for UX.</span><span class="tag">&lt;/why&gt;</span>
+  <span class="tag">&lt;caution&gt;</span><span class="content-text">Linked with session.ts setSession().
+           May have side effects.</span><span class="tag">&lt;/caution&gt;</span>
+  <span class="tag">&lt;incomplete&gt;</span><span class="content-text">Unit test not written.</span><span class="tag">&lt;/incomplete&gt;</span>
+<span class="tag">&lt;/context-handoff&gt;</span></div>
+      </div>
+
+      <div class="card" style="border-top:3px solid var(--summary-color);">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.8rem;">
+          <span class="detail-badge summary">SUMMARY</span>
+          <span style="font-size:0.82rem;color:var(--text-muted);">2 steps back</span>
+        </div>
+        <div class="xml-block" style="font-size:0.78rem;"><span class="tag">&lt;context-handoff</span> <span class="attr">detail-level</span>=<span class="val">"SUMMARY"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;what&gt;</span><span class="content-text">auth.ts modified - JWT auto-refresh
+        added.</span><span class="tag">&lt;/what&gt;</span>
+<span class="tag">&lt;/context-handoff&gt;</span></div>
+      </div>
+
+      <div class="card" style="border-top:3px solid var(--drop-color);">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.8rem;">
+          <span class="detail-badge drop">DROP</span>
+          <span style="font-size:0.82rem;color:var(--text-muted);">3+ steps back</span>
+        </div>
+        <div style="text-align:center;padding:2rem;color:var(--text-muted);font-size:0.9rem;">
+          <div style="font-size:2rem;margin-bottom:0.5rem;opacity:0.4;">X</div>
+          Not transferred.<br/>Context is discarded.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: Execution Modes -->
+  <div id="tab-modes" class="tab-panel">
+    <h2 class="section-title">Execution Mode Context Flow</h2>
+    <p class="section-desc">The sliding window operates in pipeline and full modes. Direct mode has no context transfer issue.</p>
+
+    <div class="mode-tabs">
+      <button class="mode-tab active" onclick="showMode('direct')">direct</button>
+      <button class="mode-tab" onclick="showMode('pipeline')">pipeline</button>
+      <button class="mode-tab" onclick="showMode('full')">full</button>
+    </div>
+
+    <!-- Direct Mode -->
+    <div id="mode-direct" class="mode-panel active">
+      <div class="card">
+        <div class="card-title" style="color:var(--accent);">Direct Mode - Single Session</div>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
+          Router handles everything in a single session. No sub-agent handoff needed. Context accumulates naturally.
+        </p>
+        <div class="pipeline-v">
+          <div class="pipeline-step">
+            <div class="pipeline-step-node" style="border-color:var(--accent);color:var(--accent);">Router: Analyze</div>
+            <div class="pipeline-step-desc">Read specs, understand requirement</div>
+          </div>
+          <div class="pipeline-arrow-down">&darr;</div>
+          <div class="pipeline-step">
+            <div class="pipeline-step-node" style="border-color:var(--accent);color:var(--accent);">Router: Implement</div>
+            <div class="pipeline-step-desc">Write/modify code (same session, context preserved)</div>
+          </div>
+          <div class="pipeline-arrow-down">&darr;</div>
+          <div class="pipeline-step">
+            <div class="pipeline-step-node" style="border-color:var(--accent);color:var(--accent);">Router: Self-Check</div>
+            <div class="pipeline-step-desc">Build + lint verification</div>
+          </div>
+          <div class="pipeline-arrow-down">&darr;</div>
+          <div class="pipeline-step">
+            <div class="pipeline-step-node" style="border-color:var(--accent);color:var(--accent);">Router: result.md + Commit</div>
+            <div class="pipeline-step-desc">Generate result report, git commit, callback</div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:1rem;">
+          <span class="saving-badge">No context transfer overhead</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pipeline Mode -->
+    <div id="mode-pipeline" class="mode-panel">
+      <div class="card">
+        <div class="card-title" style="color:var(--accent2);">Pipeline Mode - Builder &rarr; Verifier &rarr; Committer</div>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
+          Each agent runs in a separate session. Context-handoff transfers reasoning between them.
+        </p>
+        <div class="pipeline-v">
+          <div class="pipeline-step">
+            <div class="pipeline-step-node" style="border-color:var(--accent3);color:var(--accent3);">Builder</div>
+            <div class="pipeline-step-desc">Implements code. Outputs context-handoff with <span class="detail-badge full">FULL</span> detail.</div>
+          </div>
+          <div class="pipeline-arrow-down">&darr; <span style="font-size:0.7rem;color:var(--full-color);">FULL handoff</span></div>
+          <div class="pipeline-step">
+            <div class="pipeline-step-node" style="border-color:var(--accent4);color:var(--accent4);">Verifier</div>
+            <div class="pipeline-step-desc">Receives builder's full context. Knows <em>why</em> code was written that way &rarr; targeted verification.</div>
+          </div>
+          <div class="pipeline-arrow-down">&darr; <span style="font-size:0.7rem;color:var(--full-color);">FULL</span> + <span style="font-size:0.7rem;color:var(--summary-color);">SUMMARY</span></div>
+          <div class="pipeline-step">
+            <div class="pipeline-step-node" style="border-color:var(--accent5);color:var(--accent5);">Committer</div>
+            <div class="pipeline-step-desc">
+              Receives: verifier context <span class="detail-badge full">FULL</span>,
+              builder context <span class="detail-badge summary">SUMMARY</span>.
+              Writes result.md.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Committer's Context Window</div>
+        <table class="handoff-table">
+          <tr><th>Source</th><th>Detail Level</th><th>Content</th></tr>
+          <tr><td>Verifier (1 step)</td><td><span class="detail-badge full">FULL</span></td><td>what + why + caution + incomplete</td></tr>
+          <tr><td>Builder (2 steps)</td><td><span class="detail-badge summary">SUMMARY</span></td><td>what only (1-2 lines)</td></tr>
+          <tr><td>Planner/Scheduler</td><td><span class="detail-badge drop">DROP</span></td><td>N/A in pipeline mode</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Full Mode -->
+    <div id="mode-full" class="mode-panel">
+      <div class="card">
+        <div class="card-title" style="color:var(--accent6);">Full Mode - Cross-TASK Context Transfer</div>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
+          When TASK-N completes and TASK-N+1 starts, the new builder gets a fresh session.
+          Scheduler automatically includes context-handoff from preceding TASKs based on sliding window rules.
+        </p>
+        <div class="pipeline-v">
+          <div class="pipeline-step">
+            <div class="pipeline-step-node" style="border-color:var(--accent6);color:var(--accent6);width:220px;">TASK-N Pipeline</div>
+            <div class="pipeline-step-desc">Builder &rarr; Verifier &rarr; Committer &rarr; result.md created</div>
+          </div>
+          <div class="pipeline-arrow-down">&darr; <span style="font-size:0.7rem;color:var(--accent6);">result context-handoff</span></div>
+          <div class="pipeline-step">
+            <div class="pipeline-step-node" style="border-color:var(--accent6);color:var(--accent6);width:220px;">Scheduler</div>
+            <div class="pipeline-step-desc">Reads result.md, applies sliding window, embeds context in dispatch XML</div>
+          </div>
+          <div class="pipeline-arrow-down">&darr; <span style="font-size:0.7rem;color:var(--full-color);">FULL</span> / <span style="font-size:0.7rem;color:var(--summary-color);">SUMMARY</span> / <span style="font-size:0.7rem;color:var(--drop-color);">DROP</span></div>
+          <div class="pipeline-step">
+            <div class="pipeline-step-node" style="border-color:var(--accent6);color:var(--accent6);width:220px;">TASK-N+1 Builder</div>
+            <div class="pipeline-step-desc">New session. Receives context from previous TASKs via scheduler dispatch.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 5: Task Sliding Window -->
+  <div id="tab-sliding" class="tab-panel">
+    <h2 class="section-title">TASK Dependency Sliding Window</h2>
+    <p class="section-desc">
+      In full mode, the scheduler determines detail-level based on dependency depth. Here is an example with TASK-00 through TASK-03.
+    </p>
+
+    <div class="card">
+      <div class="card-title">Dependency Chain: TASK-00 &rarr; TASK-01 &rarr; TASK-02 &rarr; TASK-03</div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.5rem;">
+        When TASK-03 builder starts, it receives context from preceding TASKs:
+      </p>
+
+      <div class="sw-visual">
+        <div class="sw-row">
+          <div class="sw-task-label" style="color:var(--accent);">TASK-01</div>
+          <div class="sw-slots">
+            <div class="sw-slot full">TASK-00 <span class="detail-badge full" style="margin-left:4px;">FULL</span></div>
+          </div>
+        </div>
+        <div class="flow-arrow-down">&darr;</div>
+        <div class="sw-row">
+          <div class="sw-task-label" style="color:var(--accent2);">TASK-02</div>
+          <div class="sw-slots">
+            <div class="sw-slot full">TASK-01 <span class="detail-badge full" style="margin-left:4px;">FULL</span></div>
+            <div class="sw-slot summary">TASK-00 <span class="detail-badge summary" style="margin-left:4px;">SUMMARY</span></div>
+          </div>
+        </div>
+        <div class="flow-arrow-down">&darr;</div>
+        <div class="sw-row">
+          <div class="sw-task-label" style="color:var(--accent3);">TASK-03</div>
+          <div class="sw-slots">
+            <div class="sw-slot full">TASK-02 <span class="detail-badge full" style="margin-left:4px;">FULL</span></div>
+            <div class="sw-slot summary">TASK-01 <span class="detail-badge summary" style="margin-left:4px;">SUMMARY</span></div>
+            <div class="sw-slot drop">TASK-00 <span class="detail-badge drop" style="margin-left:4px;">DROP</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Window Behavior</div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
+        As TASKs increase, the traditional approach accumulates all results, growing context indefinitely.
+        The sliding window <strong>always maintains a constant context size</strong>.
+      </p>
+      <div class="compare-container">
+        <div class="compare-box bad">
+          <div class="compare-label">Traditional (Accumulative)</div>
+          <div style="padding:1rem 0;text-align:center;">
+            <div style="display:flex;align-items:flex-end;justify-content:center;gap:0.8rem;height:120px;">
+              <div style="width:40px;background:linear-gradient(to top,var(--fail),var(--accent4));border-radius:4px 4px 0 0;height:30%;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:0.7rem;color:white;">T1</div>
+              <div style="width:40px;background:linear-gradient(to top,var(--fail),var(--accent4));border-radius:4px 4px 0 0;height:50%;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:0.7rem;color:white;">T2</div>
+              <div style="width:40px;background:linear-gradient(to top,var(--fail),var(--accent4));border-radius:4px 4px 0 0;height:70%;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:0.7rem;color:white;">T3</div>
+              <div style="width:40px;background:linear-gradient(to top,var(--fail),var(--accent4));border-radius:4px 4px 0 0;height:90%;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:0.7rem;color:white;">T4</div>
+              <div style="width:40px;background:linear-gradient(to top,var(--fail),var(--accent4));border-radius:4px 4px 0 0;height:100%;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:0.7rem;color:white;">T5</div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">Context grows with each TASK</div>
+          </div>
+        </div>
+        <div class="compare-box good">
+          <div class="compare-label">Sliding Window (Constant)</div>
+          <div style="padding:1rem 0;text-align:center;">
+            <div style="display:flex;align-items:flex-end;justify-content:center;gap:0.8rem;height:120px;">
+              <div style="width:40px;background:linear-gradient(to top,var(--accent3),var(--accent));border-radius:4px 4px 0 0;height:30%;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:0.7rem;color:white;">T1</div>
+              <div style="width:40px;background:linear-gradient(to top,var(--accent3),var(--accent));border-radius:4px 4px 0 0;height:45%;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:0.7rem;color:white;">T2</div>
+              <div style="width:40px;background:linear-gradient(to top,var(--accent3),var(--accent));border-radius:4px 4px 0 0;height:45%;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:0.7rem;color:white;">T3</div>
+              <div style="width:40px;background:linear-gradient(to top,var(--accent3),var(--accent));border-radius:4px 4px 0 0;height:45%;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:0.7rem;color:white;">T4</div>
+              <div style="width:40px;background:linear-gradient(to top,var(--accent3),var(--accent));border-radius:4px 4px 0 0;height:45%;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:0.7rem;color:white;">T5</div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">Context stays constant (FULL + SUMMARY only)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="accordion" id="acc-dispatch">
+      <div class="accordion-header" onclick="toggleAccordion('acc-dispatch')">
+        Scheduler Dispatch XML Example (Full Mode)
+        <span class="accordion-arrow">&#9660;</span>
+      </div>
+      <div class="accordion-body">
+        <div class="accordion-body-inner">
+          <div class="xml-block"><span class="tag">&lt;dispatch</span> <span class="attr">to</span>=<span class="val">"builder"</span> <span class="attr">work</span>=<span class="val">"WORK-NN"</span> <span class="attr">task</span>=<span class="val">"TASK-03"</span>
+          <span class="attr">execution-mode</span>=<span class="val">"full"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;task-spec&gt;</span>...<span class="tag">&lt;/task-spec&gt;</span>
+
+  <span class="comment">&lt;!-- Direct predecessor: FULL --&gt;</span>
+  <span class="tag">&lt;context-handoff</span> <span class="attr">from</span>=<span class="val">"prev-task"</span> <span class="attr">task</span>=<span class="val">"TASK-02"</span> <span class="attr">detail-level</span>=<span class="val">"FULL"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;what&gt;</span><span class="content-text">user-validator.js created. validateEmail() implemented.</span><span class="tag">&lt;/what&gt;</span>
+    <span class="tag">&lt;why&gt;</span><span class="content-text">Added validation layer based on TASK-02 User class.</span><span class="tag">&lt;/why&gt;</span>
+    <span class="tag">&lt;caution&gt;</span><span class="content-text">User class email field name change requires sync.</span><span class="tag">&lt;/caution&gt;</span>
+    <span class="tag">&lt;incomplete&gt;</span><span class="content-text">None</span><span class="tag">&lt;/incomplete&gt;</span>
+  <span class="tag">&lt;/context-handoff&gt;</span>
+
+  <span class="comment">&lt;!-- 2 steps back: SUMMARY --&gt;</span>
+  <span class="tag">&lt;context-handoff</span> <span class="attr">from</span>=<span class="val">"prev-prev-task"</span> <span class="attr">task</span>=<span class="val">"TASK-01"</span> <span class="attr">detail-level</span>=<span class="val">"SUMMARY"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;what&gt;</span><span class="content-text">user.js created. User class (name, email, getInfo()).</span><span class="tag">&lt;/what&gt;</span>
+  <span class="tag">&lt;/context-handoff&gt;</span>
+
+  <span class="comment">&lt;!-- TASK-00: DROP - not transferred --&gt;</span>
+<span class="tag">&lt;/dispatch&gt;</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 6: Checkpoint & Gate -->
+  <div id="tab-checkpoint" class="tab-panel">
+    <h2 class="section-title">Checkpoint System & Committer Gate</h2>
+    <p class="section-desc">
+      progress.md serves as a checkpoint for crash recovery. The committer gate ensures only completed TASKs get committed.
+    </p>
+
+    <div class="card">
+      <div class="card-title">progress.md State Transitions</div>
+      <div class="status-flow">
+        <div class="status-node" style="border-color:var(--text-muted);color:var(--text-muted);">PENDING</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="status-node" style="border-color:var(--accent);color:var(--accent);">STARTED</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="status-node" style="border-color:var(--accent4);color:var(--accent4);">IN_PROGRESS</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="status-node" style="border-color:var(--accent3);color:var(--accent3);">COMPLETED</div>
+      </div>
+      <table class="handoff-table" style="margin-top:1rem;">
+        <tr><th>Timing</th><th>Status</th><th>Agent</th></tr>
+        <tr><td>TASK file created</td><td>PENDING</td><td>Planner / Router</td></tr>
+        <tr><td>Builder starts</td><td>STARTED</td><td>Builder</td></tr>
+        <tr><td>File changes in progress</td><td>IN_PROGRESS</td><td>Builder</td></tr>
+        <tr><td>Implementation complete</td><td>COMPLETED</td><td>Builder</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">progress.md Pre-creation Rule</div>
+      <table class="handoff-table">
+        <tr><th>Mode</th><th>Created By</th><th>Initial Status</th></tr>
+        <tr><td>full</td><td>Planner</td><td>PENDING</td></tr>
+        <tr><td>pipeline / direct</td><td>Router</td><td>PENDING</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Crash Recovery</div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
+        If builder crashes mid-work, on re-dispatch it reads progress.md and resumes from the last checkpoint.
+      </p>
+      <div class="pipeline-v">
+        <div class="pipeline-step">
+          <div class="pipeline-step-node" style="border-color:var(--fail);color:var(--fail);">Builder Crash</div>
+          <div class="pipeline-step-desc">Session terminated. progress.md shows IN_PROGRESS with partial file list.</div>
+        </div>
+        <div class="pipeline-arrow-down">&darr;</div>
+        <div class="pipeline-step">
+          <div class="pipeline-step-node" style="border-color:var(--accent4);color:var(--accent4);">Re-dispatch</div>
+          <div class="pipeline-step-desc">Scheduler detects incomplete TASK, dispatches builder again.</div>
+        </div>
+        <div class="pipeline-arrow-down">&darr;</div>
+        <div class="pipeline-step">
+          <div class="pipeline-step-node" style="border-color:var(--accent3);color:var(--accent3);">Resume</div>
+          <div class="pipeline-step-desc">Builder reads progress.md, skips completed files, continues from checkpoint.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--accent5);">Committer Gate Check</div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
+        Before creating result.md and committing, committer performs 3 mandatory checks:
+      </p>
+      <div class="gate-container">
+        <div class="gate-check" id="gate-1" onclick="toggleGate(1)">
+          <div class="gate-icon">1</div>
+          <div class="gate-text">progress.md file exists?</div>
+          <div class="gate-result pass">PASS</div>
+        </div>
+        <div class="flow-arrow-down">&darr;</div>
+        <div class="gate-check" id="gate-2" onclick="toggleGate(2)">
+          <div class="gate-icon">2</div>
+          <div class="gate-text">Status = COMPLETED?</div>
+          <div class="gate-result pass">PASS</div>
+        </div>
+        <div class="flow-arrow-down">&darr;</div>
+        <div class="gate-check" id="gate-3" onclick="toggleGate(3)">
+          <div class="gate-icon">3</div>
+          <div class="gate-text">Files Changed list is non-empty?</div>
+          <div class="gate-result pass">PASS</div>
+        </div>
+        <div class="flow-arrow-down">&darr;</div>
+        <div style="display:flex;gap:2rem;margin-top:0.5rem;">
+          <div class="card" style="flex:1;text-align:center;border-color:var(--accent3);padding:1rem;">
+            <div style="font-weight:700;color:var(--accent3);margin-bottom:0.3rem;">Gate PASS</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">result.md &rarr; git commit &rarr; callback</div>
+          </div>
+          <div class="card" style="flex:1;text-align:center;border-color:var(--fail);padding:1rem;">
+            <div style="font-weight:700;color:var(--fail);margin-bottom:0.3rem;">Gate FAIL</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">Return FAIL &rarr; builder re-dispatch (max 2 retries)</div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:0.8rem;color:var(--text-muted);margin-top:1rem;text-align:center;">
+        Click on each gate check to toggle pass/fail state.
+      </p>
+    </div>
+  </div>
+
+  <!-- TAB 7: Token Savings -->
+  <div id="tab-tokens" class="tab-panel">
+    <h2 class="section-title">Token Savings Analysis</h2>
+    <p class="section-desc">
+      Comparison based on a 3-TASK dependency chain (TASK-00 &rarr; TASK-01 &rarr; TASK-02).
+    </p>
+
+    <div class="card">
+      <div class="card-title">Per-TASK Token Comparison</div>
+      <div class="chart-container" id="token-chart">
+        <div class="chart-row">
+          <div class="chart-label">TASK-01</div>
+          <div class="chart-bar-container">
+            <div class="chart-bar old" data-width="82" style="width:0%;">~10,980</div>
+          </div>
+          <div class="chart-value" style="color:var(--fail);">~10,980</div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-label" style="color:var(--accent3);">TASK-01 (SW)</div>
+          <div class="chart-bar-container">
+            <div class="chart-bar new" data-width="47" style="width:0%;">~6,300</div>
+          </div>
+          <div class="chart-value" style="color:var(--accent3);">~6,300</div>
+        </div>
+
+        <div style="height:0.5rem;"></div>
+
+        <div class="chart-row">
+          <div class="chart-label">TASK-02</div>
+          <div class="chart-bar-container">
+            <div class="chart-bar old" data-width="100" style="width:0%;">~13,280</div>
+          </div>
+          <div class="chart-value" style="color:var(--fail);">~13,280</div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-label" style="color:var(--accent3);">TASK-02 (SW)</div>
+          <div class="chart-bar-container">
+            <div class="chart-bar new" data-width="50" style="width:0%;">~6,600</div>
+          </div>
+          <div class="chart-value" style="color:var(--accent3);">~6,600</div>
+        </div>
+
+        <div style="height:0.5rem;"></div>
+
+        <div class="chart-row">
+          <div class="chart-label">TASK-03</div>
+          <div class="chart-bar-container">
+            <div class="chart-bar old" data-width="100" style="width:0%;">~13,280</div>
+          </div>
+          <div class="chart-value" style="color:var(--fail);">~13,280</div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-label" style="color:var(--accent3);">TASK-03 (SW)</div>
+          <div class="chart-bar-container">
+            <div class="chart-bar new" data-width="50" style="width:0%;">~6,600</div>
+          </div>
+          <div class="chart-value" style="color:var(--accent3);">~6,600</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Total Comparison</div>
+      <div class="chart-container">
+        <div class="chart-row">
+          <div class="chart-label">Traditional</div>
+          <div class="chart-bar-container">
+            <div class="chart-bar old" data-width="100" style="width:0%;">~37,540 tokens</div>
+          </div>
+          <div class="chart-value" style="color:var(--fail);">~37,540</div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-label" style="color:var(--accent3);">Sliding Window</div>
+          <div class="chart-bar-container">
+            <div class="chart-bar new" data-width="52" style="width:0%;">~19,500 tokens</div>
+          </div>
+          <div class="chart-value" style="color:var(--accent3);">~19,500</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:1.5rem;">
+        <span class="saving-badge" style="font-size:1.2rem;padding:0.5rem 1.5rem;">~48% Token Reduction</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Scaling Behavior</div>
+      <div class="compare-container">
+        <div class="compare-box bad">
+          <div class="compare-label">Traditional</div>
+          <p style="font-size:0.85rem;color:var(--text-muted);padding:1rem 0;">
+            Each TASK accumulates all previous results.
+            Context grows <strong>linearly</strong> with TASK count.
+            At TASK-10, the context contains all 10 previous results.
+          </p>
+          <div style="text-align:center;font-size:0.85rem;font-weight:600;color:var(--fail);">
+            O(N) context growth
+          </div>
+        </div>
+        <div class="compare-box good">
+          <div class="compare-label">Sliding Window</div>
+          <p style="font-size:0.85rem;color:var(--text-muted);padding:1rem 0;">
+            Always carries only 2 previous contexts (FULL + SUMMARY).
+            Context stays <strong>constant</strong> regardless of TASK count.
+            At TASK-10, same context size as TASK-03.
+          </p>
+          <div style="text-align:center;font-size:0.85rem;font-weight:600;color:var(--accent3);">
+            O(1) constant context
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Direct Mode Bonus</div>
+      <p style="font-size:0.85rem;color:var(--text-muted);">
+        In direct mode, sub-agent session initialization cost (~12,500 tokens per agent) is completely eliminated.
+        Router handles everything in a single session with zero context transfer overhead.
+      </p>
+      <div style="text-align:center;margin-top:1rem;">
+        <span class="saving-badge">+12,500 tokens saved per TASK (session init cost = 0)</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Tab Navigation
+function showTab(tabId) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+  event.target.classList.add('active');
+  if (tabId === 'tokens') animateBars();
+}
+
+// Theme Toggle
+function toggleTheme() {
+  const html = document.documentElement;
+  html.dataset.theme = html.dataset.theme === 'light' ? '' : 'light';
+}
+
+// Mode Sub-tabs
+function showMode(mode) {
+  document.querySelectorAll('.mode-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode-' + mode).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Accordion
+function toggleAccordion(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+// Gate Check Toggle
+function toggleGate(n) {
+  const gate = document.getElementById('gate-' + n);
+  const result = gate.querySelector('.gate-result');
+  if (result.classList.contains('pass')) {
+    result.classList.remove('pass');
+    result.classList.add('fail');
+    result.textContent = 'FAIL';
+  } else {
+    result.classList.remove('fail');
+    result.classList.add('pass');
+    result.textContent = 'PASS';
+  }
+}
+
+// Animate Bar Chart
+function animateBars() {
+  document.querySelectorAll('.chart-bar').forEach(bar => {
+    const w = bar.dataset.width;
+    bar.style.width = '0%';
+    setTimeout(() => { bar.style.width = w + '%'; }, 100);
+  });
+}
+
+// Animate on first load if tokens tab visible
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) animateBars();
+  });
+});
+const tokenChart = document.getElementById('token-chart');
+if (tokenChart) observer.observe(tokenChart);
+</script>
+
+</body>
+</html>

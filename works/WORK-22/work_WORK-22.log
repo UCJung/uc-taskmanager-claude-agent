@@ -1,0 +1,3 @@
+[2026-03-15T21:44:58]_ROUTER_INIT_WORK-22 생성 — Execution-Mode: full
+[2026-03-15T21:45:19]_ROUTER_REF_참조: agents/file-content-schema.md, agents/shared-prompt-sections.md, agents/xml-schema.md, agents/work-activity-log.md, docs/spec_sliding-window-context.md, works/WORK-LIST.md, agents/planner.md
+[2026-03-15T21:45:23]_ROUTER_DISPATCH_Planner dispatch
