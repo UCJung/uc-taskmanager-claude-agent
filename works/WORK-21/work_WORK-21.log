@@ -1,0 +1,4 @@
+[2026-03-15T21:31:39]_ROUTER_INIT_WORK-21 생성 — Execution-Mode: pipeline
+[2026-03-15T21:32:18]_ROUTER_REF_참조: agents/file-content-schema.md, agents/shared-prompt-sections.md, agents/xml-schema.md, agents/work-activity-log.md, docs/spec_pipeline-architecture.md, agents/builder.md
+[2026-03-15T21:32:23]_ROUTER_PLAN_PLAN.md, TASK-00.md 생성 완료
+[2026-03-15T21:32:23]_ROUTER_DISPATCH_Builder dispatch — TASK-00

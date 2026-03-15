@@ -21,3 +21,4 @@
 | WORK-18 | 나머지 에이전트 파일 5개 router.md 형식으로 재편 | IN_PROGRESS | 2026-03-15 | — |
 | WORK-19 | docs/ 참조 문서 최신화 — 에이전트 리팩토링 반영 | IN_PROGRESS | 2026-03-15 | — |
 | WORK-20 | works 하위 파일 조사하여 WORK-LIST.md 갱신 | IN_PROGRESS | 2026-03-15 | — |
+| WORK-21 | Pipeline Architecture 시각화 HTML 작성 | IN_PROGRESS | 2026-03-15 | — |
