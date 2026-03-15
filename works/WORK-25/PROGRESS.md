@@ -6,12 +6,12 @@
 
 | TASK | Title | Status | Commit | Duration |
 |------|-------|--------|--------|----------|
-| TASK-00 | builder.md 중복 제거 | ✅ Done | — | — |
-| TASK-01 | verifier.md 중복 제거 | ✅ Done | — | — |
-| TASK-02 | committer.md 중복 제거 | ✅ Done | — | — |
-| TASK-03 | scheduler.md 중복 제거 | ✅ Done | — | — |
-| TASK-04 | router.md 중복 제거 | ✅ Done | — | — |
-| TASK-05 | planner.md 중복 제거 | ✅ Done | — | — |
+| TASK-00 | builder.md 중복 제거 | ✅ Done | 7dd179a | — |
+| TASK-01 | verifier.md 중복 제거 | ✅ Done | 7dd179a | — |
+| TASK-02 | committer.md 중복 제거 | ✅ Done | 7dd179a | — |
+| TASK-03 | scheduler.md 중복 제거 | ✅ Done | 7dd179a | — |
+| TASK-04 | router.md 중복 제거 | ✅ Done | 7dd179a | — |
+| TASK-05 | planner.md 중복 제거 | ✅ Done | 7dd179a | — |
 
 ## Log
 
