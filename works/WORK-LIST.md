@@ -6,7 +6,6 @@
 | WORK-02 | WORK Seq 인식 오류 개선 | COMPLETED | 2026-03-10 | 2026-03-10 |
 | WORK-03 | Agent간 프롬프트 전달 시 데이터 구조화로 토큰 절감 | COMPLETED | 2026-03-10 | 2026-03-10 |
 | WORK-04 | builder.md에 Serena MCP 도구 우선 탐색 지침 추가 | COMPLETED | 2026-03-11 | 2026-03-11 |
-| WORK-05 | planner.md PLAN.md에 요구사항 코드(REQ) 필드 추가 | COMPLETED | 2026-03-11 | 2026-03-11 |
 | WORK-06 | committer result 파일 섹션 헤더 다국어 대응 (REQ-049) | COMPLETED | 2026-03-11 | 2026-03-11 |
 | WORK-07 | 슬라이딩 윈도우 컨텍스트 전달 — result.md 재설계 및 파이프라인 안정성 강화 | COMPLETED | 2026-03-12 | 2026-03-12 |
 | WORK-08 | 슬라이딩 윈도우 컨텍스트 전달 시스템 동작 검증 테스트 | COMPLETED | 2026-03-12 | 2026-03-12 |
@@ -21,3 +20,4 @@
 | WORK-17 | router.md 3-7 Work Activity Log 섹션 분리 | IN_PROGRESS | 2026-03-15 | — |
 | WORK-18 | 나머지 에이전트 파일 5개 router.md 형식으로 재편 | IN_PROGRESS | 2026-03-15 | — |
 | WORK-19 | docs/ 참조 문서 최신화 — 에이전트 리팩토링 반영 | IN_PROGRESS | 2026-03-15 | — |
+| WORK-20 | works 하위 파일 조사하여 WORK-LIST.md 갱신 | IN_PROGRESS | 2026-03-15 | — |
