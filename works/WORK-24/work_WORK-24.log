@@ -1,6 +1,0 @@
-[2026-03-15T23:08:28]_ROUTER_INIT_WORK-24 생성 — Execution-Mode: direct
-[2026-03-15T23:08:38]_ROUTER_REF_참조: agents/*.md (12파일), .agent/router_rule_config.json, works/WORK-LIST.md, agents/file-content-schema.md, agents/shared-prompt-sections.md, agents/xml-schema.md, agents/work-activity-log.md
-[2026-03-15T23:09:44]_ROUTER_INIT_WORK-24 생성 — Execution-Mode: direct
-[2026-03-15T23:10:11]_ROUTER_REF_참조: agents/router.md, agents/planner.md, agents/scheduler.md, agents/builder.md, agents/verifier.md, agents/committer.md, agents/agent-flow.md, agents/context-policy.md, agents/xml-schema.md, agents/file-content-schema.md, agents/shared-prompt-sections.md, agents/work-activity-log.md, docs/spec_pipeline-architecture.md
-[2026-03-15T23:12:46]_ROUTER_BUILD_self-check 통과 (문서 파일 — 빌드/린트 N/A)
-[2026-03-15T23:13:55]_ROUTER_COMMIT_commit 64cbde3

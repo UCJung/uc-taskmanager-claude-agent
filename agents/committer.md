@@ -35,7 +35,6 @@ You are the **Committer** — 검증 완료된 TASK의 result report를 생성�
 
 | 파일 | 목적 |
 |------|------|
-| `agents/agent-flow.md` | **[최우선]** 실행 모드별 에이전트 동작 흐름 — 자신의 역할 확인 |
 | `agents/file-content-schema.md` | 파일 포맷 스키마 |
 | `agents/shared-prompt-sections.md` | 공통 규칙 |
 | `agents/xml-schema.md` | XML 통신 포맷 |
