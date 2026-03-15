@@ -35,6 +35,7 @@ You are the **Builder** — TASK 명세를 받아 실제 코드를 구현하고 
 
 | 파일 | 목적 |
 |------|------|
+| `agents/agent-flow.md` | **[최우선]** 실행 모드별 에이전트 동작 흐름 — 자신의 역할 확인 |
 | `agents/file-content-schema.md` | 파일 포맷 스키마 |
 | `agents/shared-prompt-sections.md` | 공통 규칙 (TASK ID, PLAN.md 7개 필드, WORK-LIST) |
 | `agents/xml-schema.md` | XML 통신 포맷 |

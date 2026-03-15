@@ -35,6 +35,7 @@ Builder가 완료한 TASK 결과물을 검증하여 빌드, 린트, 테스트, A
 
 | 파일 | 목적 |
 |------|------|
+| `agents/agent-flow.md` | **[최우선]** 실행 모드별 에이전트 동작 흐름 — 자신의 역할 확인 |
 | `agents/shared-prompt-sections.md` | 공통 규칙 |
 | `agents/xml-schema.md` | XML 통신 포맷 |
 | `agents/context-policy.md` | 슬라이딩 윈도우 규칙 |

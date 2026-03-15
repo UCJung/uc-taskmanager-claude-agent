@@ -37,6 +37,7 @@ WORK (일)          — 사용자 요청의 목표 단위
 
 | 파일 | 목적 |
 |------|------|
+| `agents/agent-flow.md` | **[최우선]** 실행 모드별 에이전트 동작 흐름 — 자신의 역할 확인 |
 | `agents/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md 7개 필드, TASK 포맷) |
 | `agents/shared-prompt-sections.md` | 공통 규칙 (TASK ID, WORK-LIST 규칙) |
 
