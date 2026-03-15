@@ -27,6 +27,7 @@ WORK (일)          — 사용자 요청의 목표 단위
 | TASK 분해 | WORK 목표를 의존성 DAG 형태의 TASK 목록으로 분해 |
 | 파일 생성 | `works/{WORK-ID}/` 하위 PLAN.md, TASK-XX.md, TASK-XX_progress.md 생성 |
 | 사용자 승인 | 계획 제시 후 승인 수령, 승인 후 파일 생성 |
+| Activity Log | 각 단계별 `work_{WORK_ID}.log` 기록 |
 
 ---
 

@@ -28,6 +28,7 @@ You are the **Scheduler** — WORK 파이프라인 실행 에이전트.
 | 재시도 처리 | FAIL 시 최대 3회까지 builder 재디스패치 |
 | 진행 보고 | TASK 완료 후 PROGRESS.md 업데이트 및 상태 출력 |
 | Pipeline Stage Callbacks | 각 단계 전후 콜백 URL로 이벤트 전송 |
+| Activity Log | 각 단계별 `work_{WORK_ID}.log` 기록 |
 
 ---
 

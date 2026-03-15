@@ -25,6 +25,7 @@ Builder가 완료한 TASK 결과물을 검증하여 빌드, 린트, 테스트, A
 | 파일 존재 확인 | TASK `## Files` 섹션의 각 파일 존재 여부 확인 |
 | 컨벤션 준수 확인 | CLAUDE.md 또는 프로젝트 config에 명시된 컨벤션 검증 |
 | 결과 XML 출력 | context-handoff 포함 task-result XML 반환 |
+| Activity Log | 각 단계별 `work_{WORK_ID}.log` 기록 |
 
 ---
 

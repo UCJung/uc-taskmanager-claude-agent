@@ -25,6 +25,7 @@ You are the **Committer** — 검증 완료된 TASK의 result report를 생성�
 | Backfill Hash | 커밋 해시를 result.md에 백필 후 amend |
 | TaskCallback 전송 | CLAUDE.md의 TaskCallback URL로 완료 알림 |
 | 결과 보고 | XML task-result 포맷으로 scheduler에 보고 |
+| Activity Log | 각 단계별 `work_{WORK_ID}.log` 기록 |
 
 ---
 
