@@ -158,6 +158,16 @@ Prefix your request with a `[]` tag to trigger the pipeline:
 
 No `[]` tag = handled directly without pipeline.
 
+To register this rule in your project, add the following to your `CLAUDE.md`:
+
+```markdown
+## Agent 호출 규칙
+
+`[]` 태그로 시작하는 요청 → router 에이전트 호출 (WORK 파이프라인 시작)
+```
+
+This ensures Claude automatically delegates `[]`-tagged requests to the router agent without manual invocation.
+
 ---
 
 ## Installation
@@ -304,20 +314,29 @@ router: Analyze → Implement → Self-verify → Commit → result.md
 ## File Structure
 
 ```
-tasks/
-├── multi-tasks/
-│   ├── WORK-LIST.md                      ← Master list of all WORKs (managed by router)
-│   ├── WORK-01/                          ← "User Authentication"
-│   │   ├── PLAN.md                       ← Plan + dependency graph
-│   │   ├── PROGRESS.md                   ← Progress tracking (auto-updated)
-│   │   ├── WORK-01: TASK-00.md            ← Task specification
-│   │   ├── WORK-01: TASK-00-progress.md   ← Real-time checkpoint (builder writes)
-│   │   ├── WORK-01: TASK-00-result.md     ← Completion report (committer writes)
-│   │   ├── WORK-01: TASK-01.md
-│   │   └── ...
-│   └── WORK-02/
-│       └── ...
+works/
+├── WORK-LIST.md                      ← Master list of all WORKs (managed by router)
+├── WORK-01/                          ← "User Authentication"
+│   ├── PLAN.md                       ← Plan + dependency graph
+│   ├── PROGRESS.md                   ← Progress tracking (auto-updated)
+│   ├── TASK-00.md                    ← Task specification
+│   ├── TASK-00_progress.md           ← Real-time checkpoint (builder writes)
+│   ├── TASK-00_result.md             ← Completion report (committer writes)
+│   ├── TASK-01.md
+│   └── ...
+└── WORK-02/
+    └── ...
 ```
+
+### File Naming Convention
+
+| File | Naming Rule |
+|------|-------------|
+| Task spec | `TASK-NN.md` (no prefix) |
+| Progress checkpoint | `TASK-NN_progress.md` (underscore separator) |
+| Completion report | `TASK-NN_result.md` |
+| Plan | `PLAN.md` |
+| Work progress | `PROGRESS.md` |
 
 ### WORK-LIST.md
 
@@ -423,6 +442,22 @@ Claude: [scheduler → auto mode]
 ---
 
 ## Why This Approach?
+
+### Agent File Design
+
+All agent files (`agents/*.md`) are written with a single principle: **core content only, no decoration**. Descriptions, emphasis markers, and redundant examples have been removed. The result is ~1,600 lines total across all agents — less than half the original size — while covering the same functional scope.
+
+Each agent file follows a consistent structure:
+
+```
+STARTUP — required files to read on boot
+Role declaration
+Core logic (routing / planning / scheduling / building / verifying / committing)
+File format references → file-content-schema.md (single source of truth)
+XML communication → xml-schema.md
+```
+
+`file-content-schema.md` is the single authoritative definition for all file formats (PLAN.md, TASK.md, progress.md, result.md). Agents reference it instead of embedding format specs inline — eliminating duplication across 6 agent files.
 
 ### WORK ID Assignment Strategy
 
@@ -742,7 +777,7 @@ Auto-detected from project files. No configuration needed.
 uc-taskmanager/
 ├── README.md                ← English (default)
 ├── README_KO.md             ← Korean
-├── CLAUDE.md                ← Project-level Claude instructions (push procedure, language)
+├── CLAUDE.md                ← Project-level Claude instructions (push procedure, language, agent call rules)
 ├── LICENSE
 ├── agents/                  ← Distribution: copy these to install
 │   ├── router.md            ← execution-mode routing (direct/pipeline/full)
@@ -752,17 +787,17 @@ uc-taskmanager/
 │   ├── verifier.md          ← Verification based on context-handoff (read-only)
 │   ├── committer.md         ← Gate check → result.md → git commit
 │   ├── context-policy.md    ← Sliding window context transfer policy
-│   └── xml-schema.md        ← Agent communication XML schema
+│   ├── xml-schema.md        ← Agent communication XML schema
+│   ├── shared-prompt-sections.md  ← Cacheable common sections (output language, build commands)
+│   └── file-content-schema.md     ← File format schema (PLAN.md, TASK.md, result.md)
 ├── docs/                    ← Design specifications
 │   ├── spec_pipeline-architecture.md   ← Pipeline structure & agent roles
 │   ├── spec_sliding-window-context.md  ← Sliding window context design
 │   └── spec_callback-integration.md    ← External system callback integration
-└── tasks/
-    ├── multi-tasks/         ← WORK directories (auto-generated)
-    │   ├── WORK-LIST.md     ← Master index
-    │   ├── WORK-01/
-    │   └── ...
-    └── ...                  ← all modes output here (direct/pipeline/full)
+└── works/                   ← WORK directories (auto-generated)
+    ├── WORK-LIST.md          ← Master index
+    ├── WORK-01/              ← all modes output here (direct/pipeline/full)
+    └── ...
 ```
 
 ---
