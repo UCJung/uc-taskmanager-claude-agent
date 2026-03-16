@@ -30,7 +30,7 @@ log_work() {
 | STAGE | 시점 | 설명 예시 |
 |-------|------|-----------|
 | `INIT` | WORK_ID 결정 후 | `WORK-NN 생성 — Execution-Mode: direct/pipeline/full` |
-| `REF` | STARTUP 참조 직후 | `참조: CLAUDE.md, agents/file-content-schema.md` |
+| `REF` | STARTUP 참조 직후 | `참조: CLAUDE.md, ~/.claude/agents/file-content-schema.md` |
 | `PLAN` | PLAN.md + TASK 파일 생성 완료 | `PLAN.md, TASK-00.md 생성 완료` |
 | `IMPL` | direct 모드 코드 구현 시작 | `코드 구현 시작 — 참조: {파일 목록}` |
 | `BUILD` | self-check 통과 | `빌드/린트 통과` |
