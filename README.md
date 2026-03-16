@@ -163,7 +163,7 @@ To register this rule in your project, add the following to your `CLAUDE.md`:
 ```markdown
 ## Agent 호출 규칙
 
-`[]` 태그로 시작하는 요청 → router 에이전트 호출 (WORK 파이프라인 시작)
+`[]` 태그로 시작하는 요청 → `~/.claude/agents/agent-flow.md` 를 읽고 파이프라인을 실행한다.
 ```
 
 This ensures Claude automatically delegates `[]`-tagged requests to the router agent without manual invocation.
