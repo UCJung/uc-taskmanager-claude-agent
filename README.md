@@ -784,9 +784,9 @@ Auto-detected from project files. No configuration needed.
 
 ---
 
-## MCP Server (Phase 1)
+## MCP Server (Phase 1 + 2)
 
-uc-taskmanager provides an **MCP (Model Context Protocol) Server** that exposes pipeline monitoring, resources, and agent prompts to any MCP-compatible client (Claude Desktop, Claude Code CLI, MCP Inspector).
+uc-taskmanager provides an **MCP (Model Context Protocol) Server** that exposes pipeline execution tools, monitoring, resources, and agent prompts to any MCP-compatible client (Claude Desktop, Claude Code CLI, MCP Inspector).
 
 ### Setup
 
@@ -801,20 +801,42 @@ claude mcp add uc-taskmanager -e MCP_PROJECT_ROOT=/path/to/uc-taskmanager -- nod
 claude mcp list
 ```
 
-### Available Capabilities
+### Available Capabilities (15 Tools + 5 Resources + 6 Prompts)
 
 | Type | Name | Description |
 |------|------|-------------|
+| **Tool** | `create_work` | Create new WORK with auto execution-mode detection |
+| **Tool** | `execute_work` | Execute WORK pipeline (DAG-based task orchestration) |
+| **Tool** | `approve_plan` | Approve PLAN (required for full mode) |
+| **Tool** | `resume_work` | Resume interrupted WORK from last checkpoint |
+| **Tool** | `get_next_task` | Get next executable TASK with dependency context |
+| **Tool** | `execute_task` | Execute single TASK (builder→verifier→committer) |
+| **Tool** | `retry_task` | Retry failed TASK (max 3 attempts per target) |
+| **Tool** | `approve_task` | Manually approve TASK result |
+| **Tool** | `commit_work` | Git commit WORK artifacts |
+| **Tool** | `push_work` | Push with 3-step procedure (README→WORK-LIST→push) |
 | **Tool** | `list_works` | List all WORKs with status |
 | **Tool** | `get_work_status` | Get WORK status + TASK progress |
 | **Tool** | `get_task_result` | Read TASK result file |
 | **Tool** | `get_pipeline_log` | Read pipeline activity log |
+| **Tool** | `sync_callbacks` | Batch retry failed/pending webhooks |
 | **Resource** | `work://list` | WORK-LIST.md content |
 | **Resource** | `work://{id}/plan` | WORK PLAN.md |
 | **Resource** | `work://{id}/progress` | WORK PROGRESS.md |
 | **Resource** | `work://{id}/task/{tid}` | TASK spec file |
 | **Resource** | `work://{id}/task/{tid}/result` | TASK result file |
 | **Prompt** | `router`, `planner`, `scheduler`, `builder`, `verifier`, `committer` | Agent prompts with reference doc merging |
+
+### Core Engines (Phase 2)
+
+| Module | Description |
+|--------|-------------|
+| `core/execution-mode.ts` | Execution-mode decision engine (direct/pipeline/full) |
+| `core/dag.ts` | Task dependency DAG with BFS shortest path |
+| `core/context-window.ts` | Sliding window context management (FULL/SUMMARY/DROP) |
+| `core/activity-log.ts` | Pipeline activity logging |
+| `core/webhook-relay.ts` | HTTP webhook relay with batch retry |
+| `core/callback-status.ts` | Callback status tracking (callback_status.json) |
 
 ### Environment Variables
 
@@ -823,6 +845,9 @@ claude mcp list
 | `MCP_PROJECT_ROOT` | Project root override | Auto-detect from file location |
 | `MCP_GLOBAL_AGENTS_DIR` | Global agents directory | `~/.claude/agents` |
 | `MCP_TRANSPORT` | Transport mode (`stdio` / `http`) | `stdio` |
+| `CALLBACK_ENABLED` | Enable webhook callbacks | `false` |
+| `TASK_CALLBACK_URL` | Task completion callback URL | — |
+| `CALLBACK_TOKEN` | API key for callback auth header | — |
 
 ---
 
@@ -847,18 +872,18 @@ uc-taskmanager/
 │   ├── shared-prompt-sections.md  ← Cacheable common sections (output language, build commands)
 │   ├── file-content-schema.md     ← File format schema (PLAN.md, TASK.md, result.md)
 │   └── work-activity-log.md      ← Activity log rules (log_work function, STAGE table)
-├── mcp-server/              ← MCP Server (Phase 1)
+├── mcp-server/              ← MCP Server (Phase 1 + 2)
 │   ├── src/
 │   │   ├── index.ts         ← Entry point (stdio transport)
-│   │   ├── server.ts        ← McpServer creation + registration
-│   │   ├── core/            ← Config, FileManager, WorkParser
-│   │   ├── tools/           ← Monitor tools (list_works, get_work_status, etc.)
+│   │   ├── server.ts        ← McpServer creation + registration (15 tools)
+│   │   ├── core/            ← Config, FileManager, WorkParser, DAG, ExecutionMode, ContextWindow, ActivityLog, WebhookRelay
+│   │   ├── tools/           ← Pipeline (4) + Task (4) + Git (2) + Monitor (5) tools
 │   │   ├── resources/       ← MCP Resources (work://list, plan, task, result)
 │   │   └── prompts/         ← Agent prompts (6 agents + reference doc merging)
 │   ├── package.json
 │   └── tsconfig.json
 ├── docs/                    ← Design specifications
-│   ├── plan_MCP-Integration-Design.md      ← MCP Server integration design (v1.3)
+│   ├── plan_MCP-Integration-Design.md      ← MCP Server integration design (v1.4)
 │   ├── plan_MCP-Integration-Design_report.md ← MCP design review report
 │   ├── spec_pipeline-architecture.md       ← Pipeline structure & agent roles (v1.2)
 │   ├── spec_pipeline-architecture_v1.1.md  ← Pipeline architecture spec v1.1

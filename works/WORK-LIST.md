@@ -34,3 +34,4 @@
 | WORK-31 | MCP Server Phase 1: Core MCP Server 구현 | COMPLETED | 2026-03-18 | 2026-03-18 |
 | WORK-32 | MCP Integration Design v1.4 — Phase 1.5 설계 반영 | COMPLETED | 2026-03-18 | 2026-03-18 |
 | WORK-33 | Phase 1.5 — CLAUDE.md MCP 프롬프트 전환 (테스트 프로젝트) | COMPLETED | 2026-03-18 | 2026-03-18 |
+| WORK-34 | Phase 2 — Pipeline Execution MCP Server 실행 도구 구현 | COMPLETED | 2026-03-18 | 2026-03-18 |
