@@ -27,3 +27,4 @@
 | WORK-24 | agents 파일 분석 기반 spec_pipeline-architecture.md 갱신 | COMPLETED | 2026-03-15 | 2026-03-16 |
 | WORK-25 | 에이전트 md 파일 중복 제거 및 지침 참조 전환 | COMPLETED | 2026-03-16 | 2026-03-16 |
 | WORK-26 | agents 참조문서 5개 핵심 축소 | COMPLETED | 2026-03-16 | 2026-03-16 |
+| WORK-27 | MCP Integration Design 설계 명세서 검토 리포트 작성 | IN_PROGRESS | 2026-03-17 | |
