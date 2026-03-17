@@ -1,8 +1,8 @@
 # uc-taskmanager MCP Server 통합 설계 명세서
 
-**문서 버전**: v1.2
+**문서 버전**: v1.3
 **작성일**: 2026-03-17
-**최종 수정**: 2026-03-18 (v1.2 — Callback/Webhook 전략 반영)
+**최종 수정**: 2026-03-18 (v1.3 — TASK 간 의존성 context-handoff 전달 로직 반영)
 **작성자**: UC. Jung (P&T 선행연구개발팀)
 **대상 시스템**: uc-taskmanager-claude-agent + UC TeamSpace
 **상태**: 설계 초안 (Design Draft)
@@ -14,6 +14,7 @@
 | v1.0 | 2026-03-17 | 초안 작성 |
 | v1.1 | 2026-03-17 | WORK-27 검토 리포트 반영 — CRITICAL 1건, HIGH 6건, MEDIUM 7건 수정 |
 | v1.2 | 2026-03-18 | Callback/Webhook 전략 반영 — 3.9절 신규, sync_callbacks Tool, webhook-relay 모듈, callback_status.json 스키마 |
+| v1.3 | 2026-03-18 | TASK 간 의존성 context-handoff 전달 로직 반영 — 3.7절 보강, 3.3.2절 보강, 7.3절 보강 |
 
 ---
 
@@ -243,9 +244,19 @@ uc-taskmanager-claude-agent/
 | Tool 이름 | 설명 | 입력 | 출력 |
 |-----------|------|------|------|
 | `get_next_task` | 다음 실행 가능한 TASK 반환 (DAG 기반: result file exists -> DONE, ALL deps DONE -> READY, else -> BLOCKED) | `{ work_id: string }` | `{ task_id: string, dependencies_met: boolean, spec: string }` |
-| `execute_task` | 단일 TASK 실행 (builder -> verifier -> committer) | `{ work_id: string, task_id: string, previous_context?: string }` | `{ status: "pass" \| "fail", result_path: string, commit_hash?: string, context_handoff: ContextHandoff }` |
+| `execute_task` | 단일 TASK 실행 (builder -> verifier -> committer). `previous_context`는 `execute_work` 내부에서 자동 주입 (아래 상세 참조) | `{ work_id: string, task_id: string, previous_context?: string }` | `{ status: "pass" \| "fail", result_path: string, commit_hash?: string, context_handoff: ContextHandoff }` |
 | `retry_task` | 실패한 TASK 재시도. 재시도 대상(builder/committer)을 구분하여 처리 | `{ work_id: string, task_id: string, retry_target?: "builder" \| "committer" }` | `{ attempt: number, max_attempts: 3, target: string, status: string }` |
 | `approve_task` | TASK 결과 승인 (수동 모드) | `{ work_id: string, task_id: string }` | `{ approved: boolean }` |
+
+> **`previous_context` 자동 주입 로직**: `execute_work` (또는 `get_next_task`) 내부에서 다음 절차를 수행하여 `execute_task`의 `previous_context`를 자동 생성한다:
+>
+> 1. **DAG 조회**: PLAN.md의 Task Dependency Graph에서 현재 TASK의 의존 TASK 목록을 파악
+> 2. **context-handoff 추출**: 각 의존 TASK의 `TASK-XX_result.md`에서 `## Context Handoff` 섹션을 파싱
+> 3. **의존 거리 계산**: DAG shortest path로 현재 TASK까지의 거리를 산출
+> 4. **윈도우 적용**: `applyTaskDependencyWindow()` (3.7절 참조)로 FULL/SUMMARY/DROP 변환
+> 5. **주입**: 변환된 context-handoff 결과를 `execute_task`의 `previous_context` 파라미터로 전달
+>
+> 이 로직은 `execute_work`가 DAG 순서대로 TASK를 순회할 때 매 TASK마다 자동 수행되므로, MCP 클라이언트가 `previous_context`를 수동으로 구성할 필요가 없다. 단, 클라이언트가 `execute_task`를 직접 호출하면서 `previous_context`를 명시적으로 전달한 경우에는 자동 주입을 건너뛴다.
 
 > **재시도 정책**: builder 최대 3회, committer 최대 3회 (각각 독립 카운트). Committer Gate Check 실패 시(progress.md 미존재, Status != COMPLETED, Files changed 비어있음) builder 재디스패치.
 
@@ -374,6 +385,143 @@ function applyContextWindow(
 ```
 
 > **MCP 도구 레벨 적용**: `execute_task`가 내부적으로 builder -> verifier -> committer를 순차 호출할 때, 각 단계의 결과를 `ContextHandoff` 형태로 누적하고, 다음 단계 호출 시 `applyContextWindow()`를 적용하여 전달한다.
+
+#### 3.7.1 TASK 간 의존성 context-handoff 전달
+
+`applyContextWindow()`는 단일 TASK 내부(builder -> verifier -> committer)의 에이전트 간 윈도우를 처리한다. 이와 별도로, **TASK 간 의존성**에서도 동일한 FULL/SUMMARY/DROP 윈도우가 적용된다. 현행 `context-policy.md`의 "TASK 간 의존성 전달" 규칙을 MCP 도구 레벨에서 구현한다.
+
+```typescript
+// core/context-window.ts (추가)
+
+interface TaskResultContextHandoff {
+  taskId: string;
+  builderContext: ContextHandoff;   // result.md의 Builder Context 섹션
+  verifierContext: ContextHandoff;  // result.md의 Verifier Context 섹션
+}
+
+/**
+ * TASK 간 의존성 context-handoff 윈도우 적용.
+ *
+ * result.md의 Context Handoff 섹션에서 Builder/Verifier context를 추출하고,
+ * DAG 의존 거리에 따라 FULL/SUMMARY/DROP을 적용한다.
+ *
+ * 윈도우 정책 (context-policy.md 기준):
+ * - 직전 의존 TASK (거리 1): FULL (4개 필드 모두 전달)
+ * - 2단계 전 (거리 2): SUMMARY (what만 1-3줄)
+ * - 3단계 이상 (거리 3+): DROP (전달하지 않음)
+ *
+ * @param currentTaskId  현재 실행할 TASK ID
+ * @param dag            PLAN.md에서 파싱한 DAG 구조
+ * @param resultDir      works/WORK-XX/ 디렉터리 경로
+ * @returns              윈도우 적용된 previous_context 문자열
+ */
+async function applyTaskDependencyWindow(
+  currentTaskId: string,
+  dag: TaskDag,
+  resultDir: string
+): Promise<string | undefined> {
+  // 1. DAG에서 현재 TASK의 모든 의존 TASK를 조회
+  const dependencies = dag.getDependencies(currentTaskId);
+  if (dependencies.length === 0) return undefined;
+
+  // 2. 각 의존 TASK에 대해 DAG shortest path로 거리 계산
+  const contextEntries: Array<{ taskId: string; distance: number; handoff: TaskResultContextHandoff }> = [];
+
+  for (const depTaskId of dependencies) {
+    const distance = dag.shortestPath(depTaskId, currentTaskId);
+    const resultPath = `${resultDir}/TASK-${depTaskId.replace("TASK-", "")}_result.md`;
+
+    // 3. result.md에서 Context Handoff 섹션 파싱
+    const handoff = await extractContextHandoffFromResult(resultPath);
+    if (handoff) {
+      contextEntries.push({ taskId: depTaskId, distance, handoff });
+    }
+  }
+
+  // 4. 거리순 정렬 (가까운 것부터)
+  contextEntries.sort((a, b) => a.distance - b.distance);
+
+  // 5. 윈도우 적용
+  const windowedResults: string[] = [];
+
+  for (const entry of contextEntries) {
+    if (entry.distance <= 1) {
+      // FULL: 4개 필드 모두 전달
+      windowedResults.push(
+        `### ${entry.taskId} (FULL - 직전 의존)\n` +
+        formatFullContext(entry.handoff)
+      );
+    } else if (entry.distance === 2) {
+      // SUMMARY: what만 1-3줄
+      windowedResults.push(
+        `### ${entry.taskId} (SUMMARY - 2단계 전)\n` +
+        `- what: ${entry.handoff.builderContext.what}`
+      );
+    }
+    // distance >= 3: DROP (추가하지 않음)
+  }
+
+  return windowedResults.length > 0 ? windowedResults.join("\n\n") : undefined;
+}
+
+/**
+ * result.md 파일에서 Context Handoff 섹션을 추출한다.
+ *
+ * result.md 구조 (file-content-schema.md SS 4 참조):
+ *   ## Context Handoff
+ *   ### Builder Context (SUMMARY)
+ *   {builder what 필드 1-3줄}
+ *   ### Verifier Context (FULL)
+ *   {verifier context-handoff 4개 필드}
+ */
+async function extractContextHandoffFromResult(
+  resultPath: string
+): Promise<TaskResultContextHandoff | null> {
+  try {
+    const content = await readFile(resultPath, "utf-8");
+
+    // "## Context Handoff" 섹션부터 파일 끝 또는 다음 ## 섹션까지 추출
+    const handoffMatch = content.match(
+      /## Context Handoff\n([\s\S]*?)(?=\n## |\n---|\Z)/
+    );
+    if (!handoffMatch) return null;
+
+    const handoffSection = handoffMatch[1];
+
+    // Builder Context 파싱
+    const builderMatch = handoffSection.match(
+      /### Builder Context[^\n]*\n([\s\S]*?)(?=\n### |\Z)/
+    );
+    // Verifier Context 파싱
+    const verifierMatch = handoffSection.match(
+      /### Verifier Context[^\n]*\n([\s\S]*?)(?=\n### |\Z)/
+    );
+
+    return {
+      taskId: resultPath.match(/TASK-(\d+)/)?.[0] || "UNKNOWN",
+      builderContext: parseContextFields(builderMatch?.[1] || ""),
+      verifierContext: parseContextFields(verifierMatch?.[1] || ""),
+    };
+  } catch {
+    return null; // result.md가 없으면 null 반환 (아직 미완료 TASK)
+  }
+}
+
+/**
+ * DAG shortest path 계산.
+ * BFS 기반으로 fromTask에서 toTask까지의 최단 거리를 반환한다.
+ */
+interface TaskDag {
+  getDependencies(taskId: string): string[];   // 직접 의존 TASK 목록
+  getAllAncestors(taskId: string): string[];    // 모든 선행 TASK (재귀)
+  shortestPath(from: string, to: string): number; // BFS 최단 거리
+}
+```
+
+> **핵심 설계 결정**:
+> - `execute_work`가 DAG 순서대로 TASK를 순회할 때, 각 TASK 실행 전에 `applyTaskDependencyWindow()`를 호출하여 `previous_context`를 자동 생성한다
+> - DAG shortest path는 BFS로 계산하며, 복잡 DAG(다이아몬드 의존성 등)에서도 올바른 거리를 산출한다
+> - result.md가 아직 존재하지 않는 TASK(미완료)는 자동으로 건너뛴다
 
 ### 3.8 Activity Log MCP 래퍼 (`core/activity-log.ts`)
 
@@ -1406,6 +1554,80 @@ Committer 호출 시:
   이전 TASK의 Builder context   → DROP
 ```
 
+#### 7.3.1 TASK 간 의존성 context-handoff 전달 흐름
+
+위의 에이전트 간 윈도우(builder -> verifier -> committer)와 별도로, **TASK 간 의존성**에서도 `applyTaskDependencyWindow()`가 적용된다. 아래는 TASK-00 -> TASK-01 -> TASK-02 체인에서의 context-handoff 전달 흐름이다.
+
+```
+TASK-00 실행 완료
+  ├── TASK-00_result.md 생성
+  │     └── Context Handoff:
+  │           ├── Builder Context (SUMMARY): what 1-3줄
+  │           └── Verifier Context (FULL): what, why, caution, incomplete
+  │
+  ▼
+TASK-01 실행 시 (TASK-00에 의존, 거리=1)
+  ├── applyTaskDependencyWindow("TASK-01", dag, resultDir)
+  │     └── TASK-00 → 거리 1 → FULL
+  │           result.md의 Context Handoff 4개 필드 모두 전달
+  │
+  ├── Builder 입력:
+  │     ├── TASK-01 spec (TASK-01.md)
+  │     └── previous_context:
+  │           └── "### TASK-00 (FULL - 직전 의존)
+  │                 what: ...
+  │                 why: ...
+  │                 caution: ...
+  │                 incomplete: ..."
+  │
+  ├── TASK-01_result.md 생성
+  │
+  ▼
+TASK-02 실행 시 (TASK-01에 의존, TASK-00은 2단계 전)
+  ├── applyTaskDependencyWindow("TASK-02", dag, resultDir)
+  │     ├── TASK-01 → 거리 1 → FULL
+  │     └── TASK-00 → 거리 2 → SUMMARY (what만)
+  │
+  ├── Builder 입력:
+  │     ├── TASK-02 spec (TASK-02.md)
+  │     └── previous_context:
+  │           ├── "### TASK-01 (FULL - 직전 의존)
+  │           │     what: ...
+  │           │     why: ...
+  │           │     caution: ...
+  │           │     incomplete: ..."
+  │           └── "### TASK-00 (SUMMARY - 2단계 전)
+  │                 what: ..."
+  │
+  ▼
+TASK-03 실행 시 (TASK-02에 의존, TASK-00은 3단계 전)
+  ├── applyTaskDependencyWindow("TASK-03", dag, resultDir)
+  │     ├── TASK-02 → 거리 1 → FULL
+  │     ├── TASK-01 → 거리 2 → SUMMARY
+  │     └── TASK-00 → 거리 3 → DROP (전달하지 않음)
+  │
+  └── Builder 입력:
+        ├── TASK-03 spec
+        └── previous_context:
+              ├── TASK-02 FULL
+              └── TASK-01 SUMMARY
+              (TASK-00은 DROP되어 포함되지 않음)
+```
+
+**다이아몬드 의존성 예시:**
+
+```
+TASK-00 ──→ TASK-01 ──→ TASK-03
+   └────→ TASK-02 ──────┘
+
+TASK-03 실행 시:
+  ├── TASK-01 → 거리 1 → FULL
+  ├── TASK-02 → 거리 1 → FULL
+  └── TASK-00 → 거리 2 (shortest path via TASK-01 or TASK-02) → SUMMARY
+```
+
+> **XML -> MCP 매핑**: 현행 dispatch XML의 `<previous-results>` 요소(xml-schema.md SS 1)가 `execute_task`의 `previous_context` 파라미터에 매핑된다. `execute_work` 내부에서 `applyTaskDependencyWindow()`가 이 매핑을 자동 수행하므로, MCP 클라이언트는 `<previous-results>`를 직접 구성할 필요가 없다.
+
 ---
 
 ## 8. 기존 CLI 방식과의 호환성
@@ -1527,3 +1749,19 @@ v1.1에서 반영된 WORK-27 검토 리포트 발견사항:
 | 프로젝트 구조에 `webhook-relay.ts`, `callback-status.ts` 추가 | 3.2절 | [x] |
 | 로드맵 Phase 2에 Webhook Relay TASK 추가 (TASK-11, TASK-12) | 6절 | [x] |
 | 로드맵 Phase 3~4 TASK 번호 재정렬 (TASK-13~18) | 6절 | [x] |
+
+---
+
+### v1.3 TASK 간 의존성 context-handoff 전달 로직 반영 체크리스트
+
+| 항목 | 반영 위치 | 완료 |
+|------|----------|------|
+| `applyTaskDependencyWindow()` 함수 설계 (TypeScript 코드) | 3.7.1절 | [x] |
+| `result.md`에서 context-handoff 추출 로직 (`extractContextHandoffFromResult`) | 3.7.1절 | [x] |
+| DAG shortest path 계산 방법 (BFS 기반 `TaskDag` 인터페이스) | 3.7.1절 | [x] |
+| `execute_task`의 `previous_context` 자동 주입 로직 상세 | 3.3.2절 | [x] |
+| `execute_work` 내부에서 `applyTaskDependencyWindow()` 자동 호출 설명 | 3.3.2절, 3.7.1절 | [x] |
+| TASK-00 -> TASK-01 -> TASK-02 체인 context-handoff 전달 다이어그램 | 7.3.1절 | [x] |
+| 다이아몬드 의존성 예시 다이어그램 | 7.3.1절 | [x] |
+| `<previous-results>` XML -> MCP 매핑 구현 상세 | 7.3.1절 | [x] |
+| 문서 버전 v1.2 -> v1.3 업데이트 | 헤더, 변경 이력 | [x] |
