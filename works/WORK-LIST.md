@@ -32,3 +32,4 @@
 | WORK-29 | MCP Integration Design v1.2 - Callback/Webhook 전략 반영 | COMPLETED | 2026-03-18 | 2026-03-18 |
 | WORK-30 | TASK 간 의존성 context-handoff 전달 로직 설계문서 v1.3 반영 | COMPLETED | 2026-03-18 | 2026-03-18 |
 | WORK-31 | MCP Server Phase 1: Core MCP Server 구현 | COMPLETED | 2026-03-18 | 2026-03-18 |
+| WORK-32 | MCP Integration Design v1.4 — Phase 1.5 설계 반영 | COMPLETED | 2026-03-18 | 2026-03-18 |

@@ -1,8 +1,8 @@
 # uc-taskmanager MCP Server 통합 설계 명세서
 
-**문서 버전**: v1.3
+**문서 버전**: v1.4
 **작성일**: 2026-03-17
-**최종 수정**: 2026-03-18 (v1.3 — TASK 간 의존성 context-handoff 전달 로직 반영)
+**최종 수정**: 2026-03-18 (v1.4 — Phase 1.5 CLAUDE.md MCP 프롬프트 전환 설계 반영)
 **작성자**: UC. Jung (P&T 선행연구개발팀)
 **대상 시스템**: uc-taskmanager-claude-agent + UC TeamSpace
 **상태**: 설계 초안 (Design Draft)
@@ -15,6 +15,7 @@
 | v1.1 | 2026-03-17 | WORK-27 검토 리포트 반영 — CRITICAL 1건, HIGH 6건, MEDIUM 7건 수정 |
 | v1.2 | 2026-03-18 | Callback/Webhook 전략 반영 — 3.9절 신규, sync_callbacks Tool, webhook-relay 모듈, callback_status.json 스키마 |
 | v1.3 | 2026-03-18 | TASK 간 의존성 context-handoff 전달 로직 반영 — 3.7절 보강, 3.3.2절 보강, 7.3절 보강 |
+| v1.4 | 2026-03-18 | Phase 1.5 CLAUDE.md MCP 프롬프트 전환 설계 반영 — 3.10절 신규, 6절 로드맵 보강, 8절 호환성 보강 |
 
 ---
 
@@ -744,6 +745,99 @@ interface PipelineStageCallback {
 
 > **구현 예시**: 4.6절 참조
 
+### 3.10 Phase 1.5: CLAUDE.md MCP 프롬프트 전환 (`[WORK 시작]` → MCP Prompt 경유)
+
+Phase 1 완료 후, Phase 2(실행 도구) 구현 전에 **CLAUDE.md 지침만 수정**하여 기존 `[WORK 시작]` 워크플로우가 MCP 프롬프트를 경유하도록 전환한다. 파일 생성/수정은 Claude Code의 기본 파일 도구에 의존하며, MCP 서버에 실행 도구가 없어도 동작한다.
+
+#### 3.10.1 전환 목표
+
+| 항목 | 현행 (Agent 방식) | Phase 1.5 (MCP Prompt 경유) |
+|------|-------------------|---------------------------|
+| 프롬프트 소스 | `~/.claude/agents/*.md` 직접 읽기 | MCP `get_prompt("router", ...)` API 호출 |
+| 참조문서 병합 | 에이전트가 수동으로 참조 | MCP Prompts가 자동 병합하여 반환 |
+| 모니터링 | 파일 직접 읽기 | MCP `list_works`, `get_work_status` 도구 활용 |
+| 파일 생성 | Claude 기본 파일 도구 | Claude 기본 파일 도구 (변경 없음) |
+| Fallback | — | MCP 연결 실패 시 기존 Agent 방식으로 자동 전환 |
+
+#### 3.10.2 CLAUDE.md 지침 변경 설계
+
+**현행 CLAUDE.md 지침:**
+```markdown
+## Agent 호출 규칙
+`[]` 태그로 시작하는 요청 → `~/.claude/agents/agent-flow.md` 를 읽고 파이프라인을 실행한다.
+```
+
+**Phase 1.5 변경 후:**
+```markdown
+## Agent 호출 규칙
+
+`[]` 태그로 시작하는 요청 → 다음 절차로 파이프라인을 실행한다.
+
+### MCP 모드 (기본)
+uc-taskmanager MCP 서버가 연결되어 있으면 MCP 경유로 실행:
+1. MCP `list_works` 도구로 기존 WORK 현황 확인
+2. MCP `router` 프롬프트 호출 → execution-mode 판정 + 디스패치 결정
+3. 판정 결과에 따라:
+   - direct: router 프롬프트 지침대로 직접 처리
+   - pipeline: MCP `builder` → `verifier` → `committer` 프롬프트 순차 호출
+   - full: MCP `planner` → `scheduler` → `builder` → `verifier` → `committer` 프롬프트 순차 호출
+4. 파일 생성(PLAN.md, TASK-XX.md, result.md 등)은 Claude 기본 파일 도구 사용
+5. 상태 확인은 MCP `get_work_status`, `get_task_result` 도구 사용
+
+### Fallback 모드
+MCP 서버 미연결 시 기존 방식으로 자동 전환:
+1. `~/.claude/agents/agent-flow.md` 를 읽고 파이프라인을 실행한다.
+```
+
+#### 3.10.3 실행 흐름 다이어그램
+
+```
+[WORK 시작] 태그 감지
+     │
+     ▼
+  MCP 서버 연결 확인
+     │
+     ├── 연결됨 ──────────────────────────────────┐
+     │                                             │
+     │   MCP list_works ← 기존 WORK 현황           │
+     │   MCP get_prompt("router", {request}) ← 판정 │
+     │       │                                     │
+     │       ├── direct  → router 지침대로 직접 처리  │
+     │       ├── pipeline → MCP prompts 순차 호출   │
+     │       └── full    → MCP prompts 순차 호출    │
+     │                                             │
+     │   파일 생성: Claude 기본 Write/Edit 도구       │
+     │   상태 확인: MCP get_work_status 도구          │
+     │                                             │
+     └── 미연결 ──→ agent-flow.md 읽기 → 기존 방식   │
+                                                   │
+                    ◀──────────────────────────────┘
+```
+
+#### 3.10.4 MCP 프롬프트 활용 이점
+
+1. **참조문서 자동 병합**: `shared-prompt-sections.md`, `file-content-schema.md` 등을 MCP 서버가 자동으로 병합하여 반환 → 에이전트가 개별로 읽을 필요 없음
+2. **프롬프트 일원화**: 6개 에이전트 프롬프트의 소스가 MCP 서버 한 곳으로 집중 → 변경 시 MCP 서버만 재빌드
+3. **모니터링 도구 활용**: `list_works`, `get_work_status` 등으로 파이프라인 상태를 구조화된 데이터로 조회
+4. **점진적 전환**: Phase 2 실행 도구가 추가되면 파일 생성도 MCP로 이전 가능 (CLAUDE.md 지침만 추가 변경)
+
+#### 3.10.5 한계 및 Phase 2에서의 해소
+
+| Phase 1.5 한계 | Phase 2 해소 방안 |
+|---------------|-----------------|
+| 파일 생성은 Claude 기본 도구 의존 | `create_work`, `execute_task` 도구가 파일 생성 담당 |
+| MCP 서버가 실행 상태를 모름 (stateless) | `execute_work`가 DAG 기반 상태 추적 |
+| 에러 핸들링이 Claude에 분산 | MCP 서버 내부에서 zod 검증 + 재시도 로직 |
+| 파일 구조 일관성 보장 없음 | MCP 서버가 파일명 규칙 강제 |
+
+#### 3.10.6 구현 산출물
+
+| 파일 | 변경 | 설명 |
+|------|------|------|
+| `CLAUDE.md` | MODIFY | Agent 호출 규칙 섹션을 MCP 모드 + Fallback 모드 이중 구조로 변경 |
+| `README.md` | MODIFY | Phase 1.5 전환 가이드 추가 |
+| `mcp-server/src/server.ts` | — | 변경 없음 (Phase 1 구현 그대로 사용) |
+
 ---
 
 ## 4. 핵심 코드 설계
@@ -1418,6 +1512,16 @@ const response = await fetch("https://mcp.yourplatform.com/mcp", {
 | TASK-03 | Resources (WORK 목록 `works/WORK-LIST.md` 기반, PLAN, TASK, result) | `resources/*.ts` |
 | TASK-04 | Prompts (6개 에이전트 프롬프트 + 참조문서 자동 병합) | `prompts/*.ts` |
 
+### Phase 1.5: CLAUDE.md MCP 프롬프트 전환 (1~2일)
+
+| TASK | 내용 | 산출물 |
+|------|------|--------|
+| TASK-P1 | CLAUDE.md Agent 호출 규칙 → MCP 모드 + Fallback 이중 구조로 변경 | `CLAUDE.md` 수정 |
+| TASK-P2 | MCP 프롬프트 경유 파이프라인 동작 검증 (direct/pipeline/full 각 1건) | 검증 결과 기록 |
+| TASK-P3 | README.md Phase 1.5 전환 가이드 + Fallback 동작 설명 추가 | `README.md` 수정 |
+
+> **Phase 1.5 특징**: 코드 변경 없이 CLAUDE.md 지침만 수정. MCP 서버 Phase 1 구현을 그대로 활용하며, 파일 생성은 Claude 기본 도구에 의존. MCP 연결 실패 시 기존 Agent 방식으로 자동 Fallback.
+
 ### Phase 2: Pipeline Execution (2주)
 
 | TASK | 내용 | 산출물 |
@@ -1447,8 +1551,8 @@ const response = await fetch("https://mcp.yourplatform.com/mcp", {
 | TASK-17 | 인증/인가 (OAuth 2.0 + API Key) | 인증 미들웨어 |
 | TASK-18 | README, 설치 가이드, API 문서 | 문서 |
 
-**총 예상 기간: 6주 (시니어 1명 + Claude Code SDD Pipeline)**
-**SDD Pipeline 적용 시: 약 2~3주로 단축 가능**
+**총 예상 기간: 6주 + 1~2일 (시니어 1명 + Claude Code SDD Pipeline)**
+**SDD Pipeline 적용 시: 약 2~3주로 단축 가능 (Phase 1.5는 1일 이내)**
 
 ---
 
@@ -1634,19 +1738,17 @@ TASK-03 실행 시:
 
 MCP 서버는 기존 CLI 방식과 **동일한 파일 시스템**을 공유하므로, 두 방식이 공존할 수 있다:
 
-| 시나리오 | CLI 방식 | MCP 방식 |
-|---------|---------|---------|
-| WORK 생성 | `> [추가기능] planner로 계획 세워줘` | `create_work` tool 호출 |
-| 상태 조회 | `> WORK 목록` | `list_works` tool / `work://list` resource |
-| TASK 실행 | `> WORK-01 파이프라인 실행` | `execute_work` tool 호출 |
-| 파일 구조 | `works/WORK-01/PLAN.md` | 동일 |
-| TASK 파일 | `works/WORK-01/TASK-00.md` | 동일 |
-| 산출물 | `works/WORK-01/TASK-00_result.md` | 동일 |
-| 진행 상태 | `works/WORK-01/TASK-00_progress.md` | 동일 |
-| WORK 목록 | `works/WORK-LIST.md` | 동일 |
-| 에이전트 프롬프트 | `~/.claude/agents/*.md` | 동일 (MCP Prompts가 같은 파일 참조) |
+| 시나리오 | CLI 방식 (Agent) | Phase 1.5 (MCP Prompt 경유) | Phase 2+ (MCP Full) |
+|---------|-----------------|---------------------------|-------------------|
+| WORK 생성 | `[추가기능]` → agent-flow.md → planner.md 직접 읽기 | `[추가기능]` → MCP `router` prompt → Claude 파일 도구로 생성 | `create_work` tool 호출 |
+| 상태 조회 | 파일 직접 읽기 | MCP `list_works` / `get_work_status` 도구 | 동일 |
+| TASK 실행 | scheduler.md 직접 읽기 → dispatch | MCP `scheduler` prompt → Claude 파일 도구 | `execute_work` tool 호출 |
+| 프롬프트 소스 | `~/.claude/agents/*.md` 직접 읽기 | MCP Prompts API (참조문서 자동 병합) | 동일 |
+| 파일 생성 | Claude 기본 파일 도구 | Claude 기본 파일 도구 (변경 없음) | MCP 실행 도구 |
+| 파일 구조 | `works/WORK-01/PLAN.md` | 동일 | 동일 |
+| Fallback | — | MCP 미연결 시 Agent 방식 자동 전환 | — |
 
-MCP 서버를 도입해도 기존 CLI 사용자는 아무것도 바꿀 필요가 없다. MCP는 **추가 인터페이스**이지 대체가 아니다.
+**전환 경로**: CLI 방식 → Phase 1.5 (CLAUDE.md만 수정) → Phase 2+ (MCP 실행 도구 추가). 각 단계에서 기존 사용자는 `[태그]` 방식을 그대로 사용하며, 내부 구현만 점진적으로 MCP로 이전된다.
 
 ---
 
@@ -1765,3 +1867,19 @@ v1.1에서 반영된 WORK-27 검토 리포트 발견사항:
 | 다이아몬드 의존성 예시 다이어그램 | 7.3.1절 | [x] |
 | `<previous-results>` XML -> MCP 매핑 구현 상세 | 7.3.1절 | [x] |
 | 문서 버전 v1.2 -> v1.3 업데이트 | 헤더, 변경 이력 | [x] |
+
+---
+
+### v1.4 Phase 1.5 CLAUDE.md MCP 프롬프트 전환 설계 반영 체크리스트
+
+| 항목 | 반영 위치 | 완료 |
+|------|----------|------|
+| §3.10 Phase 1.5 CLAUDE.md MCP 프롬프트 전환 설계 신규 섹션 | 3.10절 | [x] |
+| CLAUDE.md 지침 변경 전/후 설계 (MCP 모드 + Fallback) | 3.10.2절 | [x] |
+| 실행 흐름 다이어그램 | 3.10.3절 | [x] |
+| MCP 프롬프트 활용 이점 정리 | 3.10.4절 | [x] |
+| Phase 1.5 한계 및 Phase 2 해소 방안 | 3.10.5절 | [x] |
+| 구현 산출물 목록 | 3.10.6절 | [x] |
+| 로드맵에 Phase 1.5 삽입 (TASK-P1~P3) | 6절 | [x] |
+| 호환성 테이블 3열 → CLI / Phase 1.5 / Phase 2+ 비교 | 8절 | [x] |
+| 문서 버전 v1.3 → v1.4 업데이트 | 헤더, 변경 이력 | [x] |
