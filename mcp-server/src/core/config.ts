@@ -36,8 +36,8 @@ function resolveProjectRoot(): string {
   // __dirname 은 ESM에서 사용 불가 — import.meta.url 기반 계산
   const currentFileUrl = import.meta.url;
   const currentFilePath = fileURLToPath(currentFileUrl);
-  // src/core/config.ts → src/core → src → mcp-server → project-root
-  return path.resolve(path.dirname(currentFilePath), "..", "..", "..", "..");
+  // dist/core/config.js → dirname=dist/core → ..=dist → ..=mcp-server → ..=project-root
+  return path.resolve(path.dirname(currentFilePath), "..", "..", "..");
 }
 
 /**

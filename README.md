@@ -784,6 +784,48 @@ Auto-detected from project files. No configuration needed.
 
 ---
 
+## MCP Server (Phase 1)
+
+uc-taskmanager provides an **MCP (Model Context Protocol) Server** that exposes pipeline monitoring, resources, and agent prompts to any MCP-compatible client (Claude Desktop, Claude Code CLI, MCP Inspector).
+
+### Setup
+
+```bash
+# Build
+cd mcp-server && npm install && npm run build
+
+# Register with Claude Code CLI
+claude mcp add uc-taskmanager -e MCP_PROJECT_ROOT=/path/to/uc-taskmanager -- node /path/to/uc-taskmanager/mcp-server/dist/index.js
+
+# Verify
+claude mcp list
+```
+
+### Available Capabilities
+
+| Type | Name | Description |
+|------|------|-------------|
+| **Tool** | `list_works` | List all WORKs with status |
+| **Tool** | `get_work_status` | Get WORK status + TASK progress |
+| **Tool** | `get_task_result` | Read TASK result file |
+| **Tool** | `get_pipeline_log` | Read pipeline activity log |
+| **Resource** | `work://list` | WORK-LIST.md content |
+| **Resource** | `work://{id}/plan` | WORK PLAN.md |
+| **Resource** | `work://{id}/progress` | WORK PROGRESS.md |
+| **Resource** | `work://{id}/task/{tid}` | TASK spec file |
+| **Resource** | `work://{id}/task/{tid}/result` | TASK result file |
+| **Prompt** | `router`, `planner`, `scheduler`, `builder`, `verifier`, `committer` | Agent prompts with reference doc merging |
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MCP_PROJECT_ROOT` | Project root override | Auto-detect from file location |
+| `MCP_GLOBAL_AGENTS_DIR` | Global agents directory | `~/.claude/agents` |
+| `MCP_TRANSPORT` | Transport mode (`stdio` / `http`) | `stdio` |
+
+---
+
 ## Repository Structure
 
 ```
@@ -805,6 +847,16 @@ uc-taskmanager/
 │   ├── shared-prompt-sections.md  ← Cacheable common sections (output language, build commands)
 │   ├── file-content-schema.md     ← File format schema (PLAN.md, TASK.md, result.md)
 │   └── work-activity-log.md      ← Activity log rules (log_work function, STAGE table)
+├── mcp-server/              ← MCP Server (Phase 1)
+│   ├── src/
+│   │   ├── index.ts         ← Entry point (stdio transport)
+│   │   ├── server.ts        ← McpServer creation + registration
+│   │   ├── core/            ← Config, FileManager, WorkParser
+│   │   ├── tools/           ← Monitor tools (list_works, get_work_status, etc.)
+│   │   ├── resources/       ← MCP Resources (work://list, plan, task, result)
+│   │   └── prompts/         ← Agent prompts (6 agents + reference doc merging)
+│   ├── package.json
+│   └── tsconfig.json
 ├── docs/                    ← Design specifications
 │   ├── plan_MCP-Integration-Design.md      ← MCP Server integration design (v1.3)
 │   ├── plan_MCP-Integration-Design_report.md ← MCP design review report
