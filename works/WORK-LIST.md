@@ -27,7 +27,7 @@
 | WORK-24 | agents 파일 분석 기반 spec_pipeline-architecture.md 갱신 | COMPLETED | 2026-03-15 | 2026-03-16 |
 | WORK-25 | 에이전트 md 파일 중복 제거 및 지침 참조 전환 | COMPLETED | 2026-03-16 | 2026-03-16 |
 | WORK-26 | agents 참조문서 5개 핵심 축소 | COMPLETED | 2026-03-16 | 2026-03-16 |
-| WORK-27 | MCP Integration Design 설계 명세서 검토 리포트 작성 | IN_PROGRESS | 2026-03-17 | |
-| WORK-28 | MCP Integration Design 설계 명세서 v1.1 업데이트 | IN_PROGRESS | 2026-03-17 | |
-| WORK-29 | MCP Integration Design v1.2 - Callback/Webhook 전략 반영 | IN_PROGRESS | 2026-03-18 | |
-| WORK-30 | TASK 간 의존성 context-handoff 전달 로직 설계문서 v1.3 반영 | IN_PROGRESS | 2026-03-18 | |
+| WORK-27 | MCP Integration Design 설계 명세서 검토 리포트 작성 | COMPLETED | 2026-03-17 | 2026-03-18 |
+| WORK-28 | MCP Integration Design 설계 명세서 v1.1 업데이트 | COMPLETED | 2026-03-17 | 2026-03-18 |
+| WORK-29 | MCP Integration Design v1.2 - Callback/Webhook 전략 반영 | COMPLETED | 2026-03-18 | 2026-03-18 |
+| WORK-30 | TASK 간 의존성 context-handoff 전달 로직 설계문서 v1.3 반영 | COMPLETED | 2026-03-18 | 2026-03-18 |

@@ -806,6 +806,8 @@ uc-taskmanager/
 │   ├── file-content-schema.md     ← File format schema (PLAN.md, TASK.md, result.md)
 │   └── work-activity-log.md      ← Activity log rules (log_work function, STAGE table)
 ├── docs/                    ← Design specifications
+│   ├── plan_MCP-Integration-Design.md      ← MCP Server integration design (v1.3)
+│   ├── plan_MCP-Integration-Design_report.md ← MCP design review report
 │   ├── spec_pipeline-architecture.md       ← Pipeline structure & agent roles (v1.2)
 │   ├── spec_pipeline-architecture_v1.1.md  ← Pipeline architecture spec v1.1
 │   ├── spec_sliding-window-context.md      ← Sliding window context design
