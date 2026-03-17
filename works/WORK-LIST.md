@@ -28,3 +28,4 @@
 | WORK-25 | 에이전트 md 파일 중복 제거 및 지침 참조 전환 | COMPLETED | 2026-03-16 | 2026-03-16 |
 | WORK-26 | agents 참조문서 5개 핵심 축소 | COMPLETED | 2026-03-16 | 2026-03-16 |
 | WORK-27 | MCP Integration Design 설계 명세서 검토 리포트 작성 | IN_PROGRESS | 2026-03-17 | |
+| WORK-28 | MCP Integration Design 설계 명세서 v1.1 업데이트 | IN_PROGRESS | 2026-03-17 | |
