@@ -10,7 +10,7 @@
 | TASK-01 | FileManager + WorkParser 코어 모듈 | ✅ Done | 047c782 | - |
 | TASK-02 | Monitor Tools 구현 | ✅ Done | 4f98330 | 20min |
 | TASK-03 | Resources 구현 | ✅ Done | 3ea0475 | 20min |
-| TASK-04 | Prompts 구현 | ✅ Done | - | 7min |
+| TASK-04 | Prompts 구현 | ✅ Done | b57d5fb | 7min |
 
 ## Log
 - [2026-03-18 01:05] TASK-00 verified and committed
