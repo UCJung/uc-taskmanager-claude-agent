@@ -1,8 +1,8 @@
 # uc-taskmanager MCP Server 통합 설계 명세서
 
-**문서 버전**: v1.1
+**문서 버전**: v1.2
 **작성일**: 2026-03-17
-**최종 수정**: 2026-03-17 (v1.1 — WORK-27 검토 리포트 반영)
+**최종 수정**: 2026-03-18 (v1.2 — Callback/Webhook 전략 반영)
 **작성자**: UC. Jung (P&T 선행연구개발팀)
 **대상 시스템**: uc-taskmanager-claude-agent + UC TeamSpace
 **상태**: 설계 초안 (Design Draft)
@@ -13,6 +13,7 @@
 |------|------|----------|
 | v1.0 | 2026-03-17 | 초안 작성 |
 | v1.1 | 2026-03-17 | WORK-27 검토 리포트 반영 — CRITICAL 1건, HIGH 6건, MEDIUM 7건 수정 |
+| v1.2 | 2026-03-18 | Callback/Webhook 전략 반영 — 3.9절 신규, sync_callbacks Tool, webhook-relay 모듈, callback_status.json 스키마 |
 
 ---
 
@@ -207,6 +208,8 @@ uc-taskmanager-claude-agent/
 │   │   │   ├── execution-mode.ts    # ★ 신규: Execution-Mode 판정 엔진
 │   │   │   ├── context-window.ts    # ★ 신규: 슬라이딩 윈도우 컨텍스트 관리
 │   │   │   ├── activity-log.ts      # ★ 신규: Activity Log MCP 래퍼
+│   │   │   ├── webhook-relay.ts     # ★ 신규: Webhook Relay 모듈 (콜백 발송/상태 관리)
+│   │   │   ├── callback-status.ts   # ★ 신규: callback_status.json 읽기/쓰기
 │   │   │   └── config.ts            # 설정 관리
 │   │   └── integrations/
 │   │       └── teamspace-api.ts     # UC TeamSpace Backend 연동 (옵션)
@@ -254,6 +257,9 @@ uc-taskmanager-claude-agent/
 | `get_work_status` | 특정 WORK 상세 상태 | `{ work_id: string }` | `{ progress: "3/5", execution_mode: string, tasks: TaskStatus[], dag: DagInfo }` |
 | `get_task_result` | TASK result.md 내용 조회 | `{ work_id: string, task_id: string }` | `{ content: string, verification: VerifyResult }` |
 | `get_pipeline_log` | 파이프라인 Activity Log 조회 (`work_{WORK_ID}.log` 파싱, `[timestamp]_AGENT_STAGE_DESC` 포맷) | `{ work_id: string, last_n?: number }` | `{ entries: LogEntry[] }` |
+| `sync_callbacks` | 미전송/실패 콜백 일괄 재전송 (배치 트랙). 수동 Tool로만 제공 (자동 실행 없음) | `{ days?: number, work_id?: string }` | `{ synced: number, failed: number, details: SyncResult[] }` |
+
+> **sync_callbacks 상세**: `works/` 디렉터리를 스캔하여 최근 N일(기본 2일) 이내의 `callback_status.json`에서 `FAILED` 또는 `PENDING` 상태인 건을 수집하고, 일괄 POST(5초 타임아웃)를 수행한다. `work_id`를 지정하면 해당 WORK만 대상으로 한다.
 
 #### 3.3.4 Git Tools
 
@@ -394,6 +400,201 @@ async function logWork(
 ```
 
 > **MCP Tool 연동**: 모든 Tool 실행 시 자동으로 `logWork()`를 호출하여 Activity Log를 기록한다. `get_pipeline_log` Tool이 이 로그를 파싱하여 클라이언트에 반환한다.
+
+### 3.9 Callback/Webhook 전략
+
+MCP 전환 시 기존 CLAUDE.md 기반 콜백 설정을 MCP 서버 config로 이전하고, 구조화된 콜백 관리 체계를 도입한다.
+
+#### 3.9.1 인증 헤더 통일
+
+3종 콜백(TaskCallback, ProgressCallback, PipelineStageCallback) 모두 동일한 인증 헤더를 사용한다:
+
+```
+X-Runner-Api-Key: {token}
+```
+
+- 기존 Scheduler의 `Authorization: Bearer` 방식을 `X-Runner-Api-Key` 헤더로 통일
+- 토큰 값은 MCP 서버 config에서 관리 (3.9.5절 참조)
+
+#### 3.9.2 2트랙 콜백 전략
+
+콜백 전송을 **실시간 트랙**과 **배치 트랙** 2단계로 분리하여, 콜백 실패가 파이프라인을 중단하지 않으면서도 누락을 보정할 수 있게 한다.
+
+```
+[실시간 트랙]                        [배치 트랙]
+execute_task 내부                    MCP Tool: sync_callbacks
+  |                                    |
+  +-- webhook 발사 (5s timeout)        +-- works/ 스캔 (최근 1~2일)
+  +-- 성공 -> callback_status.json     +-- FAILED/PENDING 건 수집
+  +-- 성공 -> Activity Log             +-- 일괄 POST (5s timeout)
+  +-- 실패 -> callback_status.json     +-- 결과 업데이트
+      +-- Activity Log
+      (파이프라인은 계속)
+```
+
+**실시간 트랙 정책:**
+- 타임아웃: 5초
+- 시도 횟수: 1회
+- 실패 시: soft failure (파이프라인 계속 진행)
+- 결과 기록: `callback_status.json` + Activity Log
+
+**배치 트랙 정책:**
+- `sync_callbacks` MCP Tool로 수동 실행 (자동 실행 없음)
+- 최근 N일(기본 2일) 이내의 미전송/실패 건 일괄 재전송
+- 타임아웃: 건당 5초
+
+#### 3.9.3 콜백 상태 추적: callback_status.json
+
+각 WORK 디렉터리에 `callback_status.json` 파일로 구조화된 콜백 상태를 관리한다.
+
+**파일 경로**: `works/WORK-XX/callback_status.json`
+
+**스키마 정의:**
+
+```json
+{
+  "$schema": "callback_status/v1.0",
+  "workId": "WORK-01",
+  "tasks": {
+    "TASK-00": {
+      "taskCallback": {
+        "status": "SENT",
+        "url": "https://api.example.com/callbacks/task",
+        "sentAt": "2026-03-18T10:30:00",
+        "httpStatus": 200,
+        "error": null
+      },
+      "progressCallback": {
+        "status": "FAILED",
+        "url": "https://api.example.com/callbacks/progress",
+        "sentAt": "2026-03-18T10:30:01",
+        "httpStatus": 503,
+        "error": "Service Unavailable"
+      },
+      "stageCallbacks": {
+        "BUILDER_START": {
+          "status": "SENT",
+          "sentAt": "2026-03-18T10:25:00",
+          "httpStatus": 200
+        },
+        "BUILDER_DONE": {
+          "status": "SENT",
+          "sentAt": "2026-03-18T10:28:00",
+          "httpStatus": 200
+        },
+        "VERIFIER_START": {
+          "status": "PENDING",
+          "sentAt": null,
+          "httpStatus": null
+        }
+      }
+    }
+  }
+}
+```
+
+**상태값:**
+| 상태 | 설명 |
+|------|------|
+| `SENT` | 전송 성공 (HTTP 2xx 응답) |
+| `FAILED` | 전송 실패 (타임아웃, HTTP 4xx/5xx, 네트워크 오류) |
+| `PENDING` | 미발송 (콜백 비활성화 또는 아직 해당 단계 미도달) |
+
+#### 3.9.4 PipelineStageCallback 정의
+
+MCP 전환 시점에 정식 정의하는 파이프라인 단계별 콜백:
+
+```typescript
+interface PipelineStageCallback {
+  workId: string;
+  taskId: string;
+  stage: "BUILDER" | "VERIFIER" | "COMMITTER";
+  event: "START" | "DONE" | "FAILED";
+  timestamp: string;  // ISO 8601
+  detail?: string;    // 실패 시 오류 메시지
+}
+```
+
+**콜백 발생 시점:**
+| stage | event | 시점 |
+|-------|-------|------|
+| BUILDER | START | builder 에이전트 실행 시작 |
+| BUILDER | DONE | builder 구현 완료 |
+| BUILDER | FAILED | builder 구현 실패 (재시도 소진 후) |
+| VERIFIER | START | verifier 검증 시작 |
+| VERIFIER | DONE | verifier 검증 통과 |
+| VERIFIER | FAILED | verifier 검증 실패 |
+| COMMITTER | START | committer 커밋 시작 |
+| COMMITTER | DONE | committer 커밋 완료 |
+| COMMITTER | FAILED | committer 커밋 실패 |
+
+#### 3.9.5 MCP 서버 콜백 설정
+
+콜백 관련 설정은 MCP 서버 config에서 관리한다. 기존 CLAUDE.md의 콜백 설정을 MCP config로 이전한다.
+
+**MCP 서버 config 예시:**
+
+```json
+{
+  "mcpServers": {
+    "uc-taskmanager": {
+      "command": "bun",
+      "args": ["run", "/path/to/mcp-server/src/index.ts"],
+      "env": {
+        "MCP_TRANSPORT": "stdio",
+        "WORKS_DIR": "/path/to/project/works"
+      },
+      "config": {
+        "callback": {
+          "enableCallback": false,
+          "taskCallbackUrl": "https://api.example.com/callbacks/task",
+          "progressCallbackUrl": "https://api.example.com/callbacks/progress",
+          "stageCallbackUrl": "https://api.example.com/callbacks/stage",
+          "callbackToken": "your-api-key-here",
+          "timeoutMs": 5000
+        },
+        "syncCallbacks": {
+          "defaultDays": 2
+        }
+      }
+    }
+  }
+}
+```
+
+**설정 항목:**
+| 항목 | 기본값 | 설명 |
+|------|--------|------|
+| `enableCallback` | `false` | 콜백 전송 활성화 여부. false이면 모든 콜백 발송을 건너뛰고 callback_status.json에 PENDING으로 기록 |
+| `taskCallbackUrl` | (없음) | TASK 완료 시 호출할 URL |
+| `progressCallbackUrl` | (없음) | TASK 진행 상태 변경 시 호출할 URL |
+| `stageCallbackUrl` | (없음) | PipelineStageCallback 전송 URL |
+| `callbackToken` | (없음) | `X-Runner-Api-Key` 헤더 값 |
+| `timeoutMs` | `5000` | 콜백 HTTP 요청 타임아웃 (ms) |
+| `syncCallbacks.defaultDays` | `2` | sync_callbacks Tool의 기본 스캔 범위 (일) |
+
+**CLAUDE.md 지침 추가 필요:**
+- "최초 진입 시 콜백 설정 동기화" 지침: MCP 서버 시작 시 config의 `enableCallback` 값을 확인하여 콜백 활성화 상태를 초기화
+
+**README.md 가이드 추가 필요:**
+- 콜백 설정 방법 안내: enableCallback 활성화, URL/Token 설정, sync_callbacks 사용법
+
+#### 3.9.6 Webhook Relay 모듈 (`core/webhook-relay.ts`)
+
+콜백 전송의 단일 책임 모듈. 모든 콜백 발송은 이 모듈을 통해 수행된다.
+
+**설정 소스**: MCP 서버 config (`callback` 섹션)
+- 기존 CLAUDE.md의 TaskCallback/ProgressCallback/CallbackToken을 MCP config로 이전
+- 환경변수 또는 config.json으로 주입
+
+**책임 범위:**
+- 콜백 URL/Token 관리
+- HTTP POST 발송 (5초 타임아웃)
+- `callback_status.json` 읽기/쓰기
+- Activity Log에 콜백 결과 기록
+- `sync_callbacks` Tool의 배치 재전송 로직
+
+> **구현 예시**: 4.6절 참조
 
 ---
 
@@ -724,6 +925,179 @@ const TASK_RESULT_REGEX = /^TASK-(\d+)_result\.md$/;
 const WORK_DIR_PATTERN = "works/WORK-";
 ```
 
+### 4.6 Webhook Relay 구현 예시
+
+```typescript
+// mcp-server/src/core/webhook-relay.ts
+import { readFile, writeFile, mkdir } from "fs/promises";
+import { logWork } from "./activity-log.js";
+
+interface CallbackConfig {
+  enableCallback: boolean;
+  taskCallbackUrl?: string;
+  progressCallbackUrl?: string;
+  stageCallbackUrl?: string;
+  callbackToken?: string;
+  timeoutMs: number;
+}
+
+interface CallbackEntry {
+  status: "SENT" | "FAILED" | "PENDING";
+  url?: string;
+  sentAt: string | null;
+  httpStatus: number | null;
+  error: string | null;
+}
+
+interface PipelineStagePayload {
+  workId: string;
+  taskId: string;
+  stage: "BUILDER" | "VERIFIER" | "COMMITTER";
+  event: "START" | "DONE" | "FAILED";
+  timestamp: string;
+  detail?: string;
+}
+
+export class WebhookRelay {
+  private config: CallbackConfig;
+
+  constructor(config: CallbackConfig) {
+    this.config = config;
+  }
+
+  /**
+   * 콜백 발송 (실시간 트랙)
+   * - 5초 타임아웃, 1회 시도
+   * - 실패 시 soft failure (예외를 던지지 않음)
+   */
+  async sendCallback(
+    workId: string,
+    taskId: string,
+    callbackType: "task" | "progress" | "stage",
+    payload: Record<string, unknown>
+  ): Promise<CallbackEntry> {
+    if (!this.config.enableCallback) {
+      return { status: "PENDING", sentAt: null, httpStatus: null, error: null };
+    }
+
+    const url = this.getUrl(callbackType);
+    if (!url) {
+      return { status: "PENDING", sentAt: null, httpStatus: null, error: "URL not configured" };
+    }
+
+    const timestamp = new Date().toISOString();
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Runner-Api-Key": this.config.callbackToken || "",
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      const entry: CallbackEntry = {
+        status: response.ok ? "SENT" : "FAILED",
+        url,
+        sentAt: timestamp,
+        httpStatus: response.status,
+        error: response.ok ? null : `HTTP ${response.status} ${response.statusText}`,
+      };
+
+      // Activity Log 기록
+      await logWork(workId, "WEBHOOK", "COMMIT",
+        `${callbackType} callback ${entry.status} — ${taskId} → ${url} (HTTP ${response.status})`);
+
+      // callback_status.json 업데이트
+      await this.updateCallbackStatus(workId, taskId, callbackType, entry);
+
+      return entry;
+    } catch (err) {
+      const entry: CallbackEntry = {
+        status: "FAILED",
+        url,
+        sentAt: timestamp,
+        httpStatus: null,
+        error: err instanceof Error ? err.message : String(err),
+      };
+
+      await logWork(workId, "WEBHOOK", "COMMIT",
+        `${callbackType} callback FAILED — ${taskId} → ${url} (${entry.error})`);
+
+      await this.updateCallbackStatus(workId, taskId, callbackType, entry);
+
+      return entry;  // soft failure: 예외를 던지지 않음
+    }
+  }
+
+  /**
+   * PipelineStageCallback 전송
+   */
+  async sendStageCallback(payload: PipelineStagePayload): Promise<CallbackEntry> {
+    return this.sendCallback(
+      payload.workId,
+      payload.taskId,
+      "stage",
+      payload as unknown as Record<string, unknown>
+    );
+  }
+
+  /**
+   * 배치 재전송 (sync_callbacks Tool에서 호출)
+   */
+  async syncFailedCallbacks(
+    worksDir: string,
+    days: number = 2,
+    targetWorkId?: string
+  ): Promise<{ synced: number; failed: number; details: Array<{ workId: string; taskId: string; type: string; status: string }> }> {
+    // works/ 디렉터리 스캔하여 FAILED/PENDING 건 수집 후 일괄 재전송
+    // 구현은 callback-status.ts와 연동
+    // ...생략 (Phase 2 구현)
+    return { synced: 0, failed: 0, details: [] };
+  }
+
+  private getUrl(type: "task" | "progress" | "stage"): string | undefined {
+    switch (type) {
+      case "task": return this.config.taskCallbackUrl;
+      case "progress": return this.config.progressCallbackUrl;
+      case "stage": return this.config.stageCallbackUrl;
+    }
+  }
+
+  private async updateCallbackStatus(
+    workId: string,
+    taskId: string,
+    callbackType: string,
+    entry: CallbackEntry
+  ): Promise<void> {
+    const statusPath = `works/${workId}/callback_status.json`;
+    let statusData: Record<string, unknown>;
+
+    try {
+      const raw = await readFile(statusPath, "utf-8");
+      statusData = JSON.parse(raw);
+    } catch {
+      statusData = { "$schema": "callback_status/v1.0", workId, tasks: {} };
+    }
+
+    const tasks = (statusData as any).tasks || {};
+    if (!tasks[taskId]) tasks[taskId] = {};
+    tasks[taskId][`${callbackType}Callback`] = entry;
+    (statusData as any).tasks = tasks;
+
+    await mkdir(`works/${workId}`, { recursive: true });
+    await writeFile(statusPath, JSON.stringify(statusData, null, 2));
+  }
+}
+```
+
 ---
 
 ## 5. 연동 시나리오
@@ -906,22 +1280,24 @@ const response = await fetch("https://mcp.yourplatform.com/mcp", {
 | TASK-08 | DAG 엔진 (의존성 해석: result file exists -> DONE, ALL deps DONE -> READY, else -> BLOCKED) | `core/dag.ts` |
 | TASK-09 | 슬라이딩 윈도우 컨텍스트 관리 + Activity Log MCP 래퍼 | `core/context-window.ts`, `core/activity-log.ts` |
 | TASK-10 | Git Tools (commit_work, push_work + 3단계 Push 절차) | `tools/git.ts` |
+| TASK-11 | Webhook Relay 모듈 (콜백 발송, callback_status.json 관리, 2트랙 전략) | `core/webhook-relay.ts`, `core/callback-status.ts` |
+| TASK-12 | sync_callbacks Monitor Tool + 배치 재전송 로직 | `tools/monitor.ts` (sync_callbacks 추가) |
 
 ### Phase 3: Integration (1주)
 
 | TASK | 내용 | 산출물 |
 |------|------|--------|
-| TASK-11 | Claude Desktop 연동 테스트 + config 생성 | 연동 가이드 |
-| TASK-12 | Claude Code CLI 연동 (`claude mcp add`) + 기존 [태그] 방식 공존 확인 | 연동 스크립트 |
-| TASK-13 | UC TeamSpace Runner MCP Client 전환 | Runner 코드 수정 |
+| TASK-13 | Claude Desktop 연동 테스트 + config 생성 | 연동 가이드 |
+| TASK-14 | Claude Code CLI 연동 (`claude mcp add`) + 기존 [태그] 방식 공존 확인 | 연동 스크립트 |
+| TASK-15 | UC TeamSpace Runner MCP Client 전환 | Runner 코드 수정 |
 
 ### Phase 4: Production (1주)
 
 | TASK | 내용 | 산출물 |
 |------|------|--------|
-| TASK-14 | HTTP Transport 추가 (Streamable HTTP) | `index.ts` HTTP 모드 |
-| TASK-15 | 인증/인가 (OAuth 2.0 + API Key) | 인증 미들웨어 |
-| TASK-16 | README, 설치 가이드, API 문서 | 문서 |
+| TASK-16 | HTTP Transport 추가 (Streamable HTTP) | `index.ts` HTTP 모드 |
+| TASK-17 | 인증/인가 (OAuth 2.0 + API Key) | 인증 미들웨어 |
+| TASK-18 | README, 설치 가이드, API 문서 | 문서 |
 
 **총 예상 기간: 6주 (시니어 1명 + Claude Code SDD Pipeline)**
 **SDD Pipeline 적용 시: 약 2~3주로 단축 가능**
@@ -1133,3 +1509,21 @@ v1.1에서 반영된 WORK-27 검토 리포트 발견사항:
 - [x] M-5: PLAN.md "APPROVED" 마킹 -> 서버 내부 승인 상태 관리로 변경 (7.1절)
 - [x] M-6: config://agents 리소스 구체화 (3.4절)
 - [x] M-7: Activity Log MCP 환경 유지 전략 추가 (3.8절 신규)
+
+---
+
+### v1.2 Callback/Webhook 전략 반영 체크리스트
+
+| 항목 | 반영 위치 | 완료 |
+|------|----------|------|
+| 인증 헤더 통일 (`X-Runner-Api-Key`) | 3.9.1절 | [x] |
+| 2트랙 콜백 전략 (실시간 + 배치) | 3.9.2절 | [x] |
+| `callback_status.json` 스키마 정의 | 3.9.3절 | [x] |
+| PipelineStageCallback 정식 정의 | 3.9.4절 | [x] |
+| MCP 서버 콜백 설정 (`enableCallback` 등) | 3.9.5절 | [x] |
+| Webhook Relay 모듈 설계 | 3.9.6절 | [x] |
+| Webhook Relay 구현 예시 | 4.6절 | [x] |
+| `sync_callbacks` Monitor Tool 추가 | 3.3.3절 | [x] |
+| 프로젝트 구조에 `webhook-relay.ts`, `callback-status.ts` 추가 | 3.2절 | [x] |
+| 로드맵 Phase 2에 Webhook Relay TASK 추가 (TASK-11, TASK-12) | 6절 | [x] |
+| 로드맵 Phase 3~4 TASK 번호 재정렬 (TASK-13~18) | 6절 | [x] |
