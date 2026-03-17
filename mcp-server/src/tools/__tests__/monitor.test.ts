@@ -95,14 +95,15 @@ describe("registerMonitorTools", () => {
     );
   });
 
-  it("4개 도구를 등록한다", () => {
+  it("5개 도구를 등록한다", () => {
     const parser = createMockParser();
     registerMonitorTools(server, parser);
-    expect(spy).toHaveBeenCalledTimes(4);
+    expect(spy).toHaveBeenCalledTimes(5);
     expect(capturedTools.has("list_works")).toBe(true);
     expect(capturedTools.has("get_work_status")).toBe(true);
     expect(capturedTools.has("get_task_result")).toBe(true);
     expect(capturedTools.has("get_pipeline_log")).toBe(true);
+    expect(capturedTools.has("sync_callbacks")).toBe(true);
   });
 
   // -----------------------------------------------------------------------

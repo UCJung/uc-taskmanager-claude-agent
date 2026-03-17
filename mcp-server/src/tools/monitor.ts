@@ -1,15 +1,17 @@
 /**
- * Monitor Tools — 상태 조회 도구 4개를 MCP Tool로 등록한다.
+ * Monitor Tools — 상태 조회 도구 5개를 MCP Tool로 등록한다.
  *
  * 등록 도구:
  *   1. list_works       — 전체 WORK 목록 + 진행률
  *   2. get_work_status  — 특정 WORK 상세 상태
  *   3. get_task_result  — TASK result.md 내용 조회
  *   4. get_pipeline_log — Activity Log 조회
+ *   5. sync_callbacks   — 미전송/실패 콜백 일괄 재전송
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { WorkParser } from "../core/work-parser.js";
+import { fireBatchRetry } from "../core/webhook-relay.js";
 
 // ---------------------------------------------------------------------------
 // 공유 WorkParser 인스턴스 (기본 설정 사용)
@@ -28,7 +30,7 @@ function getParser(): WorkParser {
 // ---------------------------------------------------------------------------
 
 /**
- * McpServer에 Monitor Tools 4개를 등록한다.
+ * McpServer에 Monitor Tools 5개를 등록한다.
  *
  * @param server McpServer 인스턴스
  * @param parser 테스트 주입용 WorkParser (생략 시 싱글톤 사용)
@@ -188,6 +190,73 @@ export function registerMonitorTools(
           },
         ],
       };
+    }
+  );
+
+  // 5. sync_callbacks
+  server.tool(
+    "sync_callbacks",
+    "미전송/실패 콜백을 일괄 재전송한다. work_id를 지정하면 해당 WORK만 대상으로 한다.",
+    {
+      work_id: z
+        .string()
+        .optional()
+        .describe("특정 WORK ID만 대상 (생략 시 최근 WORK 전체 스캔)"),
+    },
+    async ({ work_id }) => {
+      try {
+        if (work_id) {
+          // 특정 WORK만 대상
+          const result = await fireBatchRetry(work_id);
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify({ work_id, ...result }, null, 2),
+              },
+            ],
+          };
+        }
+
+        // work_id 미지정 시: 최근 WORK 전체 스캔
+        const works = await p.listWorks();
+        let totalSynced = 0;
+        let totalFailed = 0;
+        const allDetails: Array<{ work_id: string; synced: number; failed: number }> = [];
+
+        for (const w of works) {
+          if (w.status !== "IN_PROGRESS" && w.status !== "COMPLETED") continue;
+          const result = await fireBatchRetry(w.id);
+          totalSynced += result.synced;
+          totalFailed += result.failed;
+          if (result.synced > 0 || result.failed > 0) {
+            allDetails.push({ work_id: w.id, synced: result.synced, failed: result.failed });
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(
+                { synced: totalSynced, failed: totalFailed, works_processed: allDetails },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({ error: message }, null, 2),
+            },
+          ],
+        };
+      }
     }
   );
 }

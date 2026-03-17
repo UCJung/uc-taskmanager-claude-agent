@@ -1,10 +1,14 @@
 /**
  * McpServer 인스턴스 생성 및 도구/리소스/프롬프트 등록 래퍼
  * Phase 1: Monitor Tools + Resources + Prompts 등록.
+ * Phase 2: Pipeline/Task/Git Tools + sync_callbacks 추가.
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getConfig } from "./core/config.js";
 import { registerMonitorTools } from "./tools/monitor.js";
+import { registerPipelineTools } from "./tools/pipeline.js";
+import { registerTaskTools } from "./tools/task.js";
+import { registerGitTools } from "./tools/git.js";
 import { registerResources } from "./resources/index.js";
 import { registerPrompts } from "./prompts/index.js";
 
@@ -25,18 +29,28 @@ export function createServer(): McpServer {
 
 /**
  * 서버에 모든 도구/리소스/프롬프트를 등록한다.
- * Phase 1: Monitor Tools + Resources + Prompts 등록.
- * 이후 Phase에서 Pipeline/Task Tools 추가 예정.
+ *
+ * Phase 1: Monitor Tools (5) + Resources (5) + Prompts (6)
+ * Phase 2: Pipeline Tools (4) + Task Tools (4) + Git Tools (2)
  *
  * @param server McpServer 인스턴스
  */
 export async function registerAll(server: McpServer): Promise<void> {
-  // Phase 1: Monitor Tools 등록
+  // Monitor Tools (list_works, get_work_status, get_task_result, get_pipeline_log, sync_callbacks)
   registerMonitorTools(server);
 
-  // Phase 1: Resources 등록
+  // Pipeline Tools (create_work, execute_work, approve_plan, resume_work)
+  registerPipelineTools(server);
+
+  // Task Tools (get_next_task, execute_task, retry_task, approve_task)
+  registerTaskTools(server);
+
+  // Git Tools (commit_work, push_work)
+  registerGitTools(server);
+
+  // Resources (5 URI patterns)
   registerResources(server);
 
-  // Phase 1: Prompts 등록 (6개 에이전트 프롬프트)
+  // Prompts (6 agent prompts)
   registerPrompts(server);
 }
