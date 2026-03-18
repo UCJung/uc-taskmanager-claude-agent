@@ -7,7 +7,7 @@
 | TASK | Title | Status | Commit | Duration |
 |------|-------|--------|--------|----------|
 | TASK-00 | spawn-pipeline Context Isolation 핵심 구현 | ✅ Done | 1164a7b | — |
-| TASK-01 | 테스트 업데이트 및 빌드 검증 | ✅ Done | — | — |
+| TASK-01 | 테스트 업데이트 및 빌드 검증 | ✅ Done | b7b5b35 | — |
 
 ## Log
 
