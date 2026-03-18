@@ -21,6 +21,7 @@ import type { TaskResultContextHandoff } from "../core/context-window.js";
 import { logWork } from "../core/activity-log.js";
 import { FileManager } from "../core/file-manager.js";
 import { getConfig } from "../core/config.js";
+import { spawnTaskIsolated } from "../core/spawn-pipeline.js";
 
 // ---------------------------------------------------------------------------
 // 공유 WorkParser 인스턴스 (기본 설정 사용)
@@ -313,31 +314,10 @@ export function registerTaskTools(
         .optional()
         .describe("이전 TASK 컨텍스트 (생략 시 자동 주입)"),
     },
-    async ({ work_id, task_id, previous_context }) => {
+    async ({ work_id, task_id }) => {
       try {
         // task_id 정규화
         const normalizedTaskId = normalizeTaskId(task_id);
-
-        // previous_context가 없으면 자동 주입
-        let resolvedContext = previous_context;
-        if (!resolvedContext) {
-          try {
-            const plan = await p.readPlan(work_id);
-            const dagMap = parseDagFromPlan(plan.rawContent);
-            const dag = new DagEngine(dagMap);
-            const completedSet = await buildCompletedSet(work_id);
-
-            resolvedContext = await buildDependencyContext(
-              work_id,
-              normalizedTaskId,
-              dag,
-              completedSet,
-              p
-            );
-          } catch {
-            // 컨텍스트 자동 주입 실패 시 undefined 유지
-          }
-        }
 
         // Activity Log 기록
         await logWork(
@@ -347,29 +327,19 @@ export function registerTaskTools(
           `Task execution started: ${normalizedTaskId}`
         );
 
-        // TASK 명세 파일 읽기
-        let spec: string | undefined;
-        try {
-          const num = parseInt(normalizedTaskId.replace("TASK-", ""), 10);
-          const taskFile = path.join(
-            "works",
-            work_id,
-            `TASK-${String(num).padStart(2, "0")}.md`
-          );
-          const config = getConfig();
-          const fm = new FileManager(config.projectRoot);
-          spec = await fm.readFile(taskFile);
-        } catch {
-          // TASK 명세 파일 없으면 undefined 유지
-        }
+        // spawnTaskIsolated로 Context Isolation 파이프라인 실행
+        // (프롬프트 구성 및 컨텍스트 주입은 spawnTaskIsolated 내부에서 처리)
+        const config = getConfig();
+        const jobId = spawnTaskIsolated(work_id, normalizedTaskId, {
+          cwd: config.projectRoot,
+        });
 
         const result = {
           work_id,
           task_id: normalizedTaskId,
-          status: "dispatched",
-          spec,
-          previous_context: resolvedContext,
-          message: "Builder → Verifier → Committer 파이프라인을 실행하세요.",
+          job_id: jobId,
+          status: "spawned",
+          message: "TASK 실행이 시작되었습니다. get_job_status로 진행 상태를 확인하세요.",
         };
 
         return {

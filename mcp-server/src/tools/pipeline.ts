@@ -1,11 +1,12 @@
 /**
- * Pipeline Tools — WORK 파이프라인 관리 도구 4개를 MCP Tool로 등록한다.
+ * Pipeline Tools — WORK 파이프라인 관리 도구 5개를 MCP Tool로 등록한다.
  *
  * 등록 도구:
  *   1. create_work    — 새 WORK 생성 + execution-mode 자동 판정
- *   2. execute_work   — DAG 기반 파이프라인 실행
+ *   2. execute_work   — claude -p spawn 기반 비동기 파이프라인 실행
  *   3. approve_plan   — PLAN 승인 (full 모드)
  *   4. resume_work    — 중단된 WORK 재개
+ *   5. get_job_status — 파이프라인 job 실행 상태 조회
  */
 import path from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -16,6 +17,11 @@ import { determineExecutionMode } from "../core/execution-mode.js";
 import { logWork } from "../core/activity-log.js";
 import { FileManager } from "../core/file-manager.js";
 import { getConfig } from "../core/config.js";
+import {
+  spawnWorkDag,
+  getJobStatus,
+  listActiveJobs,
+} from "../core/spawn-pipeline.js";
 
 // ---------------------------------------------------------------------------
 // 공유 WorkParser 인스턴스 (기본 설정 사용)
@@ -34,7 +40,7 @@ function getParser(): WorkParser {
 // ---------------------------------------------------------------------------
 
 /**
- * McpServer에 Pipeline Tools 4개를 등록한다.
+ * McpServer에 Pipeline Tools 5개를 등록한다.
  *
  * @param server McpServer 인스턴스
  * @param parser 테스트 주입용 WorkParser (생략 시 싱글톤 사용)
@@ -215,6 +221,10 @@ export function registerPipelineTools(
           nextAction = `ready_tasks를 순서대로 execute_task로 실행하세요: ${readyTasks.join(", ")}`;
         }
 
+        // DAG 기반 자동 실행 (spawnWorkDag)
+        const config = getConfig();
+        const jobId = spawnWorkDag(work_id, { cwd: config.projectRoot });
+
         return {
           content: [
             {
@@ -222,7 +232,8 @@ export function registerPipelineTools(
               text: JSON.stringify(
                 {
                   work_id,
-                  status: "running",
+                  job_id: jobId,
+                  status: "spawned",
                   execution_mode: executionMode,
                   total_tasks: totalTasks,
                   completed_tasks: completedCount,
@@ -417,6 +428,98 @@ export function registerPipelineTools(
                 null,
                 2
               ),
+            },
+          ],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({ error: message }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // 5. get_job_status
+  server.tool(
+    "get_job_status",
+    "파이프라인 job의 실행 상태를 조회한다. job_id로 개별 조회하거나 list_all로 전체 활성 목록을 반환한다.",
+    {
+      job_id: z
+        .string()
+        .optional()
+        .describe("조회할 job ID (생략 시 list_all 필요)"),
+      list_all: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe("true이면 전체 활성 job 목록 반환"),
+    },
+    async ({ job_id, list_all }) => {
+      try {
+        if (list_all) {
+          const activeJobs = listActiveJobs();
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(
+                  {
+                    active_jobs: activeJobs,
+                    count: activeJobs.length,
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+          };
+        }
+
+        if (!job_id) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(
+                  { error: "job_id 또는 list_all: true를 지정하세요" },
+                  null,
+                  2
+                ),
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        const status = getJobStatus(job_id);
+        if (!status) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(
+                  { error: `job_id '${job_id}'를 찾을 수 없습니다` },
+                  null,
+                  2
+                ),
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(status, null, 2),
             },
           ],
         };

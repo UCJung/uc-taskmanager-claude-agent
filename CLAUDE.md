@@ -32,5 +32,6 @@ ko
 - 각 에이전트는 작업 완료 후 결과(dispatch XML 또는 task-result XML)만 반환한다.
 - Main Claude가 반환값을 받아 다음 에이전트를 순서대로 호출한다.
 - 파이프라인 흐름은 `~/.claude/agents/agent-flow.md` 기준을 따른다.
+- 컨텍스트 압축 후 재개 시, 진행 중인 WORK가 있으면 `~/.claude/agents/agent-flow.md`를 다시 읽는다.
 
 예: `[추가기능]`, `[버그수정]`, `[리팩토링]`, `[WORK 시작]` 등

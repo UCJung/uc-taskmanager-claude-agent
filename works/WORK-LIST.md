@@ -36,3 +36,5 @@
 | WORK-33 | Phase 1.5 — CLAUDE.md MCP 프롬프트 전환 (테스트 프로젝트) | COMPLETED | 2026-03-18 | 2026-03-18 |
 | WORK-34 | Phase 2 — Pipeline Execution MCP Server 실행 도구 구현 | COMPLETED | 2026-03-18 | 2026-03-18 |
 | WORK-35 | Phase 3 — Integration (Claude Desktop + CLI 연동) | COMPLETED | 2026-03-18 | 2026-03-18 |
+| WORK-36 | MCP Server spawn-pipeline — claude -p 기반 비동기 파이프라인 실행 | IN_PROGRESS | 2026-03-18 | - |
+| WORK-37 | MCP 파이프라인 Context Isolation 구현 | IN_PROGRESS | 2026-03-18 | - |

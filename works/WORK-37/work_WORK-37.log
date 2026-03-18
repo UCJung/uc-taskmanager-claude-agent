@@ -1,0 +1,4 @@
+[2026-03-18T22:39:39]_ROUTER_INIT_WORK-37 생성 — Execution-Mode: pipeline
+[2026-03-18T22:40:52]_ROUTER_REF_참조: file-content-schema.md, shared-prompt-sections.md, xml-schema.md, work-activity-log.md, spawn-pipeline.ts, context-window.ts, dag.ts, activity-log.ts, prompts/_helpers.ts, prompts/builder.ts, prompts/verifier.ts, prompts/committer.ts, tools/task.ts, tools/pipeline.ts, config.ts, file-manager.ts
+[2026-03-18T22:40:52]_ROUTER_PLAN_PLAN.md, TASK-00.md, TASK-01.md 생성 완료
+[2026-03-18T22:40:52]_ROUTER_DISPATCH_Builder dispatch XML 반환
