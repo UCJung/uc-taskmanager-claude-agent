@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { WorkParser } from "../core/work-parser.js";
+import { fireBatchRetry } from "../core/webhook-relay.js";
 // ---------------------------------------------------------------------------
 // 공유 WorkParser 인스턴스 (기본 설정 사용)
 // ---------------------------------------------------------------------------
@@ -14,7 +15,7 @@ function getParser() {
 // registerMonitorTools
 // ---------------------------------------------------------------------------
 /**
- * McpServer에 Monitor Tools 4개를 등록한다.
+ * McpServer에 Monitor Tools 5개를 등록한다.
  *
  * @param server McpServer 인스턴스
  * @param parser 테스트 주입용 WorkParser (생략 시 싱글톤 사용)
@@ -140,6 +141,62 @@ export function registerMonitorTools(server, parser) {
                 },
             ],
         };
+    });
+    // 5. sync_callbacks
+    server.tool("sync_callbacks", "미전송/실패 콜백을 일괄 재전송한다. work_id를 지정하면 해당 WORK만 대상으로 한다.", {
+        work_id: z
+            .string()
+            .optional()
+            .describe("특정 WORK ID만 대상 (생략 시 최근 WORK 전체 스캔)"),
+    }, async ({ work_id }) => {
+        try {
+            if (work_id) {
+                // 특정 WORK만 대상
+                const result = await fireBatchRetry(work_id);
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify({ work_id, ...result }, null, 2),
+                        },
+                    ],
+                };
+            }
+            // work_id 미지정 시: 최근 WORK 전체 스캔
+            const works = await p.listWorks();
+            let totalSynced = 0;
+            let totalFailed = 0;
+            const allDetails = [];
+            for (const w of works) {
+                if (w.status !== "IN_PROGRESS" && w.status !== "COMPLETED")
+                    continue;
+                const result = await fireBatchRetry(w.id);
+                totalSynced += result.synced;
+                totalFailed += result.failed;
+                if (result.synced > 0 || result.failed > 0) {
+                    allDetails.push({ work_id: w.id, synced: result.synced, failed: result.failed });
+                }
+            }
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({ synced: totalSynced, failed: totalFailed, works_processed: allDetails }, null, 2),
+                    },
+                ],
+            };
+        }
+        catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({ error: message }, null, 2),
+                    },
+                ],
+            };
+        }
     });
 }
 //# sourceMappingURL=monitor.js.map

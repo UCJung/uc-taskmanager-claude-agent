@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "uc-taskmanager": {
+      "command": "node",
+      "args": [
+        "C:/rnd/agent/uc-taskmanager/mcp-server/dist/index.js"
+      ],
+      "env": {
+        "MCP_PROJECT_ROOT": "C:/path/to/your-project",
+        "MCP_TRANSPORT": "stdio"
+      }
+    }
+  }
+}
