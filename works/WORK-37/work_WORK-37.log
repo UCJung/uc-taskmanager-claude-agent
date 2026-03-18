@@ -2,3 +2,10 @@
 [2026-03-18T22:40:52]_ROUTER_REF_참조: file-content-schema.md, shared-prompt-sections.md, xml-schema.md, work-activity-log.md, spawn-pipeline.ts, context-window.ts, dag.ts, activity-log.ts, prompts/_helpers.ts, prompts/builder.ts, prompts/verifier.ts, prompts/committer.ts, tools/task.ts, tools/pipeline.ts, config.ts, file-manager.ts
 [2026-03-18T22:40:52]_ROUTER_PLAN_PLAN.md, TASK-00.md, TASK-01.md 생성 완료
 [2026-03-18T22:40:52]_ROUTER_DISPATCH_Builder dispatch XML 반환
+[2026-03-18T22:52:33]_COMMITTER_COMMIT_TASK-00 commit 96cf323 — spawn-pipeline Context Isolation 핵심 구현
+[2026-03-18T23:00:41]_VERIFIER_INIT_WORK-37 TASK-01 검증 시작
+[2026-03-18T23:00:41]_VERIFIER_REF_참조: TASK-01_progress.md, spawn-pipeline.test.ts
+[2026-03-18T23:00:41]_VERIFIER_BUILD_npm run build PASS — TypeScript 컴파일 오류 없음
+[2026-03-18T23:00:41]_VERIFIER_BUILD_npm test PASS — 228 tests passed (spawnTaskIsolated 11, spawnWorkDag 9)
+[2026-03-18T23:02:04]_COMMITTER_INIT_WORK-37 TASK-01 커밋 작업 시작
+[2026-03-18T23:02:04]_COMMITTER_REF_참조: file-content-schema.md, shared-prompt-sections.md, xml-schema.md, context-policy.md, work-activity-log.md
