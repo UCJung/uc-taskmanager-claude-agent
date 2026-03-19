@@ -60,24 +60,6 @@ uc-taskmanager was built to solve this. When you provide a requirement as input,
 
 Each step runs in an **isolated subagent pipeline**, so your context stays clean and every decision is documented.
 
-### The Bigger Picture
-
-This agent is designed to work with an **SDD-based requirement management and automated development system** — a server application that links requirement management → automated development → plans and artifacts. The full system architecture is documented in [`docs/spec_SDD_with_ucagent_requirement.md`](docs/spec_SDD_with_ucagent_requirement.md). Use it as a reference to build your own system tailored to your needs.
-
-### A Note on Language
-
-Starting from v1.1.0, uctm supports **multi-language agent prompts**. Use `uctm init --lang en` for English or `--lang ko` for Korean. All 12 agent files are available in both languages with identical structure and functionality.
-
-I'm Korean, so you'll find Korean in some internal documents (design specs, commit messages). Modern translation tools handle Korean well, so this shouldn't be a barrier.
-
-### What This Took
-
-I built this agent and the accompanying SDD requirement management system in roughly **one calendar month — about 2 weeks of actual development time** (8 hours/day). Ideas become reality. The technical and time barriers that once stopped you have fallen. This is the age of AI agents.
-
-**Good luck. Build something great.**
-
-This project is open source. Use it freely, share your ideas, and let's push this forward together.
-
 ---
 
 Six subagents work across any project and any language, automatically handling **request routing → task decomposition → dependency management → code implementation → verification → commit**.
@@ -265,7 +247,7 @@ uctm update --lang en
 ```bash
 git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
 mkdir -p .claude/agents
-cp /tmp/uc-tm/agents/*.md .claude/agents/
+cp /tmp/uc-tm/agents/en/*.md .claude/agents/   # or agents/ko/ for Korean
 rm -rf /tmp/uc-tm
 git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
 ```
@@ -950,6 +932,12 @@ Serena opens a web dashboard in your browser on every startup. To disable this, 
 ```
 
 The dashboard is still available at `http://localhost:PORT` — it just won't auto-open on startup.
+
+---
+
+## The Bigger Picture
+
+This agent is designed to work with an **SDD-based requirement management and automated development system** — a server application that links requirement management → automated development → plans and artifacts. The full system architecture is documented in [`docs/spec_SDD_with_ucagent_requirement.md`](docs/spec_SDD_with_ucagent_requirement.md). Use it as a reference to build your own system tailored to your needs.
 
 ---
 

@@ -23,6 +23,7 @@ README 업데이트 범위:
 ## Language
 
 ko
+CommitLanguage: en
 
 ## Agent 호출 규칙
 
