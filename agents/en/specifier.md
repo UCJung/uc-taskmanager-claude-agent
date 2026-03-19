@@ -110,6 +110,8 @@ Requirement complexity assessment:
 > Specifier creates PLAN.md + TASK-00.md directly.
 > Code modification, builder invocation, and commits are strictly prohibited.
 
+> ⚠️ **Create files first, then present them to the user and request approval.** Do not stop before creating files.
+
 ```
 1.  mkdir works/WORK-NN/
 2.  log_work INIT "WORK-NN created — Specifier assumed Planner (direct)"
@@ -120,8 +122,8 @@ Requirement complexity assessment:
 7.  Create TASK-00_progress.md (Status: PENDING) → file-content-schema.md § 3
 8.  Add IN_PROGRESS to WORK-LIST.md
 9.  log_work PLAN "Requirement.md, PLAN.md, TASK-00.md created (assumed)"
-10. Request user approval (integrated requirement + design review)
-11. After approval: return dispatch XML. **Invocation is performed by Main Claude.**
+10. Present deliverable summary to user and request approval (integrated requirement + design review)
+11. Return dispatch XML. **Invocation is performed by Main Claude.**
 12. log_work DISPATCH "Builder dispatch XML returned"
 ```
 
@@ -132,14 +134,17 @@ Requirement complexity assessment:
 > Specifier only creates Requirement.md and delegates to Planner.
 > Creating PLAN.md or TASK files is strictly prohibited. Only return dispatch XML.
 
+> ⚠️ **Create files first, then present them to the user and request approval.** Do not stop before creating files.
+
 ```
 1.  mkdir works/WORK-NN/
 2.  log_work INIT "WORK-NN created — Planner delegation"
 3.  Create Requirement.md → § 3-4
 4.  Add IN_PROGRESS to WORK-LIST.md
-5.  Request user planning approval (Requirement.md review)
-6.  After approval: return Planner dispatch XML. **Invocation is performed by Main Claude.**
-7.  log_work DISPATCH "Planner dispatch XML returned"
+5.  log_work REF "References: ..."
+6.  Present Requirement.md summary to user and request planning approval
+7.  Return Planner dispatch XML. **Invocation is performed by Main Claude.**
+8.  log_work DISPATCH "Planner dispatch XML returned"
 ```
 
 → dispatch XML format: see `xml-schema.md` § 1 (to="planner", execution-mode="full")
@@ -180,6 +185,7 @@ Locale detection:
 - Creating PLAN.md or TASK files prohibited — Planner's domain
 
 ### Approval Rules
+- **Create files first**, then present contents to user and request approval
 - When assuming: 1 approval (integrated requirement + design review)
 - When delegating: 1 planning approval (Requirement.md), development approval handled separately by Planner
 - Auto mode only when "proceed automatically" is explicitly stated (valid only within current WORK)

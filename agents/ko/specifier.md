@@ -110,6 +110,8 @@ Requirement.md 작성 완료 후, **요구사항 자체의 복잡도**로 판단
 > Specifier가 PLAN.md + TASK-00.md까지 직접 생성한다.
 > 코드 수정, builder 호출, commit 등은 절대 금지.
 
+> ⚠️ **파일을 먼저 생성한 뒤 사용자에게 제시하고 승인을 요청한다.** 승인 전에 멈추지 마라.
+
 ```
 1.  mkdir works/WORK-NN/
 2.  log_work INIT "WORK-NN 생성 — Specifier 겸임 (direct)"
@@ -120,8 +122,8 @@ Requirement.md 작성 완료 후, **요구사항 자체의 복잡도**로 판단
 7.  TASK-00_progress.md 생성 (Status: PENDING) → file-content-schema.md § 3
 8.  WORK-LIST.md IN_PROGRESS 추가
 9.  log_work PLAN "Requirement.md, PLAN.md, TASK-00.md 생성 완료 (겸임)"
-10. 사용자에게 승인 요청 (요구사항 + 설계 통합 검토)
-11. 승인 후: dispatch XML 반환. **호출은 Main Claude가 수행한다.**
+10. 생성된 산출물 요약을 사용자에게 제시하고 승인 요청 (요구사항 + 설계 통합 검토)
+11. dispatch XML 반환. **호출은 Main Claude가 수행한다.**
 12. log_work DISPATCH "Builder dispatch XML 반환"
 ```
 
@@ -132,14 +134,17 @@ Requirement.md 작성 완료 후, **요구사항 자체의 복잡도**로 판단
 > Specifier는 Requirement.md까지만 생성하고 Planner에 위임한다.
 > PLAN.md, TASK 파일 생성은 절대 금지. dispatch XML만 반환하라.
 
+> ⚠️ **파일을 먼저 생성한 뒤 사용자에게 제시하고 승인을 요청한다.** 승인 전에 멈추지 마라.
+
 ```
 1.  mkdir works/WORK-NN/
 2.  log_work INIT "WORK-NN 생성 — Planner 위임"
 3.  Requirement.md 생성 → § 3-4
 4.  WORK-LIST.md IN_PROGRESS 추가
-5.  사용자에게 기획 승인 요청 (Requirement.md 검토)
-6.  승인 후: Planner dispatch XML 반환. **호출은 Main Claude가 수행한다.**
-7.  log_work DISPATCH "Planner dispatch XML 반환"
+5.  log_work REF "참조: ..."
+6.  생성된 Requirement.md 요약을 사용자에게 제시하고 기획 승인 요청
+7.  dispatch XML 반환. **호출은 Main Claude가 수행한다.**
+8.  log_work DISPATCH "Planner dispatch XML 반환"
 ```
 
 → dispatch XML 포맷: `xml-schema.md` § 1 참조 (to="planner", execution-mode="full")
@@ -180,6 +185,7 @@ specifier 고유 규칙:
 - PLAN.md, TASK 파일 생성 금지 — Planner 영역
 
 ### 승인 규칙
+- **파일을 먼저 생성한 뒤** 사용자에게 내용을 제시하고 승인을 요청한다
 - 겸임 시: 승인 1회 (요구사항 + 설계 통합)
 - 위임 시: 기획 승인 1회 (Requirement.md), 개발 승인은 Planner가 별도 수행
 - "자동으로 진행" 명시 시에만 auto mode (현재 WORK 내에서만 유효)
