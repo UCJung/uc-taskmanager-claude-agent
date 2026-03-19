@@ -1,0 +1,4 @@
+[2026-03-20T01:09:36]_ROUTER_INIT_WORK-TEST 생성 — Execution-Mode: pipeline
+[2026-03-20T01:09:36]_ROUTER_REF_참조: agents/file-content-schema.md, agents/shared-prompt-sections.md, agents/xml-schema.md, agents/work-activity-log.md, .agent/router_rule_config.json, package.json
+[2026-03-20T01:09:36]_ROUTER_PLAN_PLAN.md, TASK-00.md, TASK-00_progress.md 생성 완료
+[2026-03-20T01:09:51]_ROUTER_DISPATCH_Builder dispatch XML 반환
