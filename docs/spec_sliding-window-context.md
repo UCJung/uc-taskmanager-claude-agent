@@ -113,27 +113,29 @@ builder가 result.md를 직접 쓰면 작업에 집중하다 빠뜨리는 문제
 
 ## 4. execution-mode별 컨텍스트 전달 방식
 
-슬라이딩 윈도우는 pipeline / full 모드에서 동작한다. direct 모드는 Router가 단일 세션에서 처리하므로 컨텍스트 전달 문제 자체가 없다.
+슬라이딩 윈도우는 pipeline / full 모드에서 동작한다. direct 모드는 Main Claude가 router를 호출하여 단일 세션에서 처리하므로 컨텍스트 전달 문제 자체가 없다.
 
 ### direct 모드
 
-Router 단일 세션 내 처리 — 서브에이전트 간 handoff 없음.
+Main Claude → router 단일 세션 내 처리 — 서브에이전트 간 handoff 없음.
 
 ```
-Router 세션:
+Main Claude → router 세션:
   [분석] → [코드 수정] → [self-check] → [result.md] → [commit] → [콜백]
   ↑ 모두 동일 세션, 컨텍스트 누적됨
 ```
 
-### pipeline 모드 — Builder → Verifier → Committer
+### pipeline 모드 — Main Claude → Builder → Verifier → Committer
 
 ```
-builder 완료
-  └─ verifier 수신: builder context-handoff (FULL)
+Main Claude가 각 서브에이전트를 순차 호출하며 context-handoff를 중개한다.
+
+builder 완료 → Main Claude에 반환
+  └─ Main Claude → verifier 호출 시 전달: builder context-handoff (FULL)
                     → builder가 왜 그렇게 짰는지 알고 타겟 검증 가능
 
-verifier 완료
-  └─ committer 수신: verifier context-handoff (FULL)
+verifier 완료 → Main Claude에 반환
+  └─ Main Claude → committer 호출 시 전달: verifier context-handoff (FULL)
                      builder context-handoff (SUMMARY)
                      → result.md 작성에 필요한 정보만 보유
 ```
@@ -148,7 +150,7 @@ committer가 받는 컨텍스트:
 ### full 모드 — TASK 간 의존성 전달
 
 TASK-1 완료 후 TASK-2가 시작될 때, TASK-2의 builder는 새 세션으로 시작한다.
-scheduler가 슬라이딩 윈도우 규칙에 따라 선행 TASK result context-handoff를 자동으로 포함한다.
+Main Claude가 scheduler의 dispatch 결과에 따라 슬라이딩 윈도우 규칙을 적용하여 선행 TASK result context-handoff를 builder에게 전달한다.
 
 ```
 TASK-00 → TASK-01 → TASK-02 → TASK-03
@@ -159,7 +161,7 @@ TASK-03 builder가 받는 컨텍스트:
   TASK-00 result context-handoff  ← DROP (3단계 전)
 ```
 
-의존성 깊이에 따라 **scheduler가 자동으로 detail-level을 결정**해서 전달한다.
+의존성 깊이에 따라 **scheduler가 dispatch XML에 detail-level을 명시**하고, Main Claude가 이를 기반으로 해당 context-handoff를 builder에게 전달한다.
 
 ### scheduler dispatch 예시 (full 모드)
 
@@ -221,7 +223,7 @@ builder가 재dispatch되면 progress.md를 읽고 **마지막 완료된 체크�
 ### progress.md 선생성 규칙
 
 - **full 모드**: planner가 TASK 파일 생성 시 progress 템플릿을 함께 미리 생성 (`Status: PENDING`)
-- **pipeline / direct 모드**: Router가 TASK 파일 생성 시 함께 생성
+- **pipeline / direct 모드**: Main Claude가 router를 통해 TASK 파일 생성 시 함께 생성
 
 ---
 
@@ -241,11 +243,11 @@ committer(pipeline / full 모드)는 작업 시작 전 반드시 다음을 확�
   → COMMITTER DONE 콜백 전송
 
 [Gate 실패 시]
-  → dispatcher(Router 또는 Scheduler)에 FAIL 반환
-  → dispatcher가 builder 재dispatch (최대 2회 재시도)
+  → Main Claude에 FAIL 반환
+  → Main Claude가 builder 재dispatch (최대 2회 재시도)
 ```
 
-direct 모드에서는 Router가 self-check로 동등한 검증을 수행한다.
+direct 모드에서는 Main Claude가 호출한 router가 self-check로 동등한 검증을 수행한다.
 
 ---
 
@@ -286,7 +288,7 @@ committer가 builder + verifier의 context-handoff를 종합해 작성한다.
 ```
 
 섹션 헤더는 PLAN.md의 `Language:` 설정에 따라 다국어로 작성된다 (en/ko/ja).
-direct 모드에서는 Router가 최소 포맷의 result.md를 직접 작성한다 (`Execution-Mode: direct` 필드 포함).
+direct 모드에서는 Main Claude가 호출한 router가 최소 포맷의 result.md를 직접 작성한다 (`Execution-Mode: direct` 필드 포함).
 
 ---
 

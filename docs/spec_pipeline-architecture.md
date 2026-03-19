@@ -303,7 +303,7 @@ works/
 주요 역할:
 - DAG Resolution: `result file 존재 → DONE`, `ALL deps DONE → READY`, 그 외 `BLOCKED`
 - READY TASK를 번호 낮은 순 실행
-- builder → verifier → committer 순차 dispatch XML 반환
+- builder → verifier → committer 순차 호출을 위한 dispatch XML 반환 (Main Claude가 각각 호출)
 - FAIL 시 최대 3회 builder 재dispatch
 - PROGRESS.md 업데이트 및 진행 보고
 - Pipeline Stage Callbacks (BUILDER/VERIFIER/COMMITTER START/DONE)

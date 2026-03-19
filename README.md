@@ -93,7 +93,7 @@ Six subagents work across any project and any language, automatically handling *
 > [bugfix] Fix typo in login error message
 ```
 
-Router selects `execution-mode: direct` → handles entirely in its own session. No subagent spawned. Creates WORK-NN directory + PLAN + result.md + commit.
+Main Claude calls router, which selects `execution-mode: direct` and handles everything in its session. No additional subagent spawned. Creates WORK-NN directory + PLAN + result.md + commit.
 
 ### Quick Task (pipeline mode)
 
@@ -101,7 +101,7 @@ Router selects `execution-mode: direct` → handles entirely in its own session.
 > [bugfix] Fix the login button not responding on mobile
 ```
 
-Router selects `execution-mode: pipeline` → creates PLAN, delegates to builder → verifier → committer. Router context stays clean.
+Main Claude calls router, which selects `execution-mode: pipeline` and creates PLAN. Then Main Claude calls builder → verifier → committer in sequence.
 
 ### Complex Feature (WORK)
 
@@ -166,7 +166,7 @@ Skip to a specific TASK within a WORK (e.g., retry after a failure):
 > Run WORK-02: TASK-02
 ```
 
-The scheduler reads the TASK file directly and dispatches builder → verifier → committer.
+The scheduler returns the next TASK, then Main Claude calls builder → verifier → committer in sequence.
 
 #### 7. Force WORK Creation (Skip Complexity Check)
 
@@ -276,34 +276,26 @@ claude
 
 ## Concept: Three Execution Modes
 
-The **router** analyzes every `[]`-tagged request and selects one of three `execution-mode` values:
+Main Claude detects the `[]` tag and calls the **router** subagent, which selects one of three `execution-mode` values:
 
 ```
-User Request
-     │
-     ▼
-  ┌────────┐
-  │ router │ ── no [] tag ──▶ handle directly (no pipeline)
-  └───┬────┘
-      │ [] tag detected
-      ▼
-  Assess complexity → execution-mode
-  (reads .agent/router_rule_config.json if present)
-      │
+User Request → Main Claude (orchestrator)
+                    │
+                    ▼
+              ┌────────┐
+              │ router │ (called by Main Claude)
+              └───┬────┘
+                  │
+            execution-mode returned
+                  │
       ├─ direct  (no build/test required)
-      │   ▼
-      │  Router handles everything — no subagent overhead
-      │  Creates WORK-NN/PLAN.md + result.md + commit (0 extra sessions)
+      │   → router handles everything — 0 additional subagent calls
       │
       ├─ pipeline  (build/test required, single domain, sequential)
-      │   ▼
-      │  router → builder → verifier → committer
-      │  Router creates PLAN, dispatches 3 subagents
+      │   → Main Claude calls: builder → verifier → committer (in sequence)
       │
       └─ full  (multi-domain / complex DAG / new module / 5+ tasks)
-          ▼
-         router → planner → scheduler → [builder → verifier → committer] × N
-                 (full planning + multi-task pipeline)
+          → Main Claude calls: planner → scheduler → [builder → verifier → committer] × N
 ```
 
 All three modes output to `works/WORK-NN/` and guarantee `result.md` + `COMMITTER DONE` callback.
@@ -320,18 +312,19 @@ WORK (unit of work)       A single goal. The unit requested by the user.
 
 ### pipeline mode (Single Task, Delegated)
 
-Subagent-delegated path for moderate single tasks. Router stays clean.
+Subagent-delegated path for moderate single tasks. Main Claude calls each agent in sequence. Router stays clean.
 
 ```
-router → builder(sonnet) → verifier(haiku) → committer(haiku)
+Main Claude → builder(sonnet) → verifier(haiku) → committer(haiku)
+              (each called individually by Main Claude)
 ```
 
 ### direct mode (Trivial)
 
-Router handles everything in its own context. No subagent sessions spawned.
+Main Claude calls router, which handles everything in its own session. No additional subagent calls.
 
 ```
-router: Analyze → Implement → Self-verify → Commit → result.md
+Main Claude → router: Analyze → Implement → Self-verify → Commit → result.md
 ```
 
 ---
@@ -340,7 +333,12 @@ router: Analyze → Implement → Self-verify → Commit → result.md
 
 ### WORK Pipeline (Complex)
 
+> Subagents cannot nest — Main Claude (CLI terminal) orchestrates every call.
+
 ```
+                          Main Claude (orchestrator)
+                    ┌──────────┼──────────────────────┐
+                    │          │                       │
   router           planner          scheduler         builder          verifier         committer
  ┌────────┐      ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
  │Request  │────▶│Create    │────▶│Dependency │────▶│Code      │────▶│Build/Test│────▶│Result    │
@@ -360,7 +358,8 @@ router: Analyze → Implement → Self-verify → Commit → result.md
  │PLAN    │─────▶│Code      │────▶│Build/Test│────▶│Result    │
  │+TASK   │      │Implement │     │Verify    │     │→ git     │
  └────────┘      └──────────┘     └──────────┘     └──────────┘
-  (context clean)  (sonnet)         (haiku)           (haiku)
+                    (sonnet)         (haiku)           (haiku)
+              ← each called by Main Claude →
 ```
 
 ### direct mode (Trivial)
@@ -686,8 +685,8 @@ For a monorepo with strict build requirements:
 ### Three Execution Modes
 
 The router matches effort to complexity via `execution-mode`:
-- **direct**: 1-line typo fix — 0 extra sessions, Router handles everything. Committer session overhead (~12,500 tokens) completely eliminated.
-- **pipeline**: Moderate fix — delegated to builder → verifier → committer, router context stays clean
+- **direct**: 1-line typo fix — Main Claude calls router, which handles everything. 0 additional subagent sessions.
+- **pipeline**: Moderate fix — Main Claude calls builder → verifier → committer in sequence. Main Claude only orchestrates, minimizing its own context usage
 - **full**: Complex features — full planning, decomposition, and tracking
 
 All three modes output to `works/WORK-NN/` with identical artifact structure (PLAN.md + result.md + COMMITTER DONE callback), ensuring Runner integration works regardless of mode.

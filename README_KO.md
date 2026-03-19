@@ -93,7 +93,7 @@ uc-taskmanager는 이 문제를 해결하기 위해 만들었습니다. 요구�
 > [버그수정] 로그인 에러 메시지 오타 수정
 ```
 
-router가 `execution-mode: direct` 선택 → 자체 세션에서 직접 처리. 추가 서브에이전트 세션 없음. WORK-NN 디렉토리 + PLAN + result.md + commit 자동 생성.
+Main Claude가 router를 호출하면 `execution-mode: direct`를 선택하여 자체 세션에서 직접 처리. 추가 서브에이전트 호출 없음. WORK-NN 디렉토리 + PLAN + result.md + commit 자동 생성.
 
 ### 간단한 작업 (pipeline 모드)
 
@@ -101,7 +101,7 @@ router가 `execution-mode: direct` 선택 → 자체 세션에서 직접 처리.
 > [버그수정] 모바일에서 로그인 버튼이 반응하지 않는 문제 수정
 ```
 
-router가 `execution-mode: pipeline` 선택 → PLAN 생성 후 builder → verifier → committer에 위임. router 컨텍스트는 깨끗하게 유지.
+Main Claude가 router를 호출하면 `execution-mode: pipeline`을 선택하고 PLAN을 생성. 이후 Main Claude가 builder → verifier → committer를 순차 호출.
 
 ### 복잡한 기능 (WORK)
 
@@ -166,7 +166,7 @@ WORK 내 특정 TASK를 지정하여 실행 (실패 후 재시도 등):
 > WORK-02-TASK-02 실행해줘
 ```
 
-scheduler가 TASK 파일을 직접 읽어 builder → verifier → committer를 디스패치합니다.
+scheduler가 다음 TASK를 반환하면 Main Claude가 builder → verifier → committer를 순차 호출합니다.
 
 #### 7. WORK 강제 생성 (복잡도 검사 스킵)
 
@@ -266,34 +266,26 @@ claude
 
 ## 개념: 세 가지 실행 모드 (execution-mode)
 
-**router**가 모든 `[]` 태그 요청을 분석하여 `execution-mode`를 결정합니다:
+Main Claude가 `[]` 태그를 감지하면 **router** 서브에이전트를 호출하여 `execution-mode`를 결정합니다:
 
 ```
-사용자 요청
-     │
-     ▼
-  ┌────────┐
-  │ router │ ── [] 태그 없음 ──▶ 직접 처리 (파이프라인 없음)
-  └───┬────┘
-      │ [] 태그 감지
-      ▼
-  복잡도 판단 → execution-mode 결정
-  (.agent/router_rule_config.json 파일이 있으면 해당 기준 우선 적용)
-      │
+사용자 요청 → Main Claude (오케스트레이터)
+                    │
+                    ▼
+              ┌────────┐
+              │ router │ (Main Claude가 호출)
+              └───┬────┘
+                  │
+            execution-mode 반환
+                  │
       ├─ direct  (빌드/테스트 검증 불필요)
-      │   ▼
-      │  Router가 모든 것을 직접 처리 — 추가 세션 0개
-      │  WORK-NN 디렉토리 + PLAN + result.md + commit
+      │   → router가 자체 세션에서 모든 것을 처리 — 추가 서브에이전트 호출 0
       │
       ├─ pipeline  (빌드/테스트 필요, 단일 도메인, 순차 처리)
-      │   ▼
-      │  router → builder → verifier → committer
-      │  Router가 PLAN 생성 후 3개 서브에이전트 순차 dispatch
+      │   → Main Claude가 순차 호출: builder → verifier → committer
       │
       └─ full  (멀티 도메인 / 복잡 DAG / 신규 모듈 / 5+ TASK)
-          ▼
-         router → planner → scheduler → [builder → verifier → committer] × N
-                 (전체 계획 + 다중 작업 파이프라인)
+          → Main Claude가 순차 호출: planner → scheduler → [builder → verifier → committer] × N
 ```
 
 3가지 모드 모두 `works/WORK-NN/`에 동일한 산출물 구조(PLAN.md + result.md + COMMITTER DONE 콜백)를 생성합니다.
@@ -310,18 +302,19 @@ WORK (일)                 하나의 목표. 사용자가 요청한 단위.
 
 ### pipeline 모드 (단일 작업, 위임)
 
-중간 규모 단일 작업을 서브에이전트에 위임. router 컨텍스트를 깨끗하게 유지합니다.
+중간 규모 단일 작업을 Main Claude가 순차 호출로 처리. Main Claude는 오케스트레이터 역할만 하므로 컨텍스트 사용을 최소화합니다.
 
 ```
-router → builder(sonnet) → verifier(haiku) → committer(haiku)
+Main Claude → builder(sonnet) → verifier(haiku) → committer(haiku)
+              (각각 Main Claude가 개별 호출)
 ```
 
 ### direct 모드 (초단순)
 
-router가 자체 세션에서 모든 것을 처리. 추가 서브에이전트 세션 없음.
+Main Claude가 router를 호출하면 자체 세션에서 모든 것을 처리. 추가 서브에이전트 호출 없음.
 
 ```
-router: 분석 → 구현 → self-check → 커밋 → result.md
+Main Claude → router: 분석 → 구현 → self-check → 커밋 → result.md
 ```
 
 ---
@@ -330,7 +323,12 @@ router: 분석 → 구현 → self-check → 커밋 → result.md
 
 ### WORK 파이프라인 (복잡한 작업)
 
+> 서브에이전트는 중첩 호출 불가 — Main Claude(CLI 터미널)가 모든 호출을 중개합니다.
+
 ```
+                          Main Claude (오케스트레이터)
+                    ┌──────────┼──────────────────────┐
+                    │          │                       │
   router           planner          scheduler         builder          verifier         committer
  ┌────────┐      ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
  │요청     │────▶│WORK 생성 │────▶│의존성 DAG │────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
@@ -351,6 +349,7 @@ router: 분석 → 구현 → self-check → 커밋 → result.md
  │+TASK생성│      │파일 생성  │     │검증 실행  │     │→ git커밋 │
  └────────┘      └──────────┘     └──────────┘     └──────────┘
   (컨텍스트 유지)   (sonnet)         (haiku)           (haiku)
+              ← 각각 Main Claude가 개별 호출 →
 ```
 
 ### direct 모드 (초단순)
@@ -675,9 +674,9 @@ router는 프로젝트 루트의 `.agent/router_rule_config.json`을 읽어 라�
 
 ### 세 가지 실행 모드
 
-router가 복잡도에 맞는 `execution-mode`를 선택합니다:
-- **direct**: 1줄 오타 수정 — 추가 세션 0개. Committer 세션 초기화 비용(~12,500 토큰) 완전 제거
-- **pipeline**: 중간 규모 수정 — 서브에이전트에 위임, router 컨텍스트 깨끗 유지
+Main Claude가 router를 호출하면, router가 복잡도에 맞는 `execution-mode`를 선택합니다:
+- **direct**: 1줄 오타 수정 — Main Claude가 router만 호출, 추가 서브에이전트 세션 0개
+- **pipeline**: 중간 규모 수정 — Main Claude가 builder → verifier → committer 순차 호출. Main Claude는 오케스트레이터 역할만 하므로 컨텍스트 사용 최소화
 - **full**: 복잡한 기능 — 전체 계획, 분해, 추적
 
 3가지 모드 모두 동일한 산출물 구조(`WORK-NN/` + result.md + 콜백)를 생성하므로 Runner 연동이 모드에 무관하게 동작합니다.
