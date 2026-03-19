@@ -3,3 +3,6 @@
 [2026-03-20T07:15:54]_PLANNER_INIT_WORK-28 계획 수립 시작 — Execution-Mode: full
 [2026-03-20T07:15:57]_PLANNER_REF_참조: agents/ko/file-content-schema.md, agents/ko/shared-prompt-sections.md, agents/ko/work-activity-log.md, Requirement.md, README.md, README_KO.md, docs/spec_pipeline-architecture.md, docs/spec_sliding-window-context.md, docs/spec_callback-integration.md, agents/ko/specifier.md, agents/ko/agent-flow.md, package.json
 [2026-03-20T07:19:04]_PLANNER_PLAN_PLAN.md, TASK-00.md, TASK-01.md, TASK-02.md, TASK-03.md, TASK-00~03_progress.md 생성 완료
+[2026-03-20T07:28:04]_COMMITTER_COMMIT_TASK-00~03_result.md 생성 완료, PROGRESS.md 생성 완료
+[2026-03-20T07:28:04]_COMMITTER_COMMIT_commit ac6c25a: docs(WORK-28): Router→Specifier 전환 반영 — docs 및 README 현행화
+[2026-03-20T07:28:05]_COMMITTER_COMMIT_WORK-LIST.md 업데이트: WORK-28 → COMPLETED
