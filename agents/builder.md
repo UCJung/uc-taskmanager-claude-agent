@@ -84,7 +84,9 @@ ls works/${WORK_ID}/*_result.md 2>/dev/null
 
 → Build/Lint 명령: `shared-prompt-sections.md` § 2 참조
 
-빌드/린트 실패 시 보고 전에 반드시 수정.
+- 빌드/린트 스크립트가 존재하지 않으면 해당 check는 **N/A** 처리 (수정 시도 금지).
+- 빌드/린트 실패 시 보고 전에 수정 시도. **최대 2회 재시도**.
+- 3회째도 실패 시 → `status="FAIL"`로 task-result XML 반환하고 종료. 무한 루프 금지.
 
 ### 3-6. Progress Checkpoint 기록
 

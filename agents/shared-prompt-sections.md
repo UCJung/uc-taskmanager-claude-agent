@@ -18,9 +18,11 @@ dispatch 시: <context><language> 필드에 resolved language code 전달
 ## § 2. Build and Lint Commands
 
 ```bash
-# Auto-detect Build
+# Auto-detect Build (스크립트 존재 시에만 실행)
 if [ -f "package.json" ]; then
-  npm run build 2>&1 || bun run build 2>&1 || yarn build 2>&1
+  if node -e "const p=JSON.parse(require('fs').readFileSync('package.json','utf8')); process.exit(p.scripts&&p.scripts.build?0:1)" 2>/dev/null; then
+    npm run build 2>&1 || bun run build 2>&1 || yarn build 2>&1
+  fi
 elif [ -f "Cargo.toml" ]; then
   cargo build 2>&1
 elif [ -f "go.mod" ]; then
@@ -31,15 +33,18 @@ elif [ -f "Makefile" ]; then
   make build 2>&1 || make 2>&1
 fi
 
-# Auto-detect Lint
+# Auto-detect Lint (스크립트 존재 시에만 실행)
 if [ -f "package.json" ]; then
-  npm run lint 2>&1 || bun run lint 2>&1 || true
+  if node -e "const p=JSON.parse(require('fs').readFileSync('package.json','utf8')); process.exit(p.scripts&&p.scripts.lint?0:1)" 2>/dev/null; then
+    npm run lint 2>&1 || bun run lint 2>&1 || true
+  fi
 elif [ -f "pyproject.toml" ]; then
   ruff check . 2>&1 || python -m flake8 . 2>&1 || true
 fi
 ```
 
-빌드/린트 실패 시 보고 전에 반드시 수정.
+- 빌드/린트 스크립트가 존재하지 않으면 **skip (N/A 처리)**.
+- 빌드/린트 실패 시 보고 전에 반드시 수정.
 
 ---
 
