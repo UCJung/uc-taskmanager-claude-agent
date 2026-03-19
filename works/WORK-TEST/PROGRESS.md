@@ -6,7 +6,7 @@
 
 | TASK | Title | Status | Commit | Duration |
 |------|-------|--------|--------|----------|
-| TASK-00 | calc.js ESM 모듈 및 테스트 파일 작성 | ✅ Done | — | — |
+| TASK-00 | calc.js ESM 모듈 및 테스트 파일 작성 | ✅ Done | 40ff82a | 2min |
 
 ## Log
 
