@@ -12,6 +12,25 @@
 
 ---
 
+## Quick Start
+
+```bash
+npm install -g uctm
+cd your-project
+uctm init
+```
+
+Then start Claude Code and use pipeline tags:
+
+```
+claude
+> [추가기능] Add a hello world feature
+```
+
+That's it. The router analyzes your request, plans the work, and executes through isolated subagent pipelines.
+
+---
+
 ## Why This Project Exists
 
 The pitfalls of **vibe coding** with AI agents are already well known. You hand your brain to the AI, the code gets written, but nothing remains — no requirements, no execution plan, no design rationale. The software you built cannot be maintained because it was never truly *yours* to begin with.
@@ -211,14 +230,23 @@ This ensures Claude automatically delegates `[]`-tagged requests to the router a
 
 ## Installation
 
-### Global (available across all projects)
+### npm (Recommended)
 
 ```bash
-git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git
-cp uc-taskmanager-claude-agent/agents/*.md ~/.claude/agents/
+npm install -g uctm
+
+# Per-project (copies agents + config + updates CLAUDE.md)
+cd your-project
+uctm init
+
+# Global (copies agents to ~/.claude/agents/)
+uctm init --global
+
+# Update agents after upgrading uctm
+uctm update
 ```
 
-### Per-Project
+### Manual
 
 ```bash
 git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
@@ -827,6 +855,9 @@ Auto-detected from project files. No configuration needed.
 
 ```
 uc-taskmanager/
+├── package.json             ← npm package config (uctm)
+├── bin/cli.mjs              ← CLI entry point (uctm init/update)
+├── lib/                     ← CLI implementation (constants, init, update)
 ├── README.md                ← English (default)
 ├── README_KO.md             ← Korean
 ├── CLAUDE.md                ← Project-level Claude instructions (push procedure, language, agent call rules)

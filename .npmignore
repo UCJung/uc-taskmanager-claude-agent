@@ -1,0 +1,10 @@
+works/
+docs/
+_TODO/
+tmp/
+.serena/
+.claude/
+mcp-server/
+*.log
+CLAUDE.md
+README_KO.md

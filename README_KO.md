@@ -12,6 +12,25 @@
 
 ---
 
+## 빠른 시작
+
+```bash
+npm install -g uctm
+cd your-project
+uctm init
+```
+
+Claude Code를 실행하고 파이프라인 태그를 사용하세요:
+
+```
+claude
+> [추가기능] hello world 기능 추가해줘
+```
+
+끝입니다. router가 요청을 분석하고, 계획을 세우고, 격리된 서브에이전트 파이프라인으로 실행합니다.
+
+---
+
 ## 이 프로젝트를 만든 이유
 
 AI Agent를 활용한 **바이브 코딩(Vibe Coding)**의 폐해는 이미 널리 알려져 있습니다. 나의 두뇌를 AI에게 맡기고 코드를 만들어내지만, 그 과정에서 요구사항도, 실행 계획도, 설계 근거도 남지 않습니다. 그렇게 만들어진 소프트웨어는 유지보수할 수 없습니다. 처음부터 *나의 것*이 아니었으니까요.
@@ -201,14 +220,23 @@ scheduler가 `PROGRESS.md`와 `result.md` 파일을 읽어 현재 상태를 보�
 
 ## 설치
 
-### 전역 설치 (모든 프로젝트에서 사용)
+### npm (권장)
 
 ```bash
-git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git
-cp uc-taskmanager-claude-agent/agents/*.md ~/.claude/agents/
+npm install -g uctm
+
+# 프로젝트별 설치 (에이전트 + 설정 복사 + CLAUDE.md 업데이트)
+cd your-project
+uctm init
+
+# 전역 설치 (~/.claude/agents/에 복사)
+uctm init --global
+
+# uctm 업그레이드 후 에이전트 파일 갱신
+uctm update
 ```
 
-### 프로젝트별 설치
+### 수동 설치
 
 ```bash
 git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
@@ -797,6 +825,9 @@ CommentLanguage: en
 
 ```
 uc-taskmanager/
+├── package.json             ← npm 패키지 설정 (uctm)
+├── bin/cli.mjs              ← CLI 진입점 (uctm init/update)
+├── lib/                     ← CLI 구현 (constants, init, update)
 ├── README.md                ← English (기본)
 ├── README_KO.md             ← 한국어
 ├── CLAUDE.md                ← 프로젝트 지침 (push 절차, 언어, 에이전트 호출 규칙)
