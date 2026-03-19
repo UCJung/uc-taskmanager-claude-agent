@@ -8,9 +8,44 @@
 
 **Universal Claude Task Manager** — A general-purpose task pipeline subagent system for Claude Code CLI.
 
-Six subagents work across any project and any language, automatically handling **request routing → task decomposition → dependency management → code implementation → verification → commit**.
-
 **[한국어 문서 (Korean)](README_KO.md)**
+
+---
+
+## Why This Project Exists
+
+The pitfalls of **vibe coding** with AI agents are already well known. You hand your brain to the AI, the code gets written, but nothing remains — no requirements, no execution plan, no design rationale. The software you built cannot be maintained because it was never truly *yours* to begin with.
+
+**SDD (Specification-Driven Development)** flips the value hierarchy:
+
+> Code is no longer the asset.
+> **Requirements → Architecture → Design** — these are the real assets now.
+> Code is just the output.
+
+uc-taskmanager was built to solve this. When you provide a requirement as input, the system:
+
+1. **Plans** — creates an execution plan with dependency graphs
+2. **Decomposes** — breaks the plan into concrete TASKs
+3. **Executes** — runs each TASK through isolated Claude AI subagents (build → verify → commit)
+4. **Accumulates** — every requirement, plan, and result is preserved as a traceable artifact
+
+Each step runs in an **isolated subagent pipeline**, so your context stays clean and every decision is documented.
+
+### The Bigger Picture
+
+This agent is designed to work with an **SDD-based requirement management and automated development system** — a server application that links requirement management → automated development → plans and artifacts. The full system architecture is documented in [`docs/spec_SDD_with_ucagent_requirement.md`](docs/spec_SDD_with_ucagent_requirement.md). Use it as a reference to build your own system tailored to your needs.
+
+### What This Took
+
+I built this agent and the accompanying SDD requirement management system in roughly **one calendar month — about 2 weeks of actual development time** (8 hours/day). Ideas become reality. The technical and time barriers that once stopped you have fallen. This is the age of AI agents.
+
+**Good luck. Build something great.**
+
+This project is open source. Use it freely, share your ideas, and let's push this forward together.
+
+---
+
+Six subagents work across any project and any language, automatically handling **request routing → task decomposition → dependency management → code implementation → verification → commit**.
 
 ```
 "[추가기능] Build a user authentication feature"
