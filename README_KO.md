@@ -27,6 +27,14 @@ claude
 > [추가기능] hello world 기능 추가해줘
 ```
 
+파일 생성, 셸 명령 등의 권한 질문 없이 실행하려면 바이패스 모드를 사용하세요:
+
+```bash
+claude --dangerously-skip-permissions
+```
+
+> **주의**: 바이패스 모드는 격리된 환경이거나 파이프라인을 충분히 신뢰할 때만 사용하세요. 자세한 내용은 [Claude Code Permissions](https://code.claude.com/docs/en/permissions)를 참고하세요.
+
 끝입니다. router가 요청을 분석하고, 계획을 세우고, 격리된 서브에이전트 파이프라인으로 실행합니다.
 
 ---
@@ -873,6 +881,8 @@ uc-taskmanager/
 ## 선택 사항: MCP 설정
 
 ### Serena MCP — 심볼 단위 코드 탐색
+
+[Serena](https://github.com/oraios/serena)를 만들고 오픈소스로 공개해 주신 [Oraios](https://github.com/oraios) 팀에 감사드립니다. 심볼 단위 코드 탐색 도구 덕분에 AI 에이전트의 토큰 사용량을 줄이고 편집 정확도를 높일 수 있었습니다.
 
 **builder** 에이전트는 [Serena MCP](https://github.com/oraios/serena)와 통합되어 심볼 단위 코드 탐색을 수행합니다. Serena 사용 시 파일 전체를 읽는 대신 아래 탐색 계층을 따릅니다:
 

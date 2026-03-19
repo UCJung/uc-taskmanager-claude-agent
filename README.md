@@ -24,8 +24,16 @@ Then start Claude Code and use pipeline tags:
 
 ```
 claude
-> [추가기능] Add a hello world feature
+> [new-feature] Add a hello world feature
 ```
+
+To run without permission prompts (file creation, shell commands, etc.), use bypass mode:
+
+```bash
+claude --dangerously-skip-permissions
+```
+
+> **Warning**: Only use bypass mode in isolated environments or when you trust the pipeline fully. See [Claude Code Permissions](https://code.claude.com/docs/en/permissions) for details.
 
 That's it. The router analyzes your request, plans the work, and executes through isolated subagent pipelines.
 
@@ -71,7 +79,7 @@ This project is open source. Use it freely, share your ideas, and let's push thi
 Six subagents work across any project and any language, automatically handling **request routing → task decomposition → dependency management → code implementation → verification → commit**.
 
 ```
-"[추가기능] Build a user authentication feature"
+"[new-feature] Build a user authentication feature"
 → router decides WORK, planner creates WORK-01 with 5 TASKs, pipeline executes
 ```
 
@@ -82,7 +90,7 @@ Six subagents work across any project and any language, automatically handling *
 ### Trivial Fix (direct mode)
 
 ```
-> [버그수정] Fix typo in login error message
+> [bugfix] Fix typo in login error message
 ```
 
 Router selects `execution-mode: direct` → handles entirely in its own session. No subagent spawned. Creates WORK-NN directory + PLAN + result.md + commit.
@@ -90,7 +98,7 @@ Router selects `execution-mode: direct` → handles entirely in its own session.
 ### Quick Task (pipeline mode)
 
 ```
-> [버그수정] Fix the login button not responding on mobile
+> [bugfix] Fix the login button not responding on mobile
 ```
 
 Router selects `execution-mode: pipeline` → creates PLAN, delegates to builder → verifier → committer. Router context stays clean.
@@ -100,7 +108,7 @@ Router selects `execution-mode: pipeline` → creates PLAN, delegates to builder
 #### 1. Create WORK (Planning)
 
 ```
-> [추가기능] Build a user authentication feature. Plan it.
+> [new-feature] Build a user authentication feature. Plan it.
 ```
 
 The planner analyzes the project and creates WORK-01:
@@ -162,10 +170,10 @@ The scheduler reads the TASK file directly and dispatches builder → verifier �
 
 #### 7. Force WORK Creation (Skip Complexity Check)
 
-Use the `[WORK 시작]` tag to always create a new WORK regardless of complexity:
+Use the `[new-work]` tag to always create a new WORK regardless of complexity:
 
 ```
-> [WORK 시작] Refactor the auth module
+> [new-work] Refactor the auth module
 ```
 
 #### 8. Handle Failure / Retry
@@ -186,7 +194,7 @@ Or fix the issue and re-run:
 #### 9. Add a TASK to an In-Progress WORK
 
 ```
-> [기능개선] Add rate limiting to the auth API
+> [enhancement] Add rate limiting to the auth API
 ```
 
 If WORK-02 is `IN_PROGRESS`, the router asks:
@@ -209,10 +217,10 @@ Prefix your request with a `[]` tag to trigger the pipeline:
 
 | Tag | Meaning |
 |-----|---------|
-| `[추가기능]` | New feature |
-| `[기능개선]` | Enhancement |
-| `[오류수정]` / `[버그수정]` | Bug fix |
-| `[WORK 시작]` | Always create new WORK (skip complexity check) |
+| `[new-feature]` | New feature |
+| `[enhancement]` | Enhancement |
+| `[bugfix]` | Bug fix |
+| `[new-work]` | Always create new WORK (skip complexity check) |
 
 No `[]` tag = handled directly without pipeline.
 
@@ -473,7 +481,7 @@ The scheduler reads `PROGRESS.md` to determine the last completed TASK and conti
 ## Example Session
 
 ```
-User: [추가기능] Build a comment feature for the blog system.
+User: [new-feature] Build a comment feature for the blog system.
 
 Claude: [router → WORK path]
   Complexity: 4+ files, DB schema change, multiple modules
@@ -905,6 +913,8 @@ uc-taskmanager/
 ## Optional: MCP Configuration
 
 ### Serena MCP — Symbol-Level Code Navigation
+
+Special thanks to the [Oraios](https://github.com/oraios) team for building and open-sourcing [Serena](https://github.com/oraios/serena). Their symbol-level code navigation tools make a real difference in reducing token usage and improving edit precision for AI agents.
 
 The **builder** agent integrates with [Serena MCP](https://github.com/oraios/serena) for symbol-level code exploration. When Serena is available, builder follows this exploration hierarchy instead of reading entire files:
 
