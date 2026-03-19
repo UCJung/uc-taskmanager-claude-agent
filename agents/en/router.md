@@ -103,9 +103,21 @@ Router handles everything on its own. Use Serena MCP first for code exploration:
 16. Add WORK-LIST.md IN_PROGRESS
 ```
 
-### 3-5. pipeline Mode Execution
+### 3-5. Pipeline Mode Execution
 
-**builder dispatch** Execute subagent then dispatch message
+> ⚠️ In pipeline mode, Router only creates PLAN.md + TASK-NN.md.
+> Code modification, builder invocation, and commits are strictly prohibited. Only return dispatch XML.
+
+```
+1.  Determine WORK ID
+2.  mkdir works/WORK-NN/
+3.  log_work INIT "WORK-NN created — Execution-Mode: pipeline"
+4.  Create PLAN.md (Execution-Mode: pipeline) → file-content-schema.md § 1
+5.  Create TASK-NN.md (multiple if needed) → file-content-schema.md § 2
+6.  Add IN_PROGRESS to WORK-LIST.md
+7.  Generate and return dispatch XML below. **Invocation is performed by Main Claude.**
+8.  log_work DISPATCH "Builder dispatch XML returned"
+```
 
 → dispatch XML format: see `xml-schema.md` § 1 (to="builder", task="TASK-00", execution-mode="pipeline")
 

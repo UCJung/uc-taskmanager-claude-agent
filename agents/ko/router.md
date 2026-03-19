@@ -104,7 +104,19 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 ```
 ### 3-5. pipeline 모드 일때 실행
 
-**builder 디스패치** subagent 실행 후 메시지 디스패치
+> ⚠️ pipeline 모드에서 Router는 PLAN.md + TASK-NN.md 생성까지만 수행한다.
+> 코드 수정, builder 호출, commit 등은 절대 금지. dispatch XML만 반환하라.
+
+```
+1.  WORK ID 결정
+2.  mkdir works/WORK-NN/
+3.  log_work INIT "WORK-NN 생성 — Execution-Mode: pipeline"
+4.  PLAN.md 생성 (Execution-Mode: pipeline) → file-content-schema.md § 1
+5.  TASK-NN.md 생성 (필요 시 복수) → file-content-schema.md § 2
+6.  WORK-LIST.md IN_PROGRESS 추가
+7.  아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
+8.  log_work DISPATCH "Builder dispatch XML 반환"
+```
 
 → dispatch XML 포맷: `xml-schema.md` § 1 참조 (to="builder", task="TASK-00", execution-mode="pipeline")
 
