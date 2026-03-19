@@ -23,7 +23,7 @@
 # WORK-01: {제목}
 
 > Created: {YYYY-MM-DD}
-> 요구사항: {REQ-XXX | N/A}
+> 요구사항: {REQ-XXX | 사용자 요청 텍스트}
 > Execution-Mode: {direct | pipeline | full}
 > Project: {project name}
 > Tech Stack: {stack}

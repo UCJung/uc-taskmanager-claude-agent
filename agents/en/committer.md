@@ -155,7 +155,23 @@ Committer-specific additional fields:
 </next-tasks>
 ```
 
-Do not change WORK-LIST.md to COMPLETED — changed only at git push time.
+### 3-9-1. WORK-LIST.md Auto-Completion
+
+Check if this is the last TASK. If so, change WORK-LIST.md from `IN_PROGRESS` to `COMPLETED`.
+
+```bash
+# Check if last TASK
+TOTAL=$(ls works/${WORK_ID}/TASK-*.md 2>/dev/null | grep -cv '_result\|_progress')
+DONE=$(ls works/${WORK_ID}/TASK-*_result.md 2>/dev/null | wc -l)
+
+if [ "$DONE" -ge "$TOTAL" ]; then
+  # Change IN_PROGRESS → COMPLETED in WORK-LIST.md
+  sed -i "s/| ${WORK_ID} |\\(.*\\)| IN_PROGRESS |\\(.*\\)|\\(.*\\)|/| ${WORK_ID} |\\1| COMPLETED |\\2| $(date '+%Y-%m-%d') |/" works/WORK-LIST.md
+  git add works/WORK-LIST.md
+  git commit --amend --no-edit
+fi
+```
+
 → see `.claude/agents/shared-prompt-sections.md` § 8
 
 ---
@@ -173,7 +189,7 @@ Do not change WORK-LIST.md to COMPLETED — changed only at git push time.
 - If Files changed is empty → immediately return FAIL
 
 ### WORK-LIST.md Rules
-- Changing to COMPLETED is prohibited — changed only at git push time
+- Automatically change WORK-LIST.md from `IN_PROGRESS` to `COMPLETED` when the last TASK is completed
 
 ### Output Language Rule
 → see `shared-prompt-sections.md` § 1

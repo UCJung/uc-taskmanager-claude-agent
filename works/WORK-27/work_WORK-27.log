@@ -1,0 +1,4 @@
+[2026-03-20T05:40:29]_ROUTER_INIT_WORK-27 생성 — Execution-Mode: pipeline
+[2026-03-20T05:41:21]_ROUTER_REF_참조: agents/ko/shared-prompt-sections.md, agents/en/shared-prompt-sections.md, agents/ko/committer.md, agents/en/committer.md, agents/ko/router.md, agents/en/router.md, agents/ko/file-content-schema.md, agents/en/file-content-schema.md, agents/ko/planner.md, agents/en/planner.md, CLAUDE.md, agents/ko/agent-flow.md
+[2026-03-20T05:41:21]_ROUTER_PLAN_PLAN.md, TASK-00.md 생성 완료
+[2026-03-20T05:41:21]_ROUTER_DISPATCH_Builder dispatch — pipeline mode

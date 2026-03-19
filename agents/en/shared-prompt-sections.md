@@ -111,7 +111,7 @@ echo "$DONE / $TOTAL"
 | Field | Required | Description |
 |-------|----------|-------------|
 | `> Created:` | ✅ | YYYY-MM-DD |
-| `> Requirement:` | ✅ | `REQ-XXX` or `N/A` |
+| `> Requirement:` | ✅ | `REQ-XXX` or user request text |
 | `> Execution-Mode:` | ✅ | `direct` / `pipeline` / `full` |
 | `> Project:` | ✅ | Project name |
 | `> Tech Stack:` | ✅ | Detected tech stack |
@@ -127,11 +127,10 @@ File: `works/WORK-LIST.md`
 | Status | Timing |
 |--------|--------|
 | `IN_PROGRESS` | Added when WORK directory is created |
-| `COMPLETED` | Changed only at git push time |
+| `COMPLETED` | Automatically changed by committer when last TASK is completed |
 
-- committer / scheduler → changing to COMPLETED is prohibited
 - Must add IN_PROGRESS when WORK directory is created
-- Do not leave as IN_PROGRESS after push
+- committer: after committing the last TASK, change WORK-LIST.md from `IN_PROGRESS` to `COMPLETED`
 
 ---
 

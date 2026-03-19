@@ -141,7 +141,7 @@ Router handles everything on its own. Use Serena MCP first for code exploration:
 → see `.claude/agents/shared-prompt-sections.md` § 8
 
 - On WORK creation: add `IN_PROGRESS`
-- COMPLETED change: **only at git push time** — Router must not change directly
+- COMPLETED change: automatically changed by committer when last TASK is completed
 
 ### File Naming Rules
 - TASK filenames: `TASK-XX.md` format

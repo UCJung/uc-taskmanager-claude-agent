@@ -111,7 +111,7 @@ echo "$DONE / $TOTAL"
 | 필드 | 필수 | 설명 |
 |------|------|------|
 | `> Created:` | ✅ | YYYY-MM-DD |
-| `> 요구사항:` | ✅ | `REQ-XXX` 또는 `N/A` |
+| `> 요구사항:` | ✅ | `REQ-XXX` 또는 사용자 요청 텍스트 |
 | `> Execution-Mode:` | ✅ | `direct` / `pipeline` / `full` |
 | `> Project:` | ✅ | 프로젝트명 |
 | `> Tech Stack:` | ✅ | 감지된 기술 스택 |
@@ -127,11 +127,10 @@ echo "$DONE / $TOTAL"
 | 상태 | 시점 |
 |------|------|
 | `IN_PROGRESS` | WORK 디렉토리 생성 시 추가 |
-| `COMPLETED` | git push 시에만 변경 |
+| `COMPLETED` | 마지막 TASK 완료 시 committer가 자동 변경 |
 
-- committer / scheduler → COMPLETED 변경 금지
 - WORK 디렉토리 생성 시 반드시 IN_PROGRESS 추가
-- push 후 IN_PROGRESS 방치 금지
+- committer: 마지막 TASK commit 후 WORK-LIST.md를 `IN_PROGRESS` → `COMPLETED`로 변경
 
 ---
 

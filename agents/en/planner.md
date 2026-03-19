@@ -143,7 +143,7 @@ Record resolved language in PLAN.md `> Language:` field. Write all outputs in th
 ### 3-9. Requirement Code (REQ) Recording
 
 - `REQ-XXX` pattern exists: `> Requirement: REQ-XXX`
-- If absent: `> Requirement: N/A`
+- If absent: `> Requirement: {user request text}` — record the user's request text as-is
 
 ---
 

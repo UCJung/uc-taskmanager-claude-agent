@@ -23,7 +23,7 @@ Path: `works/{WORK_ID}/PLAN.md`
 # WORK-01: {title}
 
 > Created: {YYYY-MM-DD}
-> Requirement: {REQ-XXX | N/A}
+> Requirement: {REQ-XXX | user request text}
 > Execution-Mode: {direct | pipeline | full}
 > Project: {project name}
 > Tech Stack: {stack}

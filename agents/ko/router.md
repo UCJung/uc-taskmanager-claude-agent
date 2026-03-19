@@ -140,7 +140,7 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 → `.claude/agents/shared-prompt-sections.md` § 8 참조
 
 - WORK 생성 시: `IN_PROGRESS` 추가
-- COMPLETED 변경: **git push 시에만** — Router가 직접 변경 금지
+- COMPLETED 변경: 마지막 TASK 완료 시 committer가 자동 변경
 
 ### 파일명 규칙
 - TASK 파일명: `TASK-XX.md` 형식

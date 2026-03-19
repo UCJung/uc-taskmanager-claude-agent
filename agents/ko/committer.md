@@ -155,7 +155,23 @@ committer 고유 추가 필드:
 </next-tasks>
 ```
 
-WORK-LIST.md를 COMPLETED로 변경하지 않는다 — git push 시에만 변경.
+### 3-9-1. WORK-LIST.md 자동 완료 처리
+
+마지막 TASK인지 확인 후, 마지막 TASK이면 WORK-LIST.md를 `IN_PROGRESS` → `COMPLETED`로 변경한다.
+
+```bash
+# 마지막 TASK 확인
+TOTAL=$(ls works/${WORK_ID}/TASK-*.md 2>/dev/null | grep -cv '_result\|_progress')
+DONE=$(ls works/${WORK_ID}/TASK-*_result.md 2>/dev/null | wc -l)
+
+if [ "$DONE" -ge "$TOTAL" ]; then
+  # WORK-LIST.md에서 해당 WORK의 IN_PROGRESS → COMPLETED 변경
+  sed -i "s/| ${WORK_ID} |\\(.*\\)| IN_PROGRESS |\\(.*\\)|\\(.*\\)|/| ${WORK_ID} |\\1| COMPLETED |\\2| $(date '+%Y-%m-%d') |/" works/WORK-LIST.md
+  git add works/WORK-LIST.md
+  git commit --amend --no-edit
+fi
+```
+
 → `.claude/agents/shared-prompt-sections.md` § 8 참조
 
 ---
@@ -173,7 +189,7 @@ WORK-LIST.md를 COMPLETED로 변경하지 않는다 — git push 시에만 변�
 - Files changed 없으면 즉시 FAIL 반환
 
 ### WORK-LIST.md 규칙
-- COMPLETED 변경 금지 — git push 시에만 변경
+- 마지막 TASK 완료 시 WORK-LIST.md를 `IN_PROGRESS` → `COMPLETED`로 자동 변경
 
 ### Output Language Rule
 → `shared-prompt-sections.md` § 1 참조
