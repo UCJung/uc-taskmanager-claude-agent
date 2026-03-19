@@ -43,15 +43,23 @@ That's it. The specifier analyzes your request, plans the work, and executes thr
 
 ## Why This Project Exists
 
-The pitfalls of **vibe coding** with AI agents are already well known. You hand your brain to the AI, the code gets written, but nothing remains — no requirements, no execution plan, no design rationale. The software you built cannot be maintained because it was never truly *yours* to begin with.
+My first experience with vibe coding was genuinely mind-blowing — ideas turned into working software faster than I'd ever imagined. But as the project grew, three problems became impossible to ignore:
 
-**SDD (Specification-Driven Development)** flips the value hierarchy:
+1. **Quality degradation in long sessions.** Continuing to develop in a single ongoing conversation caused the AI's output to gradually degrade — more hallucinations, more inconsistencies, increasing drift from the original intent as the context window filled up.
+
+2. **No trace of decisions.** In a conversational flow, requirements change, designs shift, and implementations diverge — but none of it is recorded. When something breaks three weeks later, you're left with no trail to follow.
+
+3. **Traceability collapses at scale.** The bigger the project grew, the harder it became to know what was built, why it was built that way, and where to look when something needed to change.
+
+I built uc-taskmanager to solve exactly these problems. Each request flows through an isolated subagent pipeline — the context is always clean, never polluted by what came before. Every decision, every plan, every result is written to files that stay with the project.
+
+**SDD (Specification-Driven Development)** is the underlying philosophy:
 
 > Code is no longer the asset.
 > **Requirements → Architecture → Design** — these are the real assets now.
 > Code is just the output.
 
-uc-taskmanager was built to solve this. When you provide a requirement as input, the system:
+When you provide a requirement as input, the system:
 
 1. **Plans** — creates an execution plan with dependency graphs
 2. **Decomposes** — breaks the plan into concrete TASKs
