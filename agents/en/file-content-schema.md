@@ -15,6 +15,31 @@ Single source of truth for pipeline artifact file formats.
 
 ---
 
+## § 0. Requirement.md
+
+Path: `works/{WORK_ID}/Requirement.md`
+
+```markdown
+# Requirement — WORK-NN
+
+## Original Request
+> User's exact input
+
+## Functional Requirements
+- FR-01: ...
+- FR-02: ...
+
+## Non-Functional Requirements
+- NFR-01: ...
+
+## Acceptance Criteria
+- [ ] Verifiable criteria
+```
+
+Created by: Specifier (mandatory for all requests)
+
+---
+
 ## § 1. PLAN.md
 
 Path: `works/{WORK_ID}/PLAN.md`
@@ -215,10 +240,11 @@ Path: `works/{WORK_ID}/PROGRESS.md`
 
 | Type | Format | Created By |
 |------|--------|------------|
-| WORK plan | `PLAN.md` | planner / router |
-| TASK plan | `TASK-NN.md` | planner / router |
-| TASK progress | `TASK-NN_progress.md` | planner (template) / builder (update) |
-| TASK result | `TASK-NN_result.md` | committer / router (direct) |
+| Requirement | `Requirement.md` | specifier |
+| WORK plan | `PLAN.md` | planner / specifier |
+| TASK plan | `TASK-NN.md` | planner / specifier |
+| TASK progress | `TASK-NN_progress.md` | planner / specifier (template) / builder (update) |
+| TASK result | `TASK-NN_result.md` | committer |
 | WORK progress | `PROGRESS.md` | scheduler |
 
 `WORK-NN-TASK-NN.md` format prohibited → `parseTaskFilename()` cannot recognize it.

@@ -52,6 +52,7 @@ fi
 
 ```
 works/{WORK_ID}/
+  ├─ Requirement.md                 # Created by Specifier (mandatory)
   ├─ PLAN.md
   ├─ PROGRESS.md
   ├─ TASK-00.md               # No WORK prefix

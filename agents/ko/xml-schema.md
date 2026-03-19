@@ -28,7 +28,7 @@ uc-taskmanager 에이전트 간 XML 통신 포맷 정의.
 
 | 속성 | 값 |
 |------|----|
-| `to` | builder, verifier, committer, planner, scheduler, router |
+| `to` | builder, verifier, committer, planner, scheduler, specifier |
 | `task` | `TASK-NN` — WORK prefix 포함 금지 |
 | `execution-mode` | direct / pipeline / full (생략 시 full로 간주) |
 
@@ -55,12 +55,10 @@ uc-taskmanager 에이전트 간 XML 통신 포맷 정의.
 
 | Dispatcher | Receiver | execution-mode | 설명 |
 |------------|----------|:--------------:|------|
-| Router | (자기 자신) | `direct` | 서브에이전트 없음. Router가 직접 구현+commit+콜백 |
-| Router | Planner | `full` | 복잡 WORK 계획 |
-| Router | Scheduler | `full` | 계획된 WORK 실행 |
-| Router | Builder | `pipeline` | TASK 1개 구현 |
-| Router | Verifier | `pipeline` | TASK 1개 검증 |
-| Router | Committer | `pipeline` | TASK 1개 커밋 |
+| Specifier | Builder | `direct` | 겸임: TASK 1개 구현 (Verifier 생략) |
+| Specifier | Planner | `pipeline/full` | 위임: 복잡 WORK 계획 |
+| Planner | Builder | `pipeline` | TASK 구현 |
+| Planner | Scheduler | `full` | DAG 관리 + 실행 |
 | Scheduler | Builder | `full` | TASK N개 구현 |
 | Scheduler | Verifier | `full` | TASK N개 검증 |
 | Scheduler | Committer | `full` | TASK N개 커밋 |
@@ -90,20 +88,21 @@ uc-taskmanager 에이전트 간 XML 통신 포맷 정의.
 
 | 에이전트 | direct | pipeline | full |
 |---------|--------|----------|------|
-| Router | 구현+self-check+result.md+commit+콜백 직접 | PLAN 생성 후 B→V→C dispatch | Planner에 dispatch |
-| Planner | 호출 안 됨 | 호출 안 됨 | PLAN.md 생성 |
+| Specifier | Requirement.md + PLAN.md + TASK (겸임) | Requirement.md만 → Planner 위임 | Requirement.md만 → Planner 위임 |
+| Planner | 호출 안 됨 (Specifier 겸임) | PLAN.md + TASK + execution-mode | PLAN.md + TASK + execution-mode |
 | Scheduler | 호출 안 됨 | 호출 안 됨 | DAG 관리 + [B→V→C]×N |
-| Builder | 호출 안 됨 | 정상 실행 | 정상 실행 |
+| Builder | 정상 실행 (self-check) | 정상 실행 | 정상 실행 |
 | Verifier | 호출 안 됨 | 정상 실행 | 정상 실행 |
-| Committer | 호출 안 됨 | result.md+commit+콜백 | result.md+commit+콜백 |
+| Committer | result.md+commit+콜백 | result.md+commit+콜백 | result.md+commit+콜백 |
 
 불변 항목 (모드 무관):
 
 | 항목 | direct | pipeline/full |
 |------|:---:|:---:|
-| `works/WORK-NN/` 디렉토리 | Router | Router/Planner |
-| `PLAN.md` | Router | Router/Planner |
-| `TASK-XX.md` | Router | Router/Planner |
-| `TASK-XX_result.md` | Router | Committer |
-| COMMITTER DONE 콜백 | Router | Committer |
-| `WORK-LIST.md` IN_PROGRESS | Router | Router |
+| `works/WORK-NN/` 디렉토리 | Specifier | Specifier |
+| `Requirement.md` | Specifier | Specifier |
+| `PLAN.md` | Specifier (겸임) | Planner |
+| `TASK-XX.md` | Specifier (겸임) | Planner |
+| `TASK-XX_result.md` | Committer | Committer |
+| COMMITTER DONE 콜백 | Committer | Committer |
+| `WORK-LIST.md` IN_PROGRESS | Specifier | Specifier |

@@ -28,7 +28,7 @@ XML communication format definition for uc-taskmanager agents.
 
 | Attribute | Value |
 |-----------|-------|
-| `to` | builder, verifier, committer, planner, scheduler, router |
+| `to` | builder, verifier, committer, planner, scheduler, specifier |
 | `task` | `TASK-NN` — WORK prefix must NOT be included |
 | `execution-mode` | direct / pipeline / full (defaults to full if omitted) |
 
@@ -55,12 +55,10 @@ XML communication format definition for uc-taskmanager agents.
 
 | Dispatcher | Receiver | execution-mode | Description |
 |------------|----------|:--------------:|-------------|
-| Router | (self) | `direct` | No subagents. Router implements+commits+callbacks directly |
-| Router | Planner | `full` | Complex WORK planning |
-| Router | Scheduler | `full` | Planned WORK execution |
-| Router | Builder | `pipeline` | Single TASK implementation |
-| Router | Verifier | `pipeline` | Single TASK verification |
-| Router | Committer | `pipeline` | Single TASK commit |
+| Specifier | Builder | `direct` | Assumed: single TASK implementation (Verifier skipped) |
+| Specifier | Planner | `pipeline/full` | Delegated: complex WORK planning |
+| Planner | Builder | `pipeline` | TASK implementation |
+| Planner | Scheduler | `full` | DAG management + execution |
 | Scheduler | Builder | `full` | N TASK implementation |
 | Scheduler | Verifier | `full` | N TASK verification |
 | Scheduler | Committer | `full` | N TASK commit |
@@ -90,20 +88,21 @@ XML communication format definition for uc-taskmanager agents.
 
 | Agent | direct | pipeline | full |
 |-------|--------|----------|------|
-| Router | implement+self-check+result.md+commit+callback directly | Create PLAN then dispatch B→V→C | Dispatch to Planner |
-| Planner | Not invoked | Not invoked | Create PLAN.md |
+| Specifier | Requirement.md + PLAN.md + TASK (assumed) | Requirement.md only → delegate to Planner | Requirement.md only → delegate to Planner |
+| Planner | Not invoked (Specifier assumed) | PLAN.md + TASK + execution-mode | PLAN.md + TASK + execution-mode |
 | Scheduler | Not invoked | Not invoked | DAG management + [B→V→C]×N |
-| Builder | Not invoked | Normal execution | Normal execution |
+| Builder | Normal execution (self-check) | Normal execution | Normal execution |
 | Verifier | Not invoked | Normal execution | Normal execution |
-| Committer | Not invoked | result.md+commit+callback | result.md+commit+callback |
+| Committer | result.md+commit+callback | result.md+commit+callback | result.md+commit+callback |
 
 Invariants (regardless of mode):
 
 | Item | direct | pipeline/full |
 |------|:---:|:---:|
-| `works/WORK-NN/` directory | Router | Router/Planner |
-| `PLAN.md` | Router | Router/Planner |
-| `TASK-XX.md` | Router | Router/Planner |
-| `TASK-XX_result.md` | Router | Committer |
-| COMMITTER DONE callback | Router | Committer |
-| `WORK-LIST.md` IN_PROGRESS | Router | Router |
+| `works/WORK-NN/` directory | Specifier | Specifier |
+| `Requirement.md` | Specifier | Specifier |
+| `PLAN.md` | Specifier (assumed) | Planner |
+| `TASK-XX.md` | Specifier (assumed) | Planner |
+| `TASK-XX_result.md` | Committer | Committer |
+| COMMITTER DONE callback | Committer | Committer |
+| `WORK-LIST.md` IN_PROGRESS | Specifier | Specifier |

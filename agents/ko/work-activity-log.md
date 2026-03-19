@@ -13,7 +13,7 @@
 ## log_work 함수
 
 ```bash
-AGENT_NAME="ROUTER"  # 각 에이전트 파일에서 적절히 설정
+AGENT_NAME="SPECIFIER"  # 각 에이전트 파일에서 적절히 설정
 
 log_work() {
   local WORK_ID="$1" AGENT="$2" STAGE="$3" DESC="$4"

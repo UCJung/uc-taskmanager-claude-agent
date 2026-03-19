@@ -15,6 +15,31 @@
 
 ---
 
+## § 0. Requirement.md
+
+경로: `works/{WORK_ID}/Requirement.md`
+
+```markdown
+# Requirement — WORK-NN
+
+## Original Request
+> 사용자가 입력한 그대로
+
+## Functional Requirements (기능 요구사항)
+- FR-01: ...
+- FR-02: ...
+
+## Non-Functional Requirements (비기능 요구사항)
+- NFR-01: ...
+
+## Acceptance Criteria
+- [ ] 검증 가능한 기준들
+```
+
+생성 주체: Specifier (모든 요청에 필수)
+
+---
+
 ## § 1. PLAN.md
 
 경로: `works/{WORK_ID}/PLAN.md`
@@ -215,10 +240,11 @@ None
 
 | 종류 | 형식 | 생성 주체 |
 |------|------|----------|
-| WORK 계획 | `PLAN.md` | planner / router |
-| TASK 계획 | `TASK-NN.md` | planner / router |
-| TASK 진행 | `TASK-NN_progress.md` | planner(템플릿) / builder(갱신) |
-| TASK 결과 | `TASK-NN_result.md` | committer / router(direct) |
+| 요구사항 | `Requirement.md` | specifier |
+| WORK 계획 | `PLAN.md` | planner / specifier |
+| TASK 계획 | `TASK-NN.md` | planner / specifier |
+| TASK 진행 | `TASK-NN_progress.md` | planner / specifier(템플릿) / builder(갱신) |
+| TASK 결과 | `TASK-NN_result.md` | committer |
 | WORK 진행 | `PROGRESS.md` | scheduler |
 
 `WORK-NN-TASK-NN.md` 형식 금지 → `parseTaskFilename()` 인식 불가.

@@ -6,50 +6,78 @@
 
 ---
 
-## 실행 모드 결정
+## 파이프라인 흐름
 
 ```
-[] 태그 감지 → router 호출
+[] 태그 감지 → specifier 호출
     │
-    router 반환값(execution-mode) 확인
+    specifier 반환값 확인
     │
-    ├─ direct   → router가 직접 처리 완료 (추가 호출 없음)
-    ├─ pipeline → § pipeline 절차 실행
-    └─ full     → § full 절차 실행
+    ├─ 겸임 (direct) → specifier가 Requirement.md + PLAN.md + TASK-00 생성
+    │                   → builder dispatch XML 반환
+    │                   → § direct 절차 실행
+    │
+    └─ 위임 (pipeline/full) → specifier가 Requirement.md만 생성
+                               → planner dispatch XML 반환
+                               → § planner-driven 절차 실행
 ```
 
 ---
 
-## direct 모드
+## direct 모드 (Specifier 겸임)
 
-router가 단독으로 처리 완료. Main Claude 추가 호출 없음.
+```
+1. specifier 호출 → Requirement.md + PLAN.md + TASK-00 생성 + builder dispatch XML 반환
+2. [승인 1회] 사용자 검토 (요구사항 + 설계 통합)
+3. builder 호출 (dispatch XML을 prompt로) — self-check 포함
+4. committer 호출 (builder 결과를 prompt로)
+```
+
+> Verifier 생략: Builder가 self-check(build/lint)를 수행하므로 단일 TASK에서 별도 검증 불필요.
 
 ---
 
-## pipeline 모드
+## pipeline 모드 (Planner 별도 호출)
 
 ```
-1. router 호출 → PLAN.md + TASK-00.md 생성 + builder dispatch XML 반환
-2. builder 호출 (dispatch XML을 prompt로)
-3. verifier 호출 (builder 결과를 prompt로)
-4. committer 호출 (verifier 결과를 prompt로)
+1. specifier 호출 → Requirement.md 생성 + planner dispatch XML 반환
+2. [기획 승인] 사용자 검토 (Requirement.md)
+3. planner 호출 (dispatch XML을 prompt로) → PLAN.md + TASK-NN 생성 + execution-mode 결정
+4. [개발 승인] 사용자 검토 (PLAN.md + TASK 목록)
+5. builder 호출 (TASK별 dispatch XML을 prompt로)
+6. verifier 호출 (builder 결과를 prompt로)
+7. committer 호출 (verifier 결과를 prompt로)
 ```
 
 ---
 
-## full 모드
+## full 모드 (Scheduler 포함)
 
 ```
-1. router 호출 → WORK 디렉토리 생성 + planner dispatch XML 반환
-2. planner 호출 (dispatch XML을 prompt로) → PLAN.md + TASK 파일 생성
-3. scheduler 호출 → DAG 분석 + READY TASK + builder dispatch XML 반환
-4. builder 호출 (dispatch XML을 prompt로) → 구현
-5. verifier 호출 (builder 결과를 prompt로) → 검증
-6. committer 호출 (verifier 결과를 prompt로) → commit
-7. 미완료 TASK 있으면 3번으로 돌아감
+1. specifier 호출 → Requirement.md 생성 + planner dispatch XML 반환
+2. [기획 승인] 사용자 검토 (Requirement.md)
+3. planner 호출 → PLAN.md + TASK 분해 + execution-mode: full 결정
+4. [개발 승인] 사용자 검토 (PLAN.md + TASK 목록)
+5. scheduler 호출 → DAG 분석 + READY TASK + builder dispatch XML 반환
+6. builder 호출 (dispatch XML을 prompt로) → 구현
+7. verifier 호출 (builder 결과를 prompt로) → 검증
+8. committer 호출 (verifier 결과를 prompt로) → commit
+9. 미완료 TASK 있으면 5번으로 돌아감
 ```
 
 병렬 실행: scheduler가 복수의 READY TASK를 반환하면 builder를 동시에 호출한다.
+
+---
+
+## 기존 WORK 재개
+
+이미 PLAN.md + TASK가 존재하는 WORK의 파이프라인 재개:
+
+```
+1. scheduler 호출 → READY TASK 확인 + builder dispatch XML 반환
+2. builder → verifier → committer 순서대로 실행
+3. 미완료 TASK 있으면 1번으로 돌아감
+```
 
 ---
 
@@ -57,12 +85,32 @@ router가 단독으로 처리 완료. Main Claude 추가 호출 없음.
 
 | 에이전트 | 반환값 | 호출 주체 |
 |---------|-------|---------|
-| router | execution-mode + dispatch XML | Main Claude |
-| planner | PLAN.md/TASK 파일 생성 완료 보고 | Main Claude |
+| specifier | Requirement.md + (겸임 시) PLAN.md/TASK + dispatch XML | Main Claude |
+| planner | PLAN.md/TASK 파일 생성 완료 + execution-mode | Main Claude |
 | scheduler | READY TASK + dispatch XML | Main Claude |
 | builder | task-result XML (context-handoff 포함) | Main Claude |
 | verifier | task-result XML | Main Claude |
 | committer | task-result XML + commit hash | Main Claude |
+
+---
+
+## 모드별 서브에이전트 호출 횟수
+
+| 모드 | Specifier | Planner | Scheduler | Builder | Verifier | Committer | 합계 |
+|------|:---------:|:-------:|:---------:|:-------:|:--------:|:---------:|:----:|
+| direct | O (겸임) | X | X | O | X | O | **3회** |
+| pipeline | O | O | X | O | O | O | **5회** |
+| full | O | O | O | O | O | O | **6회** |
+
+---
+
+## 승인 게이트
+
+| 모드 | 승인 횟수 | 시점 |
+|------|:---------:|------|
+| direct | 1회 | Specifier 완료 후 (요구사항 + 설계 통합) |
+| pipeline/full | 2회 | 기획 승인 (Requirement.md) → 개발 승인 (PLAN.md) |
+| 자동 승인 | 0회 | "자동으로 진행" 명시 시 |
 
 ---
 
@@ -92,8 +140,6 @@ env -u CLAUDECODE -u ANTHROPIC_API_KEY claude -p \
   "WORK-XX 파이프라인을 이어서 실행하라." \
   --dangerously-skip-permissions
 ```
-
-검증 결과 (WORK-24): `claude -p` → Task tool 9회 호출 → router/planner/scheduler/builder/verifier/committer 전체 자동 완주 확인됨.
 
 ---
 

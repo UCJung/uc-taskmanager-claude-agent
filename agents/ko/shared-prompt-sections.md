@@ -52,6 +52,7 @@ fi
 
 ```
 works/{WORK_ID}/
+  ├─ Requirement.md                 # Specifier 생성 (필수)
   ├─ PLAN.md
   ├─ PROGRESS.md
   ├─ TASK-00.md               # WORK prefix 없음

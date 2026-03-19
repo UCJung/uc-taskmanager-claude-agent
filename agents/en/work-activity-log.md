@@ -13,7 +13,7 @@ Defines the rules for each agent to record WORK progress in the `works/{WORK_ID}
 ## log_work Function
 
 ```bash
-AGENT_NAME="ROUTER"  # Set appropriately in each agent file
+AGENT_NAME="SPECIFIER"  # Set appropriately in each agent file
 
 log_work() {
   local WORK_ID="$1" AGENT="$2" STAGE="$3" DESC="$4"
