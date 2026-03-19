@@ -37,7 +37,7 @@ claude --dangerously-skip-permissions
 
 > **Warning**: Only use bypass mode in isolated environments or when you trust the pipeline fully. See [Claude Code Permissions](https://code.claude.com/docs/en/permissions) for details.
 
-That's it. The router analyzes your request, plans the work, and executes through isolated subagent pipelines.
+That's it. The specifier analyzes your request, plans the work, and executes through isolated subagent pipelines.
 
 ---
 
@@ -66,7 +66,7 @@ Six subagents work across any project and any language, automatically handling *
 
 ```
 "[new-feature] Build a user authentication feature"
-→ router decides WORK, planner creates WORK-01 with 5 TASKs, pipeline executes
+→ specifier decides WORK, planner creates WORK-01 with 5 TASKs, pipeline executes
 ```
 
 ---
@@ -79,7 +79,7 @@ Six subagents work across any project and any language, automatically handling *
 > [bugfix] Fix typo in login error message
 ```
 
-Main Claude calls router, which selects `execution-mode: direct` and handles everything in its session. No additional subagent spawned. Creates WORK-NN directory + PLAN + result.md + commit.
+Main Claude calls specifier, which selects `execution-mode: direct`. Specifier itself (acting as builder) implements the change + committer commits. Creates WORK-NN directory + PLAN + result.md + commit.
 
 ### Quick Task (pipeline mode)
 
@@ -87,7 +87,7 @@ Main Claude calls router, which selects `execution-mode: direct` and handles eve
 > [bugfix] Fix the login button not responding on mobile
 ```
 
-Main Claude calls router, which selects `execution-mode: pipeline` and creates PLAN. Then Main Claude calls builder → verifier → committer in sequence.
+Main Claude calls specifier, which selects `execution-mode: pipeline` and creates PLAN. Then Main Claude calls builder → verifier → committer in sequence.
 
 ### Complex Feature (WORK)
 
@@ -121,7 +121,7 @@ The scheduler executes WORK-01's TASKs in dependency order.
 
 #### 3. Add to Existing WORK
 
-If WORK-01 is IN_PROGRESS, the router asks:
+If WORK-01 is IN_PROGRESS, the specifier asks:
 > "WORK-01 (User Authentication) is in progress. Add as a new TASK or create a new WORK?"
 
 #### 4. Check Status
@@ -183,7 +183,7 @@ Or fix the issue and re-run:
 > [enhancement] Add rate limiting to the auth API
 ```
 
-If WORK-02 is `IN_PROGRESS`, the router asks:
+If WORK-02 is `IN_PROGRESS`, the specifier asks:
 > "WORK-02 (Auth Module) is in progress. Add as a new TASK, or create a new WORK?"
 
 #### 10. Check Individual TASK Status
@@ -215,10 +215,10 @@ To register this rule in your project, add the following to your `CLAUDE.md`:
 ```markdown
 ## Agent 호출 규칙
 
-`[]` 태그로 시작하는 요청 → router 에이전트 호출 (WORK 파이프라인 시작)
+`[]` 태그로 시작하는 요청 → specifier 에이전트 호출 (WORK 파이프라인 시작)
 ```
 
-This ensures Claude automatically delegates `[]`-tagged requests to the router agent without manual invocation.
+This ensures Claude automatically delegates `[]`-tagged requests to the specifier agent without manual invocation.
 
 ---
 
@@ -257,27 +257,27 @@ git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
 ```bash
 claude
 > /agents
-# router, planner, scheduler, builder, verifier, committer → confirm all 6
+# specifier, planner, scheduler, builder, verifier, committer → confirm all 6
 ```
 
 ---
 
 ## Concept: Three Execution Modes
 
-Main Claude detects the `[]` tag and calls the **router** subagent, which selects one of three `execution-mode` values:
+Main Claude detects the `[]` tag and calls the **specifier** subagent, which selects one of three `execution-mode` values:
 
 ```
 User Request → Main Claude (orchestrator)
                     │
                     ▼
-              ┌────────┐
-              │ router │ (called by Main Claude)
-              └───┬────┘
-                  │
-            execution-mode returned
-                  │
+              ┌───────────┐
+              │ specifier │ (called by Main Claude)
+              └─────┬─────┘
+                    │
+              execution-mode returned
+                    │
       ├─ direct  (no build/test required)
-      │   → router handles everything — 0 additional subagent calls
+      │   → specifier acts as builder + Main Claude calls committer
       │
       ├─ pipeline  (build/test required, single domain, sequential)
       │   → Main Claude calls: builder → verifier → committer (in sequence)
@@ -300,7 +300,7 @@ WORK (unit of work)       A single goal. The unit requested by the user.
 
 ### pipeline mode (Single Task, Delegated)
 
-Subagent-delegated path for moderate single tasks. Main Claude calls each agent in sequence. Router stays clean.
+Subagent-delegated path for moderate single tasks. Main Claude calls each agent in sequence. Specifier stays clean.
 
 ```
 Main Claude → builder(sonnet) → verifier(haiku) → committer(haiku)
@@ -309,10 +309,11 @@ Main Claude → builder(sonnet) → verifier(haiku) → committer(haiku)
 
 ### direct mode (Trivial)
 
-Main Claude calls router, which handles everything in its own session. No additional subagent calls.
+Main Claude calls specifier, which determines direct mode and implements the change itself. Main Claude then calls committer.
 
 ```
-Main Claude → router: Analyze → Implement → Self-verify → Commit → result.md
+Main Claude → specifier: Analyze → Implement → Self-verify → [back to Main Claude]
+Main Claude → committer: Commit → result.md
 ```
 
 ---
@@ -324,28 +325,28 @@ Main Claude → router: Analyze → Implement → Self-verify → Commit → res
 > Subagents cannot nest — Main Claude (CLI terminal) orchestrates every call.
 
 ```
-                          Main Claude (orchestrator)
-                    ┌──────────┼──────────────────────┐
-                    │          │                       │
-  router           planner          scheduler         builder          verifier         committer
- ┌────────┐      ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │Request  │────▶│Create    │────▶│Dependency │────▶│Code      │────▶│Build/Test│────▶│Result    │
- │Analysis │     │WORK/TASK │     │DAG + Order│     │Implement │     │Verify    │     │→ git     │
- └────────┘     └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
-                                                       │                │                │
-                                                       └── Retry on fail┘                │
-                                                          (max 3 times)                  │
-                                                                         Next TASK loop ◀┘
+                               Main Claude (orchestrator)
+                    ┌─────────────┼──────────────────────┐
+                    │             │                       │
+  specifier        planner          scheduler         builder          verifier         committer
+ ┌──────────┐    ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │Request   │────▶│Create   │────▶│Dependency│────▶│Code      │────▶│Build/Test│────▶│Result    │
+ │Analysis  │     │WORK/TASK│     │DAG+Order │     │Implement │     │Verify    │     │→ git     │
+ └──────────┘    └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
+                                                        │                │                │
+                                                        └── Retry on fail┘                │
+                                                           (max 3 times)                  │
+                                                                          Next TASK loop ◀┘
 ```
 
 ### pipeline mode (Simple → Delegated)
 
 ```
-  router            builder          verifier         committer
- ┌────────┐       ┌──────────┐     ┌──────────┐     ┌──────────┐
- │PLAN    │─────▶│Code      │────▶│Build/Test│────▶│Result    │
- │+TASK   │      │Implement │     │Verify    │     │→ git     │
- └────────┘      └──────────┘     └──────────┘     └──────────┘
+  specifier         builder          verifier         committer
+ ┌──────────┐      ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │PLAN      │─────▶│Code      │────▶│Build/Test│────▶│Result    │
+ │+TASK     │      │Implement │     │Verify    │     │→ git     │
+ └──────────┘      └──────────┘     └──────────┘     └──────────┘
                     (sonnet)         (haiku)           (haiku)
               ← each called by Main Claude →
 ```
@@ -353,18 +354,18 @@ Main Claude → router: Analyze → Implement → Self-verify → Commit → res
 ### direct mode (Trivial)
 
 ```
-  router
- ┌──────────────────────────────────────────────────┐
- │ Analyze → Implement → Self-check → Commit → result│
- └──────────────────────────────────────────────────┘
-  (no build/test required — no subagent overhead, 0 extra sessions)
+  specifier                                          committer
+ ┌──────────────────────────────────┐               ┌──────────┐
+ │ Analyze → Implement → Self-check │──────────────▶│Commit    │
+ └──────────────────────────────────┘               │→ result  │
+  (no build/test required)                          └──────────┘
 ```
 
 ### Agents
 
 | Agent | Role | Model | Permission | MCP |
 |-------|------|-------|------------|-----|
-| **router** | `[]` tag detection, execution-mode판정(direct/pipeline/full), PLAN생성, WORK-LIST관리 | **opus** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
+| **specifier** | `[]` tag detection, execution-mode판정(direct/pipeline/full), PLAN생성, WORK-LIST관리, direct 모드 구현(builder 겸임) | **opus** | read + dispatch + write | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
 | **planner** | Create WORK + decompose TASKs + generate PLAN.md(Execution-Mode:full) + pre-create progress templates | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
 | **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch | — |
 | **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena(심볼단위탐색/편집) |
@@ -377,7 +378,7 @@ Main Claude → router: Analyze → Implement → Self-verify → Commit → res
 
 ```
 works/
-├── WORK-LIST.md                      ← Master list of all WORKs (managed by router)
+├── WORK-LIST.md                      ← Master list of all WORKs (managed by specifier)
 ├── WORK-01/                          ← "User Authentication"
 │   ├── PLAN.md                       ← Plan + dependency graph
 │   ├── PROGRESS.md                   ← Progress tracking (auto-updated)
@@ -402,7 +403,7 @@ works/
 
 ### WORK-LIST.md
 
-The router maintains `works/WORK-LIST.md` as the master index:
+The specifier maintains `works/WORK-LIST.md` as the master index:
 
 | WORK ID | Title | Status | Created |
 |---------|-------|--------|---------|
@@ -414,7 +415,7 @@ The router maintains `works/WORK-LIST.md` as the master index:
 | `IN_PROGRESS` | TASKs in progress — not yet pushed |
 | `COMPLETED` | All TASKs committed + git push done |
 
-- **IN_PROGRESS**: router checks this before creating new WORKs
+- **IN_PROGRESS**: specifier checks this before creating new WORKs
 - **COMPLETED**: updated at `git push` time — **not by agents**
 
 #### git push Procedure
@@ -470,7 +471,7 @@ The scheduler reads `PROGRESS.md` to determine the last completed TASK and conti
 ```
 User: [new-feature] Build a comment feature for the blog system.
 
-Claude: [router → WORK path]
+Claude: [specifier → WORK path]
   Complexity: 4+ files, DB schema change, multiple modules
   → Creating new WORK
 
@@ -539,7 +540,7 @@ WORK IDs are assigned based on a **filesystem-first approach**:
 
 1. **Filesystem Source**: The planner scans `works/` directory to find existing WORK directories and determines the next WORK ID based on the latest directory found.
 2. **MEMORY.md NOT used**: Project memory (MEMORY.md) is never referenced for WORK numbering. Only the filesystem is the authoritative source.
-3. **Consistency Check**: The router validates WORK ID consistency by checking both the filesystem and WORK-LIST.md before dispatching to the planner.
+3. **Consistency Check**: The specifier validates WORK ID consistency by checking both the filesystem and WORK-LIST.md before dispatching to the planner.
 
 This ensures:
 - No duplicate WORK IDs even if MEMORY.md is stale or corrupted
@@ -575,7 +576,7 @@ scheduler's context after 5 TASKs:
 
 ### Router Rule Config (`.agent/router_rule_config.json`)
 
-The router reads `.agent/router_rule_config.json` from the project root to determine routing criteria. If the file is absent, the router uses its built-in defaults.
+The specifier reads `.agent/router_rule_config.json` from the project root to determine routing criteria. If the file is absent, the specifier uses its built-in defaults.
 
 **File location:**
 ```
@@ -585,9 +586,9 @@ The router reads `.agent/router_rule_config.json` from the project root to deter
 **JSON structure:**
 ```json
 {
-  "$schema": "http://uc-taskmanager.local/schemas/router-rules/v1.0.json",
+  "$schema": "http://uc-taskmanager.local/schemas/specifier-rules/v1.0.json",
   "version": "1.1.0",
-  "description": "Router execution-mode decision criteria. Customize per project.",
+  "description": "Specifier execution-mode decision criteria. Customize per project.",
   "decision_flow": [
     "1. build_test_required? → false → direct",
     "2. single_domain + sequential DAG → pipeline",
@@ -631,12 +632,12 @@ The router reads `.agent/router_rule_config.json` from the project root to deter
 **Key fields:**
 | Field | Description |
 |-------|-------------|
-| `rules.direct.criteria.build_test_required` | `false` → router handles entirely without spawning subagents |
+| `rules.direct.criteria.build_test_required` | `false` → specifier handles implementation, then committer commits |
 | `rules.pipeline.criteria.max_tasks` | Max task count before escalating to full (default: 5) |
 | `rules.pipeline.criteria.dag_complexity` | `sequential` only; complex DAG → escalates to full |
 | `rules.full.criteria.any_of` | List of conditions — any match triggers full mode |
 
-**Fallback behavior:** If `.agent/router_rule_config.json` is absent or malformed, the router falls back to its built-in defaults (equivalent to the structure above).
+**Fallback behavior:** If `.agent/router_rule_config.json` is absent or malformed, the specifier falls back to its built-in defaults (equivalent to the structure above).
 
 **Per-project customization example:**
 
@@ -672,8 +673,8 @@ For a monorepo with strict build requirements:
 
 ### Three Execution Modes
 
-The router matches effort to complexity via `execution-mode`:
-- **direct**: 1-line typo fix — Main Claude calls router, which handles everything. 0 additional subagent sessions.
+The specifier matches effort to complexity via `execution-mode`:
+- **direct**: 1-line typo fix — Main Claude calls specifier, which implements the change itself + committer commits. Minimal subagent overhead.
 - **pipeline**: Moderate fix — Main Claude calls builder → verifier → committer in sequence. Main Claude only orchestrates, minimizing its own context usage
 - **full**: Complex features — full planning, decomposition, and tracking
 
@@ -820,7 +821,7 @@ Place a file with the same name in `.claude/agents/` to override.
 
 | What | File | Section |
 |------|------|---------|
-| Routing criteria | `router.md` | 3-2. Execution-Mode 결정 |
+| Routing criteria | `specifier.md` | 3-2. Execution-Mode 결정 |
 | Approval policy | `scheduler.md` | Phase 1: User Approval |
 | Commit message format | `committer.md` | Step 3: Stage + Commit |
 | Verification steps | `verifier.md` | Verification Pipeline |
@@ -859,7 +860,7 @@ uc-taskmanager/
 ├── LICENSE
 ├── agents/                  ← Distribution: copy these to install
 │   ├── ko/                  ← Korean agent prompts (12 files)
-│   │   ├── router.md, planner.md, scheduler.md, builder.md,
+│   │   ├── specifier.md, planner.md, scheduler.md, builder.md,
 │   │   ├── verifier.md, committer.md, agent-flow.md,
 │   │   ├── context-policy.md, xml-schema.md, shared-prompt-sections.md,
 │   │   ├── file-content-schema.md, work-activity-log.md

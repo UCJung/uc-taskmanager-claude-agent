@@ -15,7 +15,7 @@ The uc-taskmanager pipeline supports optional HTTP callbacks for external system
 
 | execution-mode | TaskCallback 전송 주체 | ProgressCallback 전송 주체 |
 |:--------------:|:---------------------:|:-------------------------:|
-| `direct` | **Router** (committer 역할 대행) | **Router** (builder 역할 대행) |
+| `direct` | **Specifier** (committer 역할 대행) | **Specifier** (builder 역할 대행) |
 | `pipeline` | **Committer** | **Builder** |
 | `full` | **Committer** | **Builder** |
 
@@ -199,29 +199,29 @@ curl -X POST "http://your-system.com/api/v1/task-progress" \
 
 ## Callback Execution Flow by execution-mode
 
-### direct 모드 — Router 단독 수행
+### direct 모드 — Specifier 겸임 수행
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant Router
+    participant Specifier
     participant External System
 
-    User->>Router: [] 태그 요청 (direct 판정)
+    User->>Specifier: [] 태그 요청 (direct 판정)
 
     loop Progress Checkpoints
-        Router->>Router: 코드 수정
-        Router->>Router: progress.md 갱신
-        Router->>External System: POST ProgressCallback (if configured)
-        External System-->>Router: 200 OK or error
-        Note over Router: Continue regardless of callback result
+        Specifier->>Specifier: 코드 수정
+        Specifier->>Specifier: progress.md 갱신
+        Specifier->>External System: POST ProgressCallback (if configured)
+        External System-->>Specifier: 200 OK or error
+        Note over Specifier: Continue regardless of callback result
     end
 
-    Router->>Router: result.md 생성
-    Router->>Router: Git commit
-    Router->>External System: POST TaskCallback (if configured)
-    External System-->>Router: 200 OK or error
-    Note over Router: Continue regardless of callback result
+    Specifier->>Specifier: result.md 생성
+    Specifier->>Specifier: Git commit
+    Specifier->>External System: POST TaskCallback (if configured)
+    External System-->>Specifier: 200 OK or error
+    Note over Specifier: Continue regardless of callback result
 ```
 
 ### pipeline / full 모드 — 서브에이전트 수행
@@ -254,7 +254,7 @@ sequenceDiagram
     Committer->>Dispatcher: return task-result with commit hash
 ```
 
-*pipeline 모드의 Dispatcher는 Router, full 모드의 Dispatcher는 Scheduler.*
+*pipeline 모드의 Dispatcher는 Specifier, full 모드의 Dispatcher는 Scheduler.*
 
 ### Timeline (pipeline / full 공통)
 
@@ -292,7 +292,7 @@ curl ... 2>/dev/null || echo "WARNING: callback request failed ($CALLBACK_URL), 
 - Warning message logged
 - Task execution continues
 - No retry attempted
-- Commit/result already finalized (for committer/router)
+- Commit/result already finalized (for committer/specifier)
 
 ### Network Transience
 
@@ -330,7 +330,7 @@ curl ... 2>/dev/null || echo "WARNING: callback request failed ($CALLBACK_URL), 
 
 ## Implementation Guide for External Systems
 
-### Receiving TaskCallback (Committer/Router Results)
+### Receiving TaskCallback (Committer/Specifier Results)
 
 Expected HTTP request:
 
@@ -353,7 +353,7 @@ Authorization: Bearer <token>
 }
 ```
 
-### Receiving ProgressCallback (Builder/Router Checkpoints)
+### Receiving ProgressCallback (Builder/Specifier Checkpoints)
 
 Expected HTTP requests (multiple):
 
@@ -510,18 +510,18 @@ curl -X POST "http://127.0.0.1:3000/task-result" \
 - **Created**: 2026-03-12
 - **Purpose**: WORK-09 — Document callback integration design for external system notifications
 - **Updated**: 2026-03-14 — WORK-10 (SDD v1.3): execution-mode 3종 체계 반영
-  - execution-mode별 콜백 전송 주체 명시 (direct: Router, pipeline/full: Builder/Committer)
+  - execution-mode별 콜백 전송 주체 명시 (direct: Specifier, pipeline/full: Builder/Committer)
   - 불변 보장: 모든 모드에서 COMMITTER DONE 콜백(TaskCallback) 전송 보장
   - Sequence diagram을 direct 모드 / pipeline+full 모드로 분리
 - **Updated**: 2026-03-15 — WORK-19: Related Documents 갱신 (file-content-schema.md 추가, 섹션 참조 현행화)
-- **Referenced by**: CLAUDE.md, agents/builder.md (ProgressCallback), agents/committer.md, agents/router.md (direct 모드 콜백)
+- **Referenced by**: CLAUDE.md, agents/builder.md (ProgressCallback), agents/committer.md, agents/specifier.md (direct 모드 콜백)
 
 ---
 
 ## Related Documents
 
 - `agents/shared-prompt-sections.md` § 6: Task Callbacks configuration guide (현재 § 미존재 → CLAUDE.md 직접 참조)
-- `agents/router.md` → direct 모드: Router가 직접 콜백 전송
+- `agents/specifier.md` → direct 모드: Specifier가 직접 콜백 전송
 - `agents/builder.md` → ProgressCallback: Builder implementation (pipeline/full)
 - `agents/committer.md` → Committer implementation (pipeline/full)
 - `agents/xml-schema.md`: Agent communication format + execution-mode attribute

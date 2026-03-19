@@ -1,7 +1,7 @@
 # Pipeline Architecture Spec
 
 > uc-taskmanager — 에이전트 파이프라인 전체 구조 명세
-> Version: 1.2
+> Version: 1.3
 
 ---
 
@@ -28,7 +28,7 @@
 ## 1. 개요
 
 uc-taskmanager는 Claude Code CLI 위에서 동작하는 **멀티 에이전트 작업 파이프라인 시스템**이다.
-사용자의 요청을 분석하여 복잡도에 따라 세 가지 execution-mode 중 하나로 라우팅하고, 각 TASK를 에이전트 파이프라인으로 자동 처리한다.
+사용자의 요청을 분석하여 복잡도에 따라 세 가지 execution-mode 중 하나로 라우팅하고, 각 TASK를 에이전트 파이프라인으로 자동 처리한다. Specifier가 요구사항 명세화와 execution-mode 판정을 담당한다.
 
 ### 핵심 설계 원칙
 
@@ -44,7 +44,7 @@ uc-taskmanager는 Claude Code CLI 위에서 동작하는 **멀티 에이전트 �
 
 | 에이전트 | 역할 | 모델 | 실행 모드 |
 |---------|------|------|---------|
-| **router** | 사용자 요청 분석 → execution-mode 결정 및 실행 오케스트레이션 | opus | 항상 |
+| **specifier** | 사용자 요청 분석 → Requirement.md 작성 → execution-mode 결정 및 실행 오케스트레이션 | opus | 항상 |
 | **planner** | WORK 생성 + TASK 분해 + DAG 설계 | opus | full 전용 |
 | **scheduler** | DAG 관리 + Builder/Verifier/Committer 파이프라인 실행 | haiku | full 전용 |
 | **builder** | TASK 실제 구현 (파일 생성/수정) + progress.md 기록 | sonnet | pipeline / full |
@@ -61,23 +61,25 @@ uc-taskmanager는 Claude Code CLI 위에서 동작하는 **멀티 에이전트 �
 [] 태그 감지
      │
      ▼
-  Main Claude → router 호출
+  Main Claude → specifier 호출
+                  │
+         Requirement.md 작성
                   │
          execution-mode 결정
                   │
     ┌─────────────┼─────────────┐
     ▼             ▼             ▼
   direct       pipeline        full
-  (router       builder       planner
-  단독)       →verifier      →scheduler
-             →committer   →[B→V→C]×N
+ (specifier    builder       planner
+  겸임:      →verifier      →scheduler
+  B+C포함)  →committer   →[B→V→C]×N
 ```
 
 ---
 
 ## 3. execution-mode 3종 체계
 
-router가 `.agent/router_rule_config.json`의 rules를 우선 적용하여 판정한다.
+specifier가 `.agent/router_rule_config.json`의 rules를 우선 적용하여 판정한다.
 config 없을 경우 내장 기준을 사용한다.
 
 ```
@@ -94,52 +96,53 @@ config 없을 경우 내장 기준을 사용한다.
 
 ### 3.1 direct 모드
 
-Router가 서브에이전트 없이 자신의 세션에서 전 과정을 직접 수행한다.
+Specifier가 builder · committer를 겸임하여 전 과정을 수행한다.
 
 ```
-Router: WORK 파일 생성 → 코드 수정 → self-check → result.md 작성 → git commit → 콜백
+Specifier: Requirement.md + WORK 파일 생성 → 코드 수정 → self-check → result.md 작성 → git commit → 콜백
 ```
 
-**실행 순서 (16단계):**
+**실행 순서 (17단계):**
 
 ```
 1.  WORK ID 결정 (FS + WORK-LIST.md 양쪽 스캔 → 최댓값+1)
 2.  log_work INIT
 3.  mkdir works/WORK-NN/                          ← 반드시 생성 (생략 금지)
-4.  PLAN.md 생성 (Execution-Mode: direct)
-5.  TASK-00.md 생성                               ← 반드시 생성
-6.  TASK-00_progress.md 생성 (Status: PENDING)
-7.  log_work REF
-8.  코드 수정 + self-check (build && lint)
-9.  log_work BUILD
-10. TASK-00_progress.md → Status: COMPLETED
-11. TASK-00_result.md 생성                        ← 반드시 생성
-12. git add -A && git commit
-13. 커밋 해시 백필 → git commit --amend --no-edit
-14. log_work COMMIT → COMMITTER DONE 콜백 전송
-15. ProgressCallback 전송
-16. WORK-LIST.md IN_PROGRESS 추가
+4.  Requirement.md 생성                           ← 반드시 생성
+5.  PLAN.md 생성 (Execution-Mode: direct)
+6.  TASK-00.md 생성                               ← 반드시 생성
+7.  TASK-00_progress.md 생성 (Status: PENDING)
+8.  log_work REF
+9.  코드 수정 + self-check (build && lint)
+10. log_work BUILD
+11. TASK-00_progress.md → Status: COMPLETED
+12. TASK-00_result.md 생성                        ← 반드시 생성
+13. git add -A && git commit
+14. 커밋 해시 백필 → git commit --amend --no-edit
+15. log_work COMMIT → COMMITTER DONE 콜백 전송
+16. ProgressCallback 전송
+17. WORK-LIST.md IN_PROGRESS 추가
 ```
 
 - 서브에이전트 호출 없음 (세션 초기화 비용 0)
-- Router가 committer 역할까지 대행 (result.md + commit + TaskCallback)
-- ProgressCallback도 Router가 직접 전송
+- Specifier가 builder · committer 역할까지 겸임 (result.md + commit + TaskCallback)
+- ProgressCallback도 Specifier가 직접 전송
 
 ### 3.2 pipeline 모드
 
-Router가 PLAN + TASK 파일을 생성한 후 Main Claude를 통해 서브에이전트를 순차 dispatch한다.
+Specifier가 Requirement.md + PLAN + TASK 파일을 생성한 후 Main Claude를 통해 서브에이전트를 순차 dispatch한다.
 
 ```
-Router: PLAN 생성 → builder dispatch XML 반환
+Specifier: Requirement.md + PLAN 생성 → builder dispatch XML 반환
 Main Claude: builder 호출 → verifier 호출 → committer 호출
 ```
 
 **실행 순서:**
 
 ```
-1. router: WORK ID 결정, PLAN.md, TASK-00.md, TASK-00_progress.md 생성
-2. router: WORK-LIST.md IN_PROGRESS 추가
-3. router: builder dispatch XML 반환
+1. specifier: WORK ID 결정, Requirement.md, PLAN.md, TASK-00.md, TASK-00_progress.md 생성
+2. specifier: WORK-LIST.md IN_PROGRESS 추가
+3. specifier: builder dispatch XML 반환
 4. Main Claude: builder 서브에이전트 호출
 5. Main Claude: verifier 서브에이전트 호출 (builder context-handoff 전달)
 6. Main Claude: committer 서브에이전트 호출 (verifier + builder context-handoff 전달)
@@ -150,10 +153,10 @@ Main Claude: builder 호출 → verifier 호출 → committer 호출
 
 ### 3.3 full 모드
 
-Router가 planner에게 계획 수립을 위임하고, scheduler가 DAG 기반으로 파이프라인을 반복 실행한다.
+Specifier가 Requirement.md를 작성하고 planner에게 계획 수립을 위임한다. scheduler가 DAG 기반으로 파이프라인을 반복 실행한다.
 
 ```
-router → (Main Claude) → planner → (Main Claude) → scheduler
+specifier → (Main Claude) → planner → (Main Claude) → scheduler
 → (Main Claude) → [builder → verifier → committer] × N
 ```
 
@@ -161,8 +164,8 @@ router → (Main Claude) → planner → (Main Claude) → scheduler
 
 ```
 신규 WORK:
-1. router: WORK ID 결정, WORK 디렉토리 생성, WORK-LIST.md IN_PROGRESS 추가
-2. router: planner dispatch XML 반환
+1. specifier: WORK ID 결정, WORK 디렉토리 생성, Requirement.md 작성, WORK-LIST.md IN_PROGRESS 추가
+2. specifier: planner dispatch XML 반환
 3. Main Claude: planner 호출 → PLAN.md + TASK 파일 생성 (사용자 승인 후)
 4. Main Claude: scheduler 호출
 
@@ -190,7 +193,7 @@ scheduler 루프:
 | TASK 의존성 | 없음 | 없음 | 순차/병렬 |
 | 신규 모듈 추가 | 없음 | 없음 | 있음 |
 
-> config 파일(`.agent/router_rule_config.json`) 존재 시 위 내장 기준은 무시되고 config rules만 적용된다.
+> config 파일(`.agent/router_rule_config.json`) 존재 시 위 내장 기준은 무시되고 config rules만 적용된다. (파일명의 "router"는 하위 호환성 유지를 위해 그대로 사용)
 
 ---
 
@@ -202,11 +205,12 @@ scheduler 루프:
 works/
   WORK-LIST.md                  # 전체 WORK 목록 (IN_PROGRESS / COMPLETED)
   WORK-NN/
+    Requirement.md              # 요구사항 명세 (specifier 생성, 필수)
     PLAN.md                     # WORK 개요 + DAG (7개 필수 메타정보 필드)
     PROGRESS.md                 # scheduler 진행 상태 (full 모드만)
     TASK-XX.md                  # TASK 명세 (WORK prefix 없음)
-    TASK-XX_progress.md         # 실시간 체크포인트 (builder/router 작성)
-    TASK-XX_result.md           # 완료 보고서 (committer/router 작성)
+    TASK-XX_progress.md         # 실시간 체크포인트 (builder/specifier 작성)
+    TASK-XX_result.md           # 완료 보고서 (committer/specifier 작성)
     work_WORK-NN.log            # Activity Log (모든 에이전트 기록)
 ```
 
@@ -214,10 +218,11 @@ works/
 
 | 종류 | 형식 | 생성 주체 |
 |------|------|----------|
-| WORK 계획 | `PLAN.md` | planner / router |
-| TASK 계획 | `TASK-NN.md` | planner / router |
-| TASK 진행 | `TASK-NN_progress.md` | planner(템플릿) / builder(갱신) / router(direct) |
-| TASK 결과 | `TASK-NN_result.md` | committer / router(direct) |
+| 요구사항 명세 | `Requirement.md` | specifier |
+| WORK 계획 | `PLAN.md` | planner / specifier |
+| TASK 계획 | `TASK-NN.md` | planner / specifier |
+| TASK 진행 | `TASK-NN_progress.md` | planner(템플릿) / builder(갱신) / specifier(direct) |
+| TASK 결과 | `TASK-NN_result.md` | committer / specifier(direct) |
 | WORK 진행 | `PROGRESS.md` | scheduler |
 | Activity Log | `work_WORK-NN.log` | 모든 에이전트 |
 
@@ -241,42 +246,44 @@ works/
 
 | 불변 항목 | direct 수행 주체 | pipeline/full 수행 주체 |
 |-----------|:---------------:|:----------------------:|
-| `works/WORK-NN/` 디렉토리 | Router | Router / Planner |
-| `PLAN.md` | Router | Router / Planner |
-| `TASK-XX.md` 파일 | Router | Router / Planner |
-| `TASK-XX_result.md` 생성 | **Router** | **Committer** |
-| COMMITTER DONE 콜백 전송 | **Router** | **Committer** |
-| `WORK-LIST.md` IN_PROGRESS 추가 | Router | Router |
+| `works/WORK-NN/` 디렉토리 | Specifier | Specifier / Planner |
+| `Requirement.md` | Specifier | Specifier |
+| `PLAN.md` | Specifier | Specifier / Planner |
+| `TASK-XX.md` 파일 | Specifier | Specifier / Planner |
+| `TASK-XX_result.md` 생성 | **Specifier** | **Committer** |
+| COMMITTER DONE 콜백 전송 | **Specifier** | **Committer** |
+| `WORK-LIST.md` IN_PROGRESS 추가 | Specifier | Specifier |
 
 ### WORK-LIST.md 갱신 규칙
 
-- WORK 생성 시: Router가 `IN_PROGRESS` 추가
+- WORK 생성 시: Specifier가 `IN_PROGRESS` 추가
 - `COMPLETED` 변경: **git push 시에만** (committer / scheduler 직접 변경 금지)
 
 ---
 
 ## 5. 에이전트별 상세 역할
 
-### 5.1 Router
+### 5.1 Specifier
 
 **모델:** opus | **트리거:** `[]` 태그 감지
 
 주요 역할:
+- 사용자 요청 분석 → Requirement.md 작성 (구조화된 요구사항 명세)
 - execution-mode 결정 (config rules 우선, 없으면 내장 기준)
 - WORK ID 결정: FS + WORK-LIST.md 양쪽 스캔 후 최댓값+1
 - IN_PROGRESS WORK 존재 시: 단절된 WORK 재개 여부 사용자 문의
-- direct 모드: 구현부터 커밋까지 전 과정 단독 수행 (16단계)
-- pipeline 모드: PLAN + TASK 파일 생성 후 builder dispatch XML 반환
-- full 모드: planner dispatch XML 또는 scheduler dispatch XML 반환
+- direct 모드: builder · committer를 겸임하여 구현부터 커밋까지 전 과정 수행 (17단계)
+- pipeline 모드: Requirement.md + PLAN + TASK 파일 생성 후 builder dispatch XML 반환
+- full 모드: Requirement.md 작성 후 planner dispatch XML 또는 scheduler dispatch XML 반환
 - Serena MCP 코드 탐색, Sequential Thinking 복잡도 판정
 
-**STARTUP 참조 파일:** `agents/agent-flow.md`, `agents/xml-schema.md`, `agents/shared-prompt-sections.md`, `agents/context-policy.md`, `agents/work-activity-log.md`
+**STARTUP 참조 파일:** `agents/specifier.md`, `agents/agent-flow.md`, `agents/xml-schema.md`, `agents/shared-prompt-sections.md`, `agents/context-policy.md`, `agents/work-activity-log.md`
 
-**금지:** WORK-LIST.md COMPLETED 변경, 승인 없는 복잡 WORK 처리
+**금지:** WORK-LIST.md COMPLETED 변경, 승인 없는 복잡 WORK 처리, Requirement.md 없이 진행
 
 ### 5.2 Planner
 
-**모델:** opus | **트리거:** full 모드 router dispatch
+**모델:** opus | **트리거:** full 모드 specifier dispatch
 
 주요 역할:
 - 프로젝트 탐색 (CLAUDE.md, README, package.json, 디렉토리 구조)
@@ -298,7 +305,7 @@ works/
 
 ### 5.3 Scheduler
 
-**모델:** haiku | **트리거:** full 모드 (router 또는 planner 이후)
+**모델:** haiku | **트리거:** full 모드 (specifier 또는 planner 이후)
 
 주요 역할:
 - DAG Resolution: `result file 존재 → DONE`, `ALL deps DONE → READY`, 그 외 `BLOCKED`
@@ -556,12 +563,12 @@ Main Claude (오케스트레이터)
 
 | Dispatcher | Receiver | execution-mode | 설명 |
 |------------|----------|:--------------:|------|
-| Router | (자기 자신) | `direct` | Router가 구현+commit+콜백 직접 수행 |
-| Router | Builder | `pipeline` | TASK 1개 구현 |
-| Router | Verifier | `pipeline` | TASK 1개 검증 |
-| Router | Committer | `pipeline` | TASK 1개 커밋 |
-| Router | Planner | `full` | 복잡 WORK 계획 수립 |
-| Router | Scheduler | `full` | 기존 WORK 실행 |
+| Specifier | (자기 자신) | `direct` | Specifier가 builder·committer 겸임 — 구현+commit+콜백 직접 수행 |
+| Specifier | Builder | `pipeline` | TASK 1개 구현 |
+| Specifier | Verifier | `pipeline` | TASK 1개 검증 |
+| Specifier | Committer | `pipeline` | TASK 1개 커밋 |
+| Specifier | Planner | `full` | 복잡 WORK 계획 수립 |
+| Specifier | Scheduler | `full` | 기존 WORK 실행 |
 | Scheduler | Builder | `full` | TASK N개 구현 |
 | Scheduler | Verifier | `full` | TASK N개 검증 |
 | Scheduler | Committer | `full` | TASK N개 커밋 |
@@ -627,7 +634,7 @@ scheduler가 다음 TASK builder dispatch 시 슬라이딩 윈도우를 적용�
 
 ## 9. Progress 체크포인트 시스템
 
-builder(또는 direct 모드의 router)가 비정상 종료 대비를 위해 작업 상태를 파일로 실시간 기록한다.
+builder(또는 direct 모드의 specifier)가 비정상 종료 대비를 위해 작업 상태를 파일로 실시간 기록한다.
 
 ### progress.md 상태 전이
 
@@ -709,13 +716,13 @@ log_work() {
 
 | STAGE | 시점 | 기록 주체 |
 |-------|------|----------|
-| `INIT` | WORK_ID 결정 후 | Router / Planner |
+| `INIT` | WORK_ID 결정 후 | Specifier / Planner |
 | `REF` | STARTUP 참조 직후 | 모든 에이전트 |
-| `PLAN` | PLAN.md + TASK 파일 생성 완료 | Router / Planner |
-| `IMPL` | 코드 구현 시작 | Builder / Router(direct) |
+| `PLAN` | PLAN.md + TASK 파일 생성 완료 | Specifier / Planner |
+| `IMPL` | 코드 구현 시작 | Builder / Specifier(direct) |
 | `BUILD` | self-check 통과 | Builder / Verifier |
-| `COMMIT` | git commit 완료 | Committer / Router(direct) |
-| `DISPATCH` | pipeline/full dispatch | Router / Scheduler |
+| `COMMIT` | git commit 완료 | Committer / Specifier(direct) |
+| `DISPATCH` | pipeline/full dispatch | Specifier / Scheduler |
 
 ### 필수 기록 항목
 
@@ -732,8 +739,8 @@ log_work() {
 
 | 콜백 | 전송 시점 | 전송 주체 |
 |------|---------|---------|
-| **ProgressCallback** | builder 체크포인트마다 | builder (pipeline/full), router (direct) |
-| **TaskCallback** | git commit 완료 후 | committer (pipeline/full), router (direct) |
+| **ProgressCallback** | builder 체크포인트마다 | builder (pipeline/full), specifier (direct) |
+| **TaskCallback** | git commit 완료 후 | committer (pipeline/full), specifier (direct) |
 | **Pipeline Stage Callback** | 각 단계 START/DONE | scheduler (full) |
 
 ### CLAUDE.md 설정
@@ -748,7 +755,7 @@ CallbackToken: <bearer-token>
 
 | execution-mode | TaskCallback | ProgressCallback | Pipeline Stage Callback |
 |:--------------:|:------------:|:----------------:|:-----------------------:|
-| `direct` | **Router** | **Router** | 없음 |
+| `direct` | **Specifier** | **Specifier** | 없음 |
 | `pipeline` | **Committer** | **Builder** | 없음 |
 | `full` | **Committer** | **Builder** | **Scheduler** |
 
@@ -776,11 +783,12 @@ CallbackToken: <bearer-token>
 
 | 파일 | 포맷 섹션 | 생성 주체 |
 |------|----------|---------|
-| `PLAN.md` | § 1 | planner / router |
-| `TASK-XX.md` | § 2 | planner / router |
+| `Requirement.md` | § 0 | specifier |
+| `PLAN.md` | § 1 | planner / specifier |
+| `TASK-XX.md` | § 2 | planner / specifier |
 | `TASK-XX_progress.md` | § 3 | planner(템플릿) / builder(갱신) |
 | `TASK-XX_result.md` (pipeline/full) | § 4 | committer |
-| `TASK-XX_result.md` (direct) | § 5 | router |
+| `TASK-XX_result.md` (direct) | § 5 | specifier |
 | `PROGRESS.md` | § 6 | scheduler |
 
 ### result.md 구조 (committer 작성)
@@ -821,8 +829,8 @@ CallbackToken: <bearer-token>
 
 | 에이전트 | MCP 도구 | 용도 |
 |---------|---------|------|
-| Router | `mcp__sequential-thinking__sequentialthinking` | 복잡도 판정 경계 분석 |
-| Router | `mcp__serena__*` | direct 모드 코드 수정 시 심볼 단위 접근 |
+| Specifier | `mcp__sequential-thinking__sequentialthinking` | 복잡도 판정 경계 분석 |
+| Specifier | `mcp__serena__*` | direct 모드 코드 수정 시 심볼 단위 접근 |
 | Planner | `mcp__sequential-thinking__sequentialthinking` | TASK 4개 이상 / 복잡 의존성 분해 |
 | Planner | `mcp__serena__*` | 기존 코드 구조 파악 (get_symbols_overview 우선) |
 | Builder | `mcp__serena__*` | 코드 탐색 (list_dir → get_symbols_overview → find_symbol → Read 순) |
@@ -860,6 +868,20 @@ CallbackToken: <bearer-token>
 *갱신: 2026-03-15 | WORK-19 — 파일명 규칙 현행화 (TASK-XX_progress.md / TASK-XX_result.md), file-content-schema.md 참조 추가*
 *갱신: 2026-03-15 | WORK-23 — agents/ 12개 파일 전면 분석 기반 v1.1 전면 재작성*
 *갱신: 2026-03-16 | WORK-24 — TASK-00 분석 기반 v1.2: XML 태그 불일치 수정, verifier/committer dispatch XML 상세화, failure-details 추가, 누락 항목 15개 반영*
+*갱신: 2026-03-20 | WORK-28 — v1.3: 에이전트 아키텍처 specifier 기반으로 전환, Requirement.md 필수 산출물 추가, direct 모드 17단계로 확장*
+
+**v1.3 주요 변경사항 (v1.2 대비):**
+- 에이전트 구성: specifier 추가 (6개 에이전트 체계로 전환)
+- `Requirement.md` 파일을 필수 산출물로 추가 (specifier가 생성, 모든 모드 공통)
+- 에이전트 구성표: 6개 에이전트로 specifier 추가
+- direct 모드: 16단계 → 17단계 (Requirement.md 생성 단계 추가)
+- pipeline 모드: Requirement.md 생성 단계 추가
+- full 모드: Requirement.md 작성 후 planner dispatch
+- Dispatcher-Receiver 매핑 설명에 "겸임" 개념 명시
+- Specifier STARTUP 참조 파일 목록에 `agents/specifier.md` 추가
+- 금지 규칙에 "Requirement.md 없이 진행" 추가
+- 산출물 파일 포맷 요약에 `Requirement.md` (§ 0) 추가
+- NFR-01: config 파일명 "router"는 하위 호환성 유지 (router_rule_config.json 유지)
 
 **v1.2 주요 변경사항 (v1.1 대비):**
 - `<self-check>` 태그로 builder 결과 XML 통일 (xml-schema.md `<verification>` 불일치 수정)
@@ -867,7 +889,7 @@ CallbackToken: <bearer-token>
 - committer dispatch XML에 `<builder-result>`, `<verifier-result>` 요소 명시
 - verifier 결과 XML에 `<failure-details>` 구조 추가
 - committer 결과 XML에 `<commit>`, `<result-file>`, `<progress>`, `<next-tasks>` 구조 명시
-- Dispatcher-Receiver 매핑에 pipeline 모드 Router → Verifier/Committer 추가 (9가지 조합)
+- Dispatcher-Receiver 매핑에 pipeline 모드 Specifier → Verifier/Committer 포함 (9가지 조합)
 - direct 모드 실행 순서를 14단계에서 16단계로 확장 (WORK-LIST 추가 단계 명시)
 - TaskCallback 헤더명 `X-Runner-Api-Key` 명시
 - Pipeline Stage Callback 헤더 명시 (`Authorization: Bearer`)

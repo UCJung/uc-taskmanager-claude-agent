@@ -113,14 +113,14 @@ builder가 result.md를 직접 쓰면 작업에 집중하다 빠뜨리는 문제
 
 ## 4. execution-mode별 컨텍스트 전달 방식
 
-슬라이딩 윈도우는 pipeline / full 모드에서 동작한다. direct 모드는 Main Claude가 router를 호출하여 단일 세션에서 처리하므로 컨텍스트 전달 문제 자체가 없다.
+슬라이딩 윈도우는 pipeline / full 모드에서 동작한다. direct 모드는 Main Claude가 specifier를 겸임하여 단일 세션에서 처리하므로 컨텍스트 전달 문제 자체가 없다.
 
 ### direct 모드
 
-Main Claude → router 단일 세션 내 처리 — 서브에이전트 간 handoff 없음.
+Main Claude → specifier 단일 세션 내 처리 — 서브에이전트 간 handoff 없음.
 
 ```
-Main Claude → router 세션:
+Main Claude → specifier 세션:
   [분석] → [코드 수정] → [self-check] → [result.md] → [commit] → [콜백]
   ↑ 모두 동일 세션, 컨텍스트 누적됨
 ```
@@ -193,7 +193,7 @@ TASK-03 builder가 받는 컨텍스트:
 
 ### 목적
 
-비정상 종료(세션 크래시, 타임아웃)에 대비해 builder(또는 direct 모드의 router)가 작업 중간 상태를 파일로 기록한다.
+비정상 종료(세션 크래시, 타임아웃)에 대비해 builder(또는 direct 모드의 specifier)가 작업 중간 상태를 파일로 기록한다.
 
 ### 구조
 
@@ -223,7 +223,7 @@ builder가 재dispatch되면 progress.md를 읽고 **마지막 완료된 체크�
 ### progress.md 선생성 규칙
 
 - **full 모드**: planner가 TASK 파일 생성 시 progress 템플릿을 함께 미리 생성 (`Status: PENDING`)
-- **pipeline / direct 모드**: Main Claude가 router를 통해 TASK 파일 생성 시 함께 생성
+- **pipeline / direct 모드**: Main Claude가 specifier를 통해 TASK 파일 생성 시 함께 생성
 
 ---
 
@@ -247,7 +247,7 @@ committer(pipeline / full 모드)는 작업 시작 전 반드시 다음을 확�
   → Main Claude가 builder 재dispatch (최대 2회 재시도)
 ```
 
-direct 모드에서는 Main Claude가 호출한 router가 self-check로 동등한 검증을 수행한다.
+direct 모드에서는 specifier가 self-check로 동등한 검증을 수행한다.
 
 ---
 
@@ -288,7 +288,7 @@ committer가 builder + verifier의 context-handoff를 종합해 작성한다.
 ```
 
 섹션 헤더는 PLAN.md의 `Language:` 설정에 따라 다국어로 작성된다 (en/ko/ja).
-direct 모드에서는 Main Claude가 호출한 router가 최소 포맷의 result.md를 직접 작성한다 (`Execution-Mode: direct` 필드 포함).
+direct 모드에서는 specifier가 최소 포맷의 result.md를 직접 작성한다 (`Execution-Mode: direct` 필드 포함).
 
 ---
 
@@ -317,7 +317,7 @@ direct 모드의 경우 서브에이전트 세션 초기화 비용(~12,500 토�
 | `agents/file-content-schema.md` | 파이프라인 산출물 포맷 단일 정의 (PLAN.md / TASK / progress.md / result.md) |
 | `agents/context-policy.md` | 슬라이딩 윈도우 정책 상세 규칙 |
 | `agents/xml-schema.md` | context-handoff XML 요소 스키마 + execution-mode 속성 |
-| `agents/router.md` | direct/pipeline/full 모드 판정 + 직접 실행 로직 |
+| `agents/specifier.md` | direct/pipeline/full 모드 판정 + 직접 실행 로직 |
 | `agents/scheduler.md` | 슬라이딩 윈도우 dispatch 로직 (full 모드) |
 | `agents/builder.md` | progress.md 체크포인트 기록 규칙 |
 | `agents/verifier.md` | context-handoff 기반 타겟 검증 |

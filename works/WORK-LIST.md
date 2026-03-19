@@ -28,3 +28,4 @@
 | WORK-25 | 에이전트 md 파일 중복 제거 및 지침 참조 전환 | COMPLETED | 2026-03-16 | 2026-03-16 |
 | WORK-26 | README 소개글에 한국어 기술 문서 안내 추가 | COMPLETED | 2026-03-19 | 2026-03-19 |
 | WORK-27 | COMPLETED 자동 변경 + PLAN.md 요구사항 필드 개선 | COMPLETED | 2026-03-20 | 2026-03-20 |
+| WORK-28 | Router->Specifier 전환 반영 — docs 및 README 현행화 | IN_PROGRESS | 2026-03-20 | |

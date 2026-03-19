@@ -37,7 +37,7 @@ claude --dangerously-skip-permissions
 
 > **주의**: 바이패스 모드는 격리된 환경이거나 파이프라인을 충분히 신뢰할 때만 사용하세요. 자세한 내용은 [Claude Code Permissions](https://code.claude.com/docs/en/permissions)를 참고하세요.
 
-끝입니다. router가 요청을 분석하고, 계획을 세우고, 격리된 서브에이전트 파이프라인으로 실행합니다.
+끝입니다. specifier가 요청을 분석하고, 계획을 세우고, 격리된 서브에이전트 파이프라인으로 실행합니다.
 
 ---
 
@@ -78,11 +78,11 @@ uc-taskmanager는 이 문제를 해결하기 위해 만들었습니다. 요구�
 
 ---
 
-어떤 프로젝트에서든, 어떤 언어에서든 동작하는 6개의 서브에이전트가 **요청 라우팅 → 작업 분해 → 의존성 관리 → 코드 구현 → 검증 → 커밋**을 자동으로 처리합니다.
+어떤 프로젝트에서든, 어떤 언어에서든 동작하는 6개의 서브에이전트가 **실행 모드 판정 → 작업 분해 → 의존성 관리 → 코드 구현 → 검증 → 커밋**을 자동으로 처리합니다.
 
 ```
 "[추가기능] 사용자 인증 기능을 만들어줘"
-→ router가 WORK 판단, planner가 WORK-01 + TASK 5개 생성, 파이프라인 실행
+→ specifier가 WORK 판단, planner가 WORK-01 + TASK 5개 생성, 파이프라인 실행
 ```
 
 ---
@@ -95,7 +95,7 @@ uc-taskmanager는 이 문제를 해결하기 위해 만들었습니다. 요구�
 > [버그수정] 로그인 에러 메시지 오타 수정
 ```
 
-Main Claude가 router를 호출하면 `execution-mode: direct`를 선택하여 자체 세션에서 직접 처리. 추가 서브에이전트 호출 없음. WORK-NN 디렉토리 + PLAN + result.md + commit 자동 생성.
+Main Claude가 specifier를 호출하면 `execution-mode: direct`를 판정하여 specifier가 겸임으로 자체 세션에서 직접 처리. 추가 서브에이전트 호출 없음. WORK-NN 디렉토리 + PLAN + result.md + commit 자동 생성.
 
 ### 간단한 작업 (pipeline 모드)
 
@@ -103,7 +103,7 @@ Main Claude가 router를 호출하면 `execution-mode: direct`를 선택하여 �
 > [버그수정] 모바일에서 로그인 버튼이 반응하지 않는 문제 수정
 ```
 
-Main Claude가 router를 호출하면 `execution-mode: pipeline`을 선택하고 PLAN을 생성. 이후 Main Claude가 builder → verifier → committer를 순차 호출.
+Main Claude가 specifier를 호출하면 `execution-mode: pipeline`을 판정하고 PLAN을 생성. 이후 Main Claude가 builder → verifier → committer를 순차 호출.
 
 ### 복잡한 기능 (WORK)
 
@@ -137,7 +137,7 @@ scheduler가 의존성 순서대로 TASK를 실행합니다.
 
 #### 3. 기존 WORK에 추가
 
-WORK-01이 IN_PROGRESS이면 router가 질문합니다:
+WORK-01이 IN_PROGRESS이면 specifier가 질문합니다:
 > "WORK-01 (사용자 인증 기능)이 진행 중입니다. 추가 TASK로 진행할까요, 새 WORK를 생성할까요?"
 
 #### 4. 전체 현황 확인
@@ -199,7 +199,7 @@ scheduler가 다음 TASK를 반환하면 Main Claude가 builder → verifier →
 > [기능개선] 인증 API에 rate limiting 추가해줘
 ```
 
-WORK-02가 `IN_PROGRESS`이면 router가 질문합니다:
+WORK-02가 `IN_PROGRESS`이면 specifier가 질문합니다:
 > "WORK-02 (인증 모듈)이 진행 중입니다. 추가 TASK로 진행할까요, 새 WORK를 생성할까요?"
 
 #### 10. 개별 TASK 상태 확인
@@ -261,27 +261,27 @@ git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
 ```bash
 claude
 > /agents
-# router, planner, scheduler, builder, verifier, committer → 6개 확인
+# specifier, planner, scheduler, builder, verifier, committer → 6개 확인
 ```
 
 ---
 
 ## 개념: 세 가지 실행 모드 (execution-mode)
 
-Main Claude가 `[]` 태그를 감지하면 **router** 서브에이전트를 호출하여 `execution-mode`를 결정합니다:
+Main Claude가 `[]` 태그를 감지하면 **specifier** 서브에이전트를 호출하여 `execution-mode`를 판정합니다:
 
 ```
 사용자 요청 → Main Claude (오케스트레이터)
                     │
                     ▼
-              ┌────────┐
-              │ router │ (Main Claude가 호출)
-              └───┬────┘
-                  │
-            execution-mode 반환
-                  │
+              ┌───────────┐
+              │ specifier │ (Main Claude가 호출)
+              └─────┬─────┘
+                    │
+              execution-mode 판정
+                    │
       ├─ direct  (빌드/테스트 검증 불필요)
-      │   → router가 자체 세션에서 모든 것을 처리 — 추가 서브에이전트 호출 0
+      │   → specifier가 겸임으로 자체 세션에서 모든 것을 처리 — 추가 서브에이전트 호출 0
       │
       ├─ pipeline  (빌드/테스트 필요, 단일 도메인, 순차 처리)
       │   → Main Claude가 순차 호출: builder → verifier → committer
@@ -313,10 +313,10 @@ Main Claude → builder(sonnet) → verifier(haiku) → committer(haiku)
 
 ### direct 모드 (초단순)
 
-Main Claude가 router를 호출하면 자체 세션에서 모든 것을 처리. 추가 서브에이전트 호출 없음.
+Main Claude가 specifier를 호출하면 specifier가 겸임으로 자체 세션에서 모든 것을 처리. 추가 서브에이전트 호출 없음.
 
 ```
-Main Claude → router: 분석 → 구현 → self-check → 커밋 → result.md
+Main Claude → specifier: 분석 → 구현 → self-check → 커밋 → result.md
 ```
 
 ---
@@ -331,35 +331,35 @@ Main Claude → router: 분석 → 구현 → self-check → 커밋 → result.m
                           Main Claude (오케스트레이터)
                     ┌──────────┼──────────────────────┐
                     │          │                       │
-  router           planner          scheduler         builder          verifier         committer
- ┌────────┐      ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │요청     │────▶│WORK 생성 │────▶│의존성 DAG │────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
- │분석     │     │TASK 분해 │     │실행 순서  │     │파일 생성  │     │검증 실행  │     │→ git커밋 │
- └────────┘     └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
-                                                       │                │                │
-                                                       └── 실패 시 재시도 ┘                │
-                                                          (최대 3회)                      │
-                                                                          다음 TASK로 반복 ◀┘
+  specifier        planner          scheduler         builder          verifier         committer
+ ┌──────────┐    ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │실행 모드  │────▶│WORK 생성 │────▶│의존성 DAG │────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
+ │판정      │     │TASK 분해 │     │실행 순서  │     │파일 생성  │     │검증 실행  │     │→ git커밋 │
+ └──────────┘    └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
+                                                        │                │                │
+                                                        └── 실패 시 재시도 ┘                │
+                                                           (최대 3회)                      │
+                                                                           다음 TASK로 반복 ◀┘
 ```
 
 ### pipeline 모드 (단순 → 위임)
 
 ```
-  router            builder          verifier         committer
- ┌────────┐       ┌──────────┐     ┌──────────┐     ┌──────────┐
- │PLAN    │─────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
- │+TASK생성│      │파일 생성  │     │검증 실행  │     │→ git커밋 │
- └────────┘      └──────────┘     └──────────┘     └──────────┘
+  specifier         builder          verifier         committer
+ ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │PLAN      │────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
+ │+TASK생성 │     │파일 생성  │     │검증 실행  │     │→ git커밋 │
+ └──────────┘     └──────────┘     └──────────┘     └──────────┘
   (컨텍스트 유지)   (sonnet)         (haiku)           (haiku)
-              ← 각각 Main Claude가 개별 호출 →
+               ← 각각 Main Claude가 개별 호출 →
 ```
 
 ### direct 모드 (초단순)
 
 ```
-  router
+  specifier (겸임)
  ┌────────────────────────────────────────────────┐
- │ 분석 → 구현 → self-check → 커밋 → result.md    │
+ │ 판정 → 구현 → self-check → 커밋 → result.md    │
  └────────────────────────────────────────────────┘
   (빌드/테스트 불필요 — 추가 서브에이전트 세션 0개)
 ```
@@ -368,7 +368,7 @@ Main Claude → router: 분석 → 구현 → self-check → 커밋 → result.m
 
 | 에이전트 | 역할 | 모델 | 권한 | MCP |
 |----------|------|------|------|-----|
-| **router** | `[]` 태그 감지, execution-mode 판정(direct/pipeline/full), PLAN 생성, WORK-LIST 관리 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
+| **specifier** | `[]` 태그 감지, execution-mode 판정(direct/pipeline/full), PLAN 생성, WORK-LIST 관리; direct 모드 시 구현까지 겸임 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
 | **planner** | WORK 생성 + TASK 분해 + PLAN.md(Execution-Mode:full) + progress 템플릿 선생성 | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
 | **scheduler** | 특정 WORK의 DAG 관리 + [B→V→C]×N 파이프라인 실행 | **haiku** | read + dispatch | — |
 | **builder** | 코드 구현 + progress.md 체크포인트 기록 | **sonnet** | full access | Serena(심볼단위탐색/편집) |
@@ -381,7 +381,7 @@ Main Claude → router: 분석 → 구현 → self-check → 커밋 → result.m
 
 ```
 works/
-├── WORK-LIST.md                      ← 전체 WORK 마스터 목록 (router가 관리)
+├── WORK-LIST.md                      ← 전체 WORK 마스터 목록 (specifier가 관리)
 ├── WORK-01/                          ← "사용자 인증 기능"
 │   ├── PLAN.md                       ← 계획 + 의존성 그래프
 │   ├── PROGRESS.md                   ← 진행 상황 (자동 업데이트)
@@ -406,7 +406,7 @@ works/
 
 ### WORK-LIST.md
 
-router가 `works/WORK-LIST.md`를 마스터 인덱스로 관리합니다:
+specifier가 `works/WORK-LIST.md`를 마스터 인덱스로 관리합니다:
 
 | WORK ID | Title | Status | Created |
 |---------|-------|--------|---------|
@@ -418,7 +418,7 @@ router가 `works/WORK-LIST.md`를 마스터 인덱스로 관리합니다:
 | `IN_PROGRESS` | TASK 진행 중 — 아직 push 안 됨 |
 | `COMPLETED` | 모든 TASK 커밋 완료 + git push 완료 |
 
-- **IN_PROGRESS**: 새 WORK 생성 전 router가 확인
+- **IN_PROGRESS**: 새 WORK 생성 전 specifier가 확인
 - **COMPLETED**: `git push` 시점에 갱신 — **Agent가 갱신하지 않음**
 
 #### git push 절차
@@ -474,7 +474,7 @@ scheduler가 `PROGRESS.md`를 읽어 마지막으로 완료된 TASK를 파악하
 ```
 User: [추가기능] 블로그 시스템의 댓글 기능을 만들거야.
 
-Claude: [router → WORK 경로]
+Claude: [specifier → WORK 경로]
   복잡도: 4+ 파일, DB 스키마 변경, 다중 모듈
   → 새 WORK 생성
 
@@ -543,7 +543,7 @@ WORK ID는 **파일시스템 우선 원칙**을 따릅니다:
 
 1. **파일시스템 소스**: planner가 `works/` 디렉토리를 스캔하여 기존 WORK 디렉토리를 찾고, 가장 최신 디렉토리를 기반으로 다음 WORK ID를 결정합니다.
 2. **MEMORY.md 미참조**: 프로젝트 메모리(MEMORY.md)는 WORK 번호 결정에 절대 참조되지 않습니다. 오직 파일시스템만이 유일한 정보원입니다.
-3. **일관성 검증**: router는 planner 전에 파일시스템과 WORK-LIST.md를 모두 확인하여 WORK ID 일관성을 검증합니다.
+3. **일관성 검증**: specifier는 planner 전에 파일시스템과 WORK-LIST.md를 모두 확인하여 WORK ID 일관성을 검증합니다.
 
 이를 통해:
 - MEMORY.md가 오래되거나 손상되어도 WORK ID 중복 할당 방지
@@ -577,9 +577,9 @@ scheduler's context after 5 TASKs:
 | 추적 | 채팅 히스토리 스크롤 | 파일 기반 (PLAN.md, result.md) |
 | 검증 | 수동 | 자동 (build/lint/test) |
 
-### Router 판정 기준 config (`.agent/router_rule_config.json`)
+### Specifier 판정 기준 config (`.agent/router_rule_config.json`)
 
-router는 프로젝트 루트의 `.agent/router_rule_config.json`을 읽어 라우팅 판정 기준을 결정합니다. 파일이 없으면 router의 내장 기본값을 사용합니다.
+specifier는 프로젝트 루트의 `.agent/router_rule_config.json`을 읽어 실행 모드 판정 기준을 결정합니다. 파일이 없으면 specifier의 내장 기본값을 사용합니다.
 
 **파일 위치:**
 ```
@@ -589,9 +589,9 @@ router는 프로젝트 루트의 `.agent/router_rule_config.json`을 읽어 라�
 **JSON 구조:**
 ```json
 {
-  "$schema": "http://uc-taskmanager.local/schemas/router-rules/v1.0.json",
+  "$schema": "http://uc-taskmanager.local/schemas/specifier-rules/v1.0.json",
   "version": "1.1.0",
-  "description": "Router execution-mode 판정 기준 설정. 프로젝트별로 커스터마이즈.",
+  "description": "Specifier execution-mode 판정 기준 설정. 프로젝트별로 커스터마이즈.",
   "decision_flow": [
     "1. build_test_required 여부 판단 → false이면 direct",
     "2. single_domain + sequential DAG → pipeline",
@@ -635,12 +635,12 @@ router는 프로젝트 루트의 `.agent/router_rule_config.json`을 읽어 라�
 **주요 필드 설명:**
 | 필드 | 설명 |
 |------|------|
-| `rules.direct.criteria.build_test_required` | `false` → 서브에이전트 없이 router가 직접 처리 |
+| `rules.direct.criteria.build_test_required` | `false` → 서브에이전트 없이 specifier가 겸임으로 직접 처리 |
 | `rules.pipeline.criteria.max_tasks` | pipeline에서 full로 에스컬레이션하는 최대 TASK 수 (기본: 5) |
 | `rules.pipeline.criteria.dag_complexity` | `sequential`만 허용; complex DAG → full로 에스컬레이션 |
 | `rules.full.criteria.any_of` | 조건 목록 — 하나라도 해당하면 full 모드 트리거 |
 
-**Fallback 동작:** `.agent/router_rule_config.json`이 없거나 파싱 오류 시 router의 내장 기본값으로 폴백합니다 (위 구조와 동일).
+**Fallback 동작:** `.agent/router_rule_config.json`이 없거나 파싱 오류 시 specifier의 내장 기본값으로 폴백합니다 (위 구조와 동일).
 
 **프로젝트별 커스터마이즈 예시:**
 
@@ -676,8 +676,8 @@ router는 프로젝트 루트의 `.agent/router_rule_config.json`을 읽어 라�
 
 ### 세 가지 실행 모드
 
-Main Claude가 router를 호출하면, router가 복잡도에 맞는 `execution-mode`를 선택합니다:
-- **direct**: 1줄 오타 수정 — Main Claude가 router만 호출, 추가 서브에이전트 세션 0개
+Main Claude가 specifier를 호출하면, specifier가 복잡도에 맞는 `execution-mode`를 판정합니다:
+- **direct**: 1줄 오타 수정 — Main Claude가 specifier만 호출, specifier가 겸임으로 구현, 추가 서브에이전트 세션 0개
 - **pipeline**: 중간 규모 수정 — Main Claude가 builder → verifier → committer 순차 호출. Main Claude는 오케스트레이터 역할만 하므로 컨텍스트 사용 최소화
 - **full**: 복잡한 기능 — 전체 계획, 분해, 추적
 
@@ -804,7 +804,7 @@ CommentLanguage: en
 
 | 항목 | 파일 | 섹션 |
 |------|------|------|
-| 라우팅 기준 | `router.md` | Three-Path Routing |
+| 실행 모드 판정 기준 | `specifier.md` | Three-Path Routing |
 | 승인 정책 | `scheduler.md` | Phase 1: User Approval |
 | 커밋 메시지 형식 | `committer.md` | Step 3: Stage + Commit |
 | 검증 단계 | `verifier.md` | Verification Pipeline |
@@ -842,12 +842,20 @@ uc-taskmanager/
 ├── CLAUDE.md                ← 프로젝트 지침 (push 절차, 언어, 에이전트 호출 규칙)
 ├── LICENSE
 ├── agents/                  ← 배포용: 이 파일들을 복사하여 설치
-│   ├── router.md            ← execution-mode 판정 (direct/pipeline/full)
-│   ├── planner.md           ← WORK 생성 + TASK 분해
-│   ├── scheduler.md         ← WORK별 파이프라인 실행 (슬라이딩 윈도우 dispatch)
-│   ├── builder.md           ← 코드 구현 + progress.md 체크포인트 기록
-│   ├── verifier.md          ← 검증 (context-handoff 기반, read-only)
-│   ├── committer.md         ← gate 검사 → result.md → git commit
+│   ├── ko/                  ← 한국어 에이전트
+│   │   ├── specifier.md     ← execution-mode 판정 (direct/pipeline/full) + direct 겸임 구현
+│   │   ├── planner.md       ← WORK 생성 + TASK 분해
+│   │   ├── scheduler.md     ← WORK별 파이프라인 실행 (슬라이딩 윈도우 dispatch)
+│   │   ├── builder.md       ← 코드 구현 + progress.md 체크포인트 기록
+│   │   ├── verifier.md      ← 검증 (context-handoff 기반, read-only)
+│   │   └── committer.md     ← gate 검사 → result.md → git commit
+│   ├── en/                  ← English agents (same structure)
+│   │   ├── specifier.md
+│   │   ├── planner.md
+│   │   ├── scheduler.md
+│   │   ├── builder.md
+│   │   ├── verifier.md
+│   │   └── committer.md
 │   ├── context-policy.md    ← 슬라이딩 윈도우 컨텍스트 전달 정책
 │   ├── xml-schema.md        ← 에이전트 간 XML 통신 스키마
 │   ├── shared-prompt-sections.md  ← 캐시 가능 공통 섹션 (출력 언어, 빌드 명령어)
