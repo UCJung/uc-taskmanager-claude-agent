@@ -772,11 +772,18 @@ uc-taskmanager/
 │   ├── context-policy.md    ← 슬라이딩 윈도우 컨텍스트 전달 정책
 │   ├── xml-schema.md        ← 에이전트 간 XML 통신 스키마
 │   ├── shared-prompt-sections.md  ← 캐시 가능 공통 섹션 (출력 언어, 빌드 명령어)
-│   └── file-content-schema.md     ← 파일 포맷 스키마 (PLAN.md, TASK.md, result.md)
+│   ├── file-content-schema.md     ← 파일 포맷 스키마 (PLAN.md, TASK.md, result.md)
+│   ├── agent-flow.md        ← Main Claude 오케스트레이션 흐름 (direct/pipeline/full)
+│   └── work-activity-log.md      ← Activity log 규칙 (log_work 함수, STAGE 테이블)
+├── .agent/                  ← 프로젝트별 설정
+│   └── router_rule_config.json  ← Router execution-mode 판정 기준
 ├── docs/                    ← 설계 명세
-│   ├── spec_pipeline-architecture.md   ← 파이프라인 구조 및 에이전트 역할
-│   ├── spec_sliding-window-context.md  ← 슬라이딩 윈도우 컨텍스트 설계
-│   └── spec_callback-integration.md    ← 외부 시스템 콜백 연동 가이드
+│   ├── spec_pipeline-architecture.md       ← 파이프라인 구조 및 에이전트 역할 (v1.2)
+│   ├── spec_pipeline-architecture_v1.1.md  ← 파이프라인 아키텍처 스펙 v1.1
+│   ├── spec_sliding-window-context.md      ← 슬라이딩 윈도우 컨텍스트 설계
+│   ├── spec_callback-integration.md        ← 외부 시스템 콜백 연동 가이드
+│   ├── pipeline-architecture-visual.html   ← 인터랙티브 파이프라인 시각화
+│   └── sliding-window-context-visual.html  ← 인터랙티브 슬라이딩 윈도우 시각화
 └── works/                   ← WORK 디렉토리 (자동 생성)
     ├── WORK-LIST.md          ← 마스터 인덱스
     ├── WORK-01/              ← 모든 모드의 산출물 (direct/pipeline/full)

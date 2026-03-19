@@ -805,11 +805,15 @@ uc-taskmanager/
 │   ├── shared-prompt-sections.md  ← Cacheable common sections (output language, build commands)
 │   ├── file-content-schema.md     ← File format schema (PLAN.md, TASK.md, result.md)
 │   └── work-activity-log.md      ← Activity log rules (log_work function, STAGE table)
+├── .agent/                  ← Per-project configuration
+│   └── router_rule_config.json  ← Router execution-mode decision criteria
 ├── docs/                    ← Design specifications
 │   ├── spec_pipeline-architecture.md       ← Pipeline structure & agent roles (v1.2)
 │   ├── spec_pipeline-architecture_v1.1.md  ← Pipeline architecture spec v1.1
 │   ├── spec_sliding-window-context.md      ← Sliding window context design
-│   └── spec_callback-integration.md        ← External system callback integration
+│   ├── spec_callback-integration.md        ← External system callback integration
+│   ├── pipeline-architecture-visual.html   ← Interactive pipeline visualization
+│   └── sliding-window-context-visual.html  ← Interactive sliding window visualization
 ├── _TODO/                   ← Pending tasks and experiments
 │   └── bash-cli-pipeline-automation.md ← Server automation via claude -p (verified)
 └── works/                   ← WORK directories (auto-generated)
