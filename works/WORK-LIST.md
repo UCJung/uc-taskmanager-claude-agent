@@ -26,3 +26,4 @@
 | WORK-23 | agents 파일 분석 기반 Pipeline Architecture 스펙 문서 v1.1 생성 | COMPLETED | 2026-03-15 | 2026-03-16 |
 | WORK-24 | agents 파일 분석 기반 spec_pipeline-architecture.md 갱신 | COMPLETED | 2026-03-15 | 2026-03-16 |
 | WORK-25 | 에이전트 md 파일 중복 제거 및 지침 참조 전환 | COMPLETED | 2026-03-16 | 2026-03-16 |
+| WORK-26 | README 소개글에 한국어 기술 문서 안내 추가 | COMPLETED | 2026-03-19 | 2026-03-19 |
