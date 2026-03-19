@@ -35,6 +35,10 @@ Each step runs in an **isolated subagent pipeline**, so your context stays clean
 
 This agent is designed to work with an **SDD-based requirement management and automated development system** — a server application that links requirement management → automated development → plans and artifacts. The full system architecture is documented in [`docs/spec_SDD_with_ucagent_requirement.md`](docs/spec_SDD_with_ucagent_requirement.md). Use it as a reference to build your own system tailored to your needs.
 
+### A Note on Language
+
+I'm Korean, so you'll find Korean scattered throughout the codebase — all technical documents (design specs, agent prompts, commit messages) are written in Korean. Modern translation tools handle Korean well, so this shouldn't be a barrier. Use your preferred translator and you'll have no trouble understanding the internals.
+
 ### What This Took
 
 I built this agent and the accompanying SDD requirement management system in roughly **one calendar month — about 2 weeks of actual development time** (8 hours/day). Ideas become reality. The technical and time barriers that once stopped you have fallen. This is the age of AI agents.
