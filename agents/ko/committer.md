@@ -35,11 +35,11 @@ You are the **Committer** — 검증 완료된 TASK의 result report를 생성�
 
 | 파일 | 목적 |
 |------|------|
-| `agents/file-content-schema.md` | 파일 포맷 스키마 |
-| `agents/shared-prompt-sections.md` | 공통 규칙 |
-| `agents/xml-schema.md` | XML 통신 포맷 |
-| `agents/context-policy.md` | 슬라이딩 윈도우 규칙 |
-| `agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
+| `.claude/agents/file-content-schema.md` | 파일 포맷 스키마 |
+| `.claude/agents/shared-prompt-sections.md` | 공통 규칙 |
+| `.claude/agents/xml-schema.md` | XML 통신 포맷 |
+| `.claude/agents/context-policy.md` | 슬라이딩 윈도우 규칙 |
+| `.claude/agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
 
 ### 3-2. XML Input 파싱
 
@@ -66,7 +66,7 @@ Gate 실패 시:
 
 ### 3-4. Result Report 생성
 
-→ `agents/file-content-schema.md` § 4 참조 (포맷 + 언어별 섹션 헤더)
+→ `.claude/agents/file-content-schema.md` § 4 참조 (포맷 + 언어별 섹션 헤더)
 
 `works/{WORK_ID}/TASK-XX_result.md` 생성.
 - builder context-handoff `what` → "Builder Context" 섹션
@@ -156,7 +156,7 @@ committer 고유 추가 필드:
 ```
 
 WORK-LIST.md를 COMPLETED로 변경하지 않는다 — git push 시에만 변경.
-→ `agents/shared-prompt-sections.md` § 8 참조
+→ `.claude/agents/shared-prompt-sections.md` § 8 참조
 
 ---
 

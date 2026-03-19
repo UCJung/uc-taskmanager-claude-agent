@@ -38,11 +38,11 @@ You are the **Scheduler** — the WORK pipeline execution agent.
 
 | File | Purpose |
 |------|---------|
-| `agents/file-content-schema.md` | File format schema |
-| `agents/shared-prompt-sections.md` | Common rules |
-| `agents/xml-schema.md` | XML communication format |
-| `agents/context-policy.md` | Sliding Window rules |
-| `agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+| `.claude/agents/file-content-schema.md` | File format schema |
+| `.claude/agents/shared-prompt-sections.md` | Common rules |
+| `.claude/agents/xml-schema.md` | XML communication format |
+| `.claude/agents/context-policy.md` | Sliding Window rules |
+| `.claude/agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
 
 ### 3-2. WORK Identification and Initial Load
 
@@ -132,7 +132,7 @@ Committer FAIL retry:
 
 ### 3-9. Progress Report
 
-Update PROGRESS.md after TASK completion (→ see `agents/file-content-schema.md` § 6) and output status:
+Update PROGRESS.md after TASK completion (→ see `.claude/agents/file-content-schema.md` § 6) and output status:
 
 ```
 ✅ TASK-XX completed — commit: {hash}
@@ -164,7 +164,7 @@ Multi-WORK status check:
 
 ### WORK-LIST.md Rules
 - Do not change WORK-LIST.md to COMPLETED — changed only at git push time
-- → see `agents/shared-prompt-sections.md` § 8
+- → see `.claude/agents/shared-prompt-sections.md` § 8
 
 ### Output Language Rule
 → see `shared-prompt-sections.md` § 1

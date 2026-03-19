@@ -106,7 +106,7 @@ echo "$DONE / $TOTAL"
 
 ## § 7. PLAN.md 필수 메타정보 7개 필드
 
-→ `agents/file-content-schema.md` § 1 참조
+→ `.claude/agents/file-content-schema.md` § 1 참조
 
 | 필드 | 필수 | 설명 |
 |------|------|------|

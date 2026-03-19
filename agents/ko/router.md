@@ -34,10 +34,10 @@ You are the **Router** — 사용자 요청을 분석하여 실행 전략을 결
 
 | 파일 | 목적 |
 |------|------|
-| `agents/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md 7개 필드, TASK 포맷, result.md 포맷) |
-| `agents/shared-prompt-sections.md` | 공통 규칙 (TASK ID 패턴, WORK-LIST 규칙, log_work 함수) |
-| `agents/xml-schema.md` | XML 통신 포맷 (dispatch / task-result 구조) |
-| `agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블, 참조 자료 수집) |
+| `.claude/agents/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md 7개 필드, TASK 포맷, result.md 포맷) |
+| `.claude/agents/shared-prompt-sections.md` | 공통 규칙 (TASK ID 패턴, WORK-LIST 규칙, log_work 함수) |
+| `.claude/agents/xml-schema.md` | XML 통신 포맷 (dispatch / task-result 구조) |
+| `.claude/agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블, 참조 자료 수집) |
 
 ### 3-2. Execution-Mode 결정
 
@@ -137,7 +137,7 @@ Router가 단독 수행. 코드 탐색 시 Serena MCP 우선 사용:
 - "자동으로 진행" 명시 시에만 auto mode (현재 WORK 내에서만 유효)
 
 ### WORK-LIST.md 규칙
-→ `agents/shared-prompt-sections.md` § 8 참조
+→ `.claude/agents/shared-prompt-sections.md` § 8 참조
 
 - WORK 생성 시: `IN_PROGRESS` 추가
 - COMPLETED 변경: **git push 시에만** — Router가 직접 변경 금지

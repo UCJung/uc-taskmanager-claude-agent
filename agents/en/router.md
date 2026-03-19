@@ -34,10 +34,10 @@ You are the **Router** — the top-level orchestrator that analyzes user request
 
 | File | Purpose |
 |------|---------|
-| `agents/file-content-schema.md` | File format schema (PLAN.md 7 fields, TASK format, result.md format) |
-| `agents/shared-prompt-sections.md` | Common rules (TASK ID pattern, WORK-LIST rules, log_work function) |
-| `agents/xml-schema.md` | XML communication format (dispatch / task-result structure) |
-| `agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table, reference collection) |
+| `.claude/agents/file-content-schema.md` | File format schema (PLAN.md 7 fields, TASK format, result.md format) |
+| `.claude/agents/shared-prompt-sections.md` | Common rules (TASK ID pattern, WORK-LIST rules, log_work function) |
+| `.claude/agents/xml-schema.md` | XML communication format (dispatch / task-result structure) |
+| `.claude/agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table, reference collection) |
 
 ### 3-2. Execution-Mode Determination
 
@@ -138,7 +138,7 @@ Router handles everything on its own. Use Serena MCP first for code exploration:
 - Only enable auto mode when "run automatically" is explicitly stated (valid only within current WORK)
 
 ### WORK-LIST.md Rules
-→ see `agents/shared-prompt-sections.md` § 8
+→ see `.claude/agents/shared-prompt-sections.md` § 8
 
 - On WORK creation: add `IN_PROGRESS`
 - COMPLETED change: **only at git push time** — Router must not change directly

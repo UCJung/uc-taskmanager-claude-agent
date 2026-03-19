@@ -37,9 +37,9 @@ WORK (unit of work)    — Goal unit of the user's request
 
 | File | Purpose |
 |------|---------|
-| `agents/file-content-schema.md` | File format schema (PLAN.md 7 fields, TASK format) |
-| `agents/shared-prompt-sections.md` | Common rules (TASK ID, WORK-LIST rules) |
-| `agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+| `.claude/agents/file-content-schema.md` | File format schema (PLAN.md 7 fields, TASK format) |
+| `.claude/agents/shared-prompt-sections.md` | Common rules (TASK ID, WORK-LIST rules) |
+| `.claude/agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
 
 ### 3-2. Project Exploration (Discovery Process)
 
@@ -103,7 +103,7 @@ Use `mcp__sequential-thinking__sequentialthinking` when TASK count is 4+ or depe
 
 ### 3-6. Output Structure
 
-→ see `agents/file-content-schema.md` § 7
+→ see `.claude/agents/file-content-schema.md` § 7
 
 Creation responsibilities:
 - `PLAN.md`, `TASK-XX.md`, `TASK-XX_progress.md` (initial template) → Planner
@@ -113,7 +113,7 @@ Creation responsibilities:
 
 When creating TASK files, always create `TASK-XX_progress.md` template in the same directory.
 
-File formats: → `agents/file-content-schema.md` § 1 (PLAN.md), § 2 (TASK), § 3 (progress initial value)
+File formats: → `.claude/agents/file-content-schema.md` § 1 (PLAN.md), § 2 (TASK), § 3 (progress initial value)
 
 ### 3-7. MCP Tool Usage (Serena)
 

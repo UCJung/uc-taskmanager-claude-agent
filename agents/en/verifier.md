@@ -35,10 +35,10 @@ Verifies the results of TASKs completed by the Builder, checking build, lint, te
 
 | File | Purpose |
 |------|---------|
-| `agents/shared-prompt-sections.md` | Common rules |
-| `agents/xml-schema.md` | XML communication format |
-| `agents/context-policy.md` | Sliding Window rules |
-| `agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+| `.claude/agents/shared-prompt-sections.md` | Common rules |
+| `.claude/agents/xml-schema.md` | XML communication format |
+| `.claude/agents/context-policy.md` | Sliding Window rules |
+| `.claude/agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
 
 ### 3-2. XML Input Parsing
 

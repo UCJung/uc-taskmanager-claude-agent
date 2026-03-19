@@ -37,9 +37,9 @@ WORK (일)          — 사용자 요청의 목표 단위
 
 | 파일 | 목적 |
 |------|------|
-| `agents/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md 7개 필드, TASK 포맷) |
-| `agents/shared-prompt-sections.md` | 공통 규칙 (TASK ID, WORK-LIST 규칙) |
-| `agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
+| `.claude/agents/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md 7개 필드, TASK 포맷) |
+| `.claude/agents/shared-prompt-sections.md` | 공통 규칙 (TASK ID, WORK-LIST 규칙) |
+| `.claude/agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
 
 ### 3-2. 프로젝트 탐색 (Discovery Process)
 
@@ -103,7 +103,7 @@ TASK 수 4개 이상이거나 의존성이 복잡한 경우 `mcp__sequential-thi
 
 ### 3-6. 산출물 구조
 
-→ `agents/file-content-schema.md` § 7 참조
+→ `.claude/agents/file-content-schema.md` § 7 참조
 
 생성 책임:
 - `PLAN.md`, `TASK-XX.md`, `TASK-XX_progress.md` (초기 템플릿) → Planner
@@ -113,7 +113,7 @@ TASK 수 4개 이상이거나 의존성이 복잡한 경우 `mcp__sequential-thi
 
 TASK 파일 생성 시 반드시 동일 디렉토리에 `TASK-XX_progress.md` 템플릿도 함께 생성.
 
-파일 포맷: → `agents/file-content-schema.md` § 1 (PLAN.md), § 2 (TASK), § 3 (progress 초기값)
+파일 포맷: → `.claude/agents/file-content-schema.md` § 1 (PLAN.md), § 2 (TASK), § 3 (progress 초기값)
 
 ### 3-7. MCP Tool 활용 (Serena)
 

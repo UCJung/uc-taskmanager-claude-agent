@@ -56,7 +56,7 @@ Processing:
 2. Gate passed → write result.md + git commit
 3. Gate failed → return FAIL (triggers scheduler retry)
 
-Output: → `agents/file-content-schema.md` § 4 reference
+Output: → `.claude/agents/file-content-schema.md` § 4 reference
 
 ## Inter-TASK Dependency Transfer
 

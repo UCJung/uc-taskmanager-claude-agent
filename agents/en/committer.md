@@ -35,11 +35,11 @@ You are the **Committer** — the agent that generates the result report for a v
 
 | File | Purpose |
 |------|---------|
-| `agents/file-content-schema.md` | File format schema |
-| `agents/shared-prompt-sections.md` | Common rules |
-| `agents/xml-schema.md` | XML communication format |
-| `agents/context-policy.md` | Sliding window rules |
-| `agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+| `.claude/agents/file-content-schema.md` | File format schema |
+| `.claude/agents/shared-prompt-sections.md` | Common rules |
+| `.claude/agents/xml-schema.md` | XML communication format |
+| `.claude/agents/context-policy.md` | Sliding window rules |
+| `.claude/agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
 
 ### 3-2. XML Input Parsing
 
@@ -66,7 +66,7 @@ On gate failure:
 
 ### 3-4. Result Report Generation
 
-→ see `agents/file-content-schema.md` § 4 (format + language-specific section headers)
+→ see `.claude/agents/file-content-schema.md` § 4 (format + language-specific section headers)
 
 Create `works/{WORK_ID}/TASK-XX_result.md`.
 - builder context-handoff `what` → "Builder Context" section
@@ -156,7 +156,7 @@ Committer-specific additional fields:
 ```
 
 Do not change WORK-LIST.md to COMPLETED — changed only at git push time.
-→ see `agents/shared-prompt-sections.md` § 8
+→ see `.claude/agents/shared-prompt-sections.md` § 8
 
 ---
 
