@@ -17,7 +17,9 @@
 ```bash
 npm install -g uctm
 cd your-project
-uctm init
+uctm init --lang ko   # 한국어 에이전트
+uctm init --lang en   # English agents
+uctm init             # 대화형 언어 선택
 ```
 
 Claude Code를 실행하고 파이프라인 태그를 사용하세요:

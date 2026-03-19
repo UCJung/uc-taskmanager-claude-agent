@@ -17,7 +17,9 @@
 ```bash
 npm install -g uctm
 cd your-project
-uctm init
+uctm init --lang en   # English agents
+uctm init --lang ko   # 한국어 에이전트
+uctm init             # Interactive language selection
 ```
 
 Then start Claude Code and use pipeline tags:
@@ -64,7 +66,9 @@ This agent is designed to work with an **SDD-based requirement management and au
 
 ### A Note on Language
 
-I'm Korean, so you'll find Korean scattered throughout the codebase — all technical documents (design specs, agent prompts, commit messages) are written in Korean. Modern translation tools handle Korean well, so this shouldn't be a barrier. Use your preferred translator and you'll have no trouble understanding the internals.
+Starting from v1.1.0, uctm supports **multi-language agent prompts**. Use `uctm init --lang en` for English or `--lang ko` for Korean. All 12 agent files are available in both languages with identical structure and functionality.
+
+I'm Korean, so you'll find Korean in some internal documents (design specs, commit messages). Modern translation tools handle Korean well, so this shouldn't be a barrier.
 
 ### What This Took
 
@@ -245,13 +249,15 @@ npm install -g uctm
 
 # Per-project (copies agents + config + updates CLAUDE.md)
 cd your-project
-uctm init
+uctm init --lang en          # English agents
+uctm init --lang ko          # 한국어 에이전트
+uctm init                    # Interactive language selection
 
 # Global (copies agents to ~/.claude/agents/)
-uctm init --global
+uctm init --global --lang en
 
-# Update agents after upgrading uctm
-uctm update
+# Update agents after upgrading uctm (--lang required)
+uctm update --lang en
 ```
 
 ### Manual
@@ -870,18 +876,12 @@ uc-taskmanager/
 ├── CLAUDE.md                ← Project-level Claude instructions (push procedure, language, agent call rules)
 ├── LICENSE
 ├── agents/                  ← Distribution: copy these to install
-│   ├── router.md            ← execution-mode routing (direct/pipeline/full)
-│   ├── planner.md           ← Create WORK + decompose TASKs
-│   ├── scheduler.md         ← Run pipeline per WORK (sliding window dispatch)
-│   ├── builder.md           ← Code implementation + progress.md checkpoint
-│   ├── verifier.md          ← Verification based on context-handoff (read-only)
-│   ├── committer.md         ← Gate check → result.md → git commit
-│   ├── agent-flow.md        ← Main Claude orchestration flow (direct/pipeline/full)
-│   ├── context-policy.md    ← Sliding window context transfer policy
-│   ├── xml-schema.md        ← Agent communication XML schema
-│   ├── shared-prompt-sections.md  ← Cacheable common sections (output language, build commands)
-│   ├── file-content-schema.md     ← File format schema (PLAN.md, TASK.md, result.md)
-│   └── work-activity-log.md      ← Activity log rules (log_work function, STAGE table)
+│   ├── ko/                  ← Korean agent prompts (12 files)
+│   │   ├── router.md, planner.md, scheduler.md, builder.md,
+│   │   ├── verifier.md, committer.md, agent-flow.md,
+│   │   ├── context-policy.md, xml-schema.md, shared-prompt-sections.md,
+│   │   ├── file-content-schema.md, work-activity-log.md
+│   └── en/                  ← English agent prompts (12 files, same structure)
 ├── .agent/                  ← Per-project configuration
 │   └── router_rule_config.json  ← Router execution-mode decision criteria
 ├── docs/                    ← Design specifications
