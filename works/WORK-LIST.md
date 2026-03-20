@@ -33,3 +33,4 @@
 | WORK-30 | Claude Marketplace Plugin 형식 전환 | COMPLETED | 2026-03-20 | 2026-03-20 |
 | WORK-31 | 프로젝트 폴더구조 재구조화 (agents/npm/plugin 분리) | COMPLETED | 2026-03-20 | 2026-03-20 |
 | WORK-32 | docs 현행화 — Plugin 구조 전환 반영 | COMPLETED | 2026-03-21 | 2026-03-21 |
+| WORK-33 | 에이전트 중복 지침 통합 — shared-prompt-sections.md 참조 전환 | COMPLETED | 2026-03-21 | 2026-03-21 |

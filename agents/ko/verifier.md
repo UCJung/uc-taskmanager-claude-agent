@@ -46,7 +46,7 @@ Builder가 완료한 TASK 결과물을 검증하여 빌드, 린트, 테스트, A
 
 ### 3-3. Step 0: Progress File Gate (CRITICAL)
 
-→ Gate 조건: `file-content-schema.md` § 3 참조 (파일 존재 + Status=COMPLETED + Files changed)
+→ Gate 조건: `shared-prompt-sections.md` § 12 참조
 
 CRITICAL 실패 시 즉시 중단. 이후 Step 진행 불가.
 

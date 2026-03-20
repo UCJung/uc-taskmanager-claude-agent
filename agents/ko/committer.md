@@ -59,7 +59,7 @@ You are the **Committer** — 검증 완료된 TASK의 result report를 생성�
 
 ### 3-3. Gate Check
 
-→ Gate 조건: `file-content-schema.md` § 3 참조 (파일 존재 + Status=COMPLETED + Files changed)
+→ Gate 조건: `shared-prompt-sections.md` § 12 참조
 
 Gate 실패 시:
 → FAIL task-result 반환 (`xml-schema.md` § 2 참조). result.md 생성 및 commit 금지.
@@ -111,27 +111,9 @@ git commit --amend --no-edit
 
 ### 3-8. TaskCallback 전송
 
-```bash
-TASK_CALLBACK=$(grep "^TaskCallback:" CLAUDE.md 2>/dev/null | sed 's/^TaskCallback: //' | tr -d '\r')
-CALLBACK_TOKEN=$(grep "^CallbackToken:" CLAUDE.md 2>/dev/null | sed 's/^CallbackToken: //' | tr -d '\r')
+→ 콜백 전송: `shared-prompt-sections.md` § 10 참조 (CallbackType=TaskCallback)
 
-if [ -n "$TASK_CALLBACK" ] && [ "$TASK_CALLBACK" != "TaskCallback:" ]; then
-  COMMIT_HASH=$(git log --oneline -1 | cut -d' ' -f1)
-  PAYLOAD=$(cat <<EOF
-{
-  "workId": "${WORK_ID}",
-  "taskId": "${TASK_ID}",
-  "status": "SUCCESS",
-  "commitHash": "${COMMIT_HASH}"
-}
-EOF
-  )
-  AUTH_HEADER=""
-  [ -n "$CALLBACK_TOKEN" ] && AUTH_HEADER="-H \"X-Runner-Api-Key: ${CALLBACK_TOKEN}\""
-  curl -s -X POST "$TASK_CALLBACK" -H "Content-Type: application/json" $AUTH_HEADER -d "$PAYLOAD" 2>/dev/null || \
-    echo "WARNING: TaskCallback failed, continuing..."
-fi
-```
+페이로드 필드: `"status": "SUCCESS"`, `"commitHash": "${COMMIT_HASH}"` (먼저 `git log --oneline -1 | cut -d' ' -f1` 실행)
 
 ### 3-9. 결과 보고
 
