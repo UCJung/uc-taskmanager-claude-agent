@@ -135,7 +135,81 @@ File: `works/WORK-LIST.md`
 
 ---
 
+## § 9. Locale Detection
+
+```
+1. CLAUDE.md → check "Language: xx"
+2. If not found, ask user for language
+3. If not found, auto-detect system locale
+   - Windows: powershell -c "[CultureInfo]::CurrentCulture.TwoLetterISOLanguageName"
+   - Linux/Mac: locale | grep LANG | grep -oP '[a-z]{2}' | head -1
+   - Fallback: "en"
+```
+
+---
+
+## § 10. Callback Transmission Template
+
+Replace `{CallbackType}` with the actual key name (e.g., `ProgressCallback`, `TaskCallback`).
+
+```bash
+CALLBACK_URL=$(grep "^{CallbackType}:" CLAUDE.md 2>/dev/null | sed 's/^{CallbackType}: //' | tr -d '\r')
+CALLBACK_TOKEN=$(grep "^CallbackToken:" CLAUDE.md 2>/dev/null | sed 's/^CallbackToken: //' | tr -d '\r')
+
+if [ -n "$CALLBACK_URL" ] && [ "$CALLBACK_URL" != "{CallbackType}:" ]; then
+  PAYLOAD=$(cat <<EOF
+{
+  "workId": "${WORK_ID}",
+  "taskId": "${TASK_ID}",
+  ... agent-specific fields ...
+}
+EOF
+  )
+  AUTH_HEADER=""
+  [ -n "$CALLBACK_TOKEN" ] && AUTH_HEADER="-H \"X-Runner-Api-Key: ${CALLBACK_TOKEN}\""
+  curl -s -X POST "$CALLBACK_URL" \
+    -H "Content-Type: application/json" \
+    $AUTH_HEADER \
+    -d "$PAYLOAD" > /dev/null 2>&1
+fi
+```
+
+Agent-specific payload fields:
+- **ProgressCallback** (builder): `"status": "IN_PROGRESS"`, `"currentReasoning": "..."`
+- **TaskCallback** (committer): `"status": "SUCCESS"`, `"commitHash": "${COMMIT_HASH}"`
+
+---
+
+## § 11. Project Discovery
+
+```bash
+# 1. Check CLAUDE.md language setting
+grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null
+
+# 2. Tech stack
+cat package.json 2>/dev/null | head -50
+cat pyproject.toml 2>/dev/null | head -30
+cat Cargo.toml 2>/dev/null | head -20
+cat go.mod 2>/dev/null | head -10
+
+# 3. Structure (when needed)
+find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) | grep -v node_modules | head -30
+```
+
+---
+
+## § 12. Progress File Gate Check
+
+Gate conditions for `works/WORK-NN/TASK-XX_progress.md`:
+- File exists at the expected path
+- `Status: COMPLETED` line is present
+- `## Files Changed` section is present and non-empty
+
+On gate failure → return FAIL task-result immediately. Do not proceed to subsequent steps.
+
+---
+
 ## Version
 
 - Created: 2026-03-10
-- Updated: 2026-03-15
+- Updated: 2026-03-21

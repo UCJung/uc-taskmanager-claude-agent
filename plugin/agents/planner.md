@@ -47,19 +47,9 @@ WORK (unit of work)    — Goal unit of the user's request
 ```bash
 # 1. Check existing WORKs
 ls -d works/WORK-* 2>/dev/null | sort -V | tail -1
-
-# 2. Check CLAUDE.md language setting
-grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null
-
-# 3. Tech stack
-cat package.json 2>/dev/null | head -50
-cat pyproject.toml 2>/dev/null | head -30
-cat Cargo.toml 2>/dev/null | head -20
-cat go.mod 2>/dev/null | head -10
-
-# 4. Structure
-find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) | grep -v node_modules | head -30
 ```
+
+→ Discovery commands (steps 2–4): see `shared-prompt-sections.md` § 11
 
 ### 3-3. Requirement.md Analysis + WORK Directory Check
 
@@ -132,16 +122,7 @@ File formats: → `../skills/sdd-pipeline/references/file-content-schema.md` § 
 ### 3-8. Output Language Rule
 
 → Priority rules: see `shared-prompt-sections.md` § 1
-
-Planner-specific locale detection:
-```
-1. CLAUDE.md → check "Language: xx"
-2. If not found, ask user for language
-3. If not found, auto-detect system locale
-   - Windows: powershell -c "[CultureInfo]::CurrentCulture.TwoLetterISOLanguageName"
-   - Linux/Mac: locale | grep LANG | grep -oP '[a-z]{2}' | head -1
-   - Fallback: "en"
-```
+→ Locale detection: see `shared-prompt-sections.md` § 9
 
 Record resolved language in PLAN.md `> Language:` field. Write all outputs in that language.
 

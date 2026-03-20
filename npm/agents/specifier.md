@@ -56,17 +56,9 @@ When IN_PROGRESS WORK exists:
 
 ### 3-3. Project Exploration (Discovery)
 
-```bash
-# 1. Check CLAUDE.md language setting
-grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null
+→ Project discovery commands: see `shared-prompt-sections.md` § 11
 
-# 2. Tech stack
-cat package.json 2>/dev/null | head -50
-cat pyproject.toml 2>/dev/null | head -30
-
-# 3. Structure (only when assuming Planner — skip for simple requirements)
-find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) | grep -v node_modules | head -30
-```
+Note: Step 3 (Structure) is only needed when assuming Planner role — skip for simple requirements.
 
 ### 3-4. Requirement.md Creation
 
@@ -149,20 +141,11 @@ Requirement complexity assessment:
 ### 3-8. Output Language Rule
 
 → Priority rules: see `shared-prompt-sections.md` § 1
+→ Locale detection: see `shared-prompt-sections.md` § 9
 
 Specifier-specific rules:
 - Pass resolved language via dispatch `<context><language>` field
 - Write both Requirement.md and PLAN.md in resolved language
-
-Locale detection:
-```
-1. CLAUDE.md → check "Language: xx"
-2. If not found, ask user for language
-3. If not found, auto-detect system locale
-   - Windows: powershell -c "[CultureInfo]::CurrentCulture.TwoLetterISOLanguageName"
-   - Linux/Mac: locale | grep LANG | grep -oP '[a-z]{2}' | head -1
-   - Fallback: "en"
-```
 
 ---
 

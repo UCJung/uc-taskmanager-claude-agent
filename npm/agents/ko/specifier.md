@@ -56,17 +56,9 @@ IN_PROGRESS WORK 존재 시:
 
 ### 3-3. 프로젝트 탐색 (Discovery)
 
-```bash
-# 1. CLAUDE.md 언어 설정 확인
-grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null
+→ 프로젝트 탐색 명령: `shared-prompt-sections.md` § 11 참조
 
-# 2. 기술 스택
-cat package.json 2>/dev/null | head -50
-cat pyproject.toml 2>/dev/null | head -30
-
-# 3. 구조 (겸임 시에만 — 단순 요구사항은 생략 가능)
-find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) | grep -v node_modules | head -30
-```
+Note: 3단계(구조)는 Planner 겸임 시에만 실행 — 단순 요구사항은 생략 가능.
 
 ### 3-4. Requirement.md 작성
 
@@ -149,20 +141,11 @@ Requirement.md 작성 완료 후, **요구사항 자체의 복잡도**로 판단
 ### 3-8. Output Language Rule
 
 → 우선순위 규칙: `shared-prompt-sections.md` § 1 참조
+→ 로케일 감지: `shared-prompt-sections.md` § 9 참조
 
 specifier 고유 규칙:
 - dispatch `<context><language>` 필드로 resolved language 전달
 - Requirement.md, PLAN.md 모두 resolved language로 작성
-
-로케일 감지:
-```
-1. CLAUDE.md → "Language: xx" 확인
-2. 없으면 사용자에게 언어 질문
-3. 없으면 시스템 로케일 자동 감지
-   - Windows: powershell -c "[CultureInfo]::CurrentCulture.TwoLetterISOLanguageName"
-   - Linux/Mac: locale | grep LANG | grep -oP '[a-z]{2}' | head -1
-   - Fallback: "en"
-```
 
 ---
 

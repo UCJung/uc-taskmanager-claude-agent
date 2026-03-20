@@ -103,26 +103,9 @@ ls works/${WORK_ID}/*_result.md 2>/dev/null
 
 ### 3-7. ProgressCallback 전송
 
-```bash
-PROGRESS_CALLBACK=$(grep "^ProgressCallback:" CLAUDE.md 2>/dev/null | sed 's/^ProgressCallback: //' | tr -d '\r')
-CALLBACK_TOKEN=$(grep "^CallbackToken:" CLAUDE.md 2>/dev/null | sed 's/^CallbackToken: //' | tr -d '\r')
+→ 콜백 전송: `shared-prompt-sections.md` § 10 참조 (CallbackType=ProgressCallback)
 
-if [ -n "$PROGRESS_CALLBACK" ] && [ "$PROGRESS_CALLBACK" != "ProgressCallback:" ]; then
-  PAYLOAD=$(cat <<EOF
-{
-  "workId": "${WORK_ID}",
-  "taskId": "${TASK_ID}",
-  "status": "IN_PROGRESS",
-  "currentReasoning": "$(grep "^- Updated:" "works/${WORK_ID}/TASK-XX_progress.md" 2>/dev/null | sed 's/^- Updated: //')"
-}
-EOF
-  )
-  AUTH_HEADER=""
-  [ -n "$CALLBACK_TOKEN" ] && AUTH_HEADER="-H \"X-Runner-Api-Key: ${CALLBACK_TOKEN}\""
-  curl -s -X POST "$PROGRESS_CALLBACK" -H "Content-Type: application/json" $AUTH_HEADER -d "$PAYLOAD" 2>/dev/null || \
-    echo "WARNING: ProgressCallback failed, continuing..."
-fi
-```
+페이로드 필드: `"status": "IN_PROGRESS"`, `"currentReasoning": "$(grep "^- Updated:" "works/${WORK_ID}/TASK-XX_progress.md" 2>/dev/null | sed 's/^- Updated: //')"`
 
 각 주요 체크포인트 갱신 후 호출. 실패해도 구현 계속.
 

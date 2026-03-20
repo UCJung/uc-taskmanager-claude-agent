@@ -135,7 +135,81 @@ echo "$DONE / $TOTAL"
 
 ---
 
+## § 9. 로케일 감지
+
+```
+1. CLAUDE.md → "Language: xx" 확인
+2. 없으면 사용자에게 언어 질문
+3. 없으면 시스템 로케일 자동 감지
+   - Windows: powershell -c "[CultureInfo]::CurrentCulture.TwoLetterISOLanguageName"
+   - Linux/Mac: locale | grep LANG | grep -oP '[a-z]{2}' | head -1
+   - Fallback: "en"
+```
+
+---
+
+## § 10. 콜백 전송 템플릿
+
+`{CallbackType}`을 실제 키 이름으로 대체 (예: `ProgressCallback`, `TaskCallback`).
+
+```bash
+CALLBACK_URL=$(grep "^{CallbackType}:" CLAUDE.md 2>/dev/null | sed 's/^{CallbackType}: //' | tr -d '\r')
+CALLBACK_TOKEN=$(grep "^CallbackToken:" CLAUDE.md 2>/dev/null | sed 's/^CallbackToken: //' | tr -d '\r')
+
+if [ -n "$CALLBACK_URL" ] && [ "$CALLBACK_URL" != "{CallbackType}:" ]; then
+  PAYLOAD=$(cat <<EOF
+{
+  "workId": "${WORK_ID}",
+  "taskId": "${TASK_ID}",
+  ... 에이전트별 필드 ...
+}
+EOF
+  )
+  AUTH_HEADER=""
+  [ -n "$CALLBACK_TOKEN" ] && AUTH_HEADER="-H \"X-Runner-Api-Key: ${CALLBACK_TOKEN}\""
+  curl -s -X POST "$CALLBACK_URL" \
+    -H "Content-Type: application/json" \
+    $AUTH_HEADER \
+    -d "$PAYLOAD" > /dev/null 2>&1
+fi
+```
+
+에이전트별 페이로드 필드:
+- **ProgressCallback** (builder): `"status": "IN_PROGRESS"`, `"currentReasoning": "..."`
+- **TaskCallback** (committer): `"status": "SUCCESS"`, `"commitHash": "${COMMIT_HASH}"`
+
+---
+
+## § 11. 프로젝트 탐색
+
+```bash
+# 1. CLAUDE.md 언어 설정 확인
+grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null
+
+# 2. 기술 스택
+cat package.json 2>/dev/null | head -50
+cat pyproject.toml 2>/dev/null | head -30
+cat Cargo.toml 2>/dev/null | head -20
+cat go.mod 2>/dev/null | head -10
+
+# 3. 구조 (필요 시)
+find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) | grep -v node_modules | head -30
+```
+
+---
+
+## § 12. Progress File Gate Check
+
+`works/WORK-NN/TASK-XX_progress.md` Gate 조건:
+- 파일이 해당 경로에 존재
+- `Status: COMPLETED` 줄이 있음
+- `## Files Changed` 섹션이 있고 비어 있지 않음
+
+Gate 실패 시 → 즉시 FAIL task-result 반환. 이후 단계 진행 금지.
+
+---
+
 ## Version
 
 - Created: 2026-03-10
-- Updated: 2026-03-15
+- Updated: 2026-03-21

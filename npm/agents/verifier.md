@@ -46,7 +46,7 @@ Verifies the results of TASKs completed by the Builder, checking build, lint, te
 
 ### 3-3. Step 0: Progress File Gate (CRITICAL)
 
-→ Gate conditions: see `file-content-schema.md` § 3 (file exists + Status=COMPLETED + Files changed)
+→ Gate conditions: see `shared-prompt-sections.md` § 12
 
 On CRITICAL failure, halt immediately. Cannot proceed to subsequent steps.
 

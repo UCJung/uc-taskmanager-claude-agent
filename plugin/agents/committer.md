@@ -59,7 +59,7 @@ Execution order:
 
 ### 3-3. Gate Check
 
-→ Gate conditions: see `file-content-schema.md` § 3 (file exists + Status=COMPLETED + Files changed)
+→ Gate conditions: see `shared-prompt-sections.md` § 12
 
 On gate failure:
 → Return FAIL task-result (see `xml-schema.md` § 2). Do not create result.md or commit.
@@ -111,27 +111,9 @@ git commit --amend --no-edit
 
 ### 3-8. TaskCallback Transmission
 
-```bash
-TASK_CALLBACK=$(grep "^TaskCallback:" CLAUDE.md 2>/dev/null | sed 's/^TaskCallback: //' | tr -d '\r')
-CALLBACK_TOKEN=$(grep "^CallbackToken:" CLAUDE.md 2>/dev/null | sed 's/^CallbackToken: //' | tr -d '\r')
+→ Callback transmission: see `shared-prompt-sections.md` § 10 (CallbackType=TaskCallback)
 
-if [ -n "$TASK_CALLBACK" ] && [ "$TASK_CALLBACK" != "TaskCallback:" ]; then
-  COMMIT_HASH=$(git log --oneline -1 | cut -d' ' -f1)
-  PAYLOAD=$(cat <<EOF
-{
-  "workId": "${WORK_ID}",
-  "taskId": "${TASK_ID}",
-  "status": "SUCCESS",
-  "commitHash": "${COMMIT_HASH}"
-}
-EOF
-  )
-  AUTH_HEADER=""
-  [ -n "$CALLBACK_TOKEN" ] && AUTH_HEADER="-H \"X-Runner-Api-Key: ${CALLBACK_TOKEN}\""
-  curl -s -X POST "$TASK_CALLBACK" -H "Content-Type: application/json" $AUTH_HEADER -d "$PAYLOAD" 2>/dev/null || \
-    echo "WARNING: TaskCallback failed, continuing..."
-fi
-```
+Payload fields: `"status": "SUCCESS"`, `"commitHash": "${COMMIT_HASH}"` (run `git log --oneline -1 | cut -d' ' -f1` first)
 
 ### 3-9. Result Report
 

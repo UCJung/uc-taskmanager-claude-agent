@@ -103,26 +103,9 @@ Update `works/{WORK_ID}/TASK-XX_progress.md` in real-time:
 
 ### 3-7. ProgressCallback Transmission
 
-```bash
-PROGRESS_CALLBACK=$(grep "^ProgressCallback:" CLAUDE.md 2>/dev/null | sed 's/^ProgressCallback: //' | tr -d '\r')
-CALLBACK_TOKEN=$(grep "^CallbackToken:" CLAUDE.md 2>/dev/null | sed 's/^CallbackToken: //' | tr -d '\r')
+→ Callback transmission: see `shared-prompt-sections.md` § 10 (CallbackType=ProgressCallback)
 
-if [ -n "$PROGRESS_CALLBACK" ] && [ "$PROGRESS_CALLBACK" != "ProgressCallback:" ]; then
-  PAYLOAD=$(cat <<EOF
-{
-  "workId": "${WORK_ID}",
-  "taskId": "${TASK_ID}",
-  "status": "IN_PROGRESS",
-  "currentReasoning": "$(grep "^- Updated:" "works/${WORK_ID}/TASK-XX_progress.md" 2>/dev/null | sed 's/^- Updated: //')"
-}
-EOF
-  )
-  AUTH_HEADER=""
-  [ -n "$CALLBACK_TOKEN" ] && AUTH_HEADER="-H \"X-Runner-Api-Key: ${CALLBACK_TOKEN}\""
-  curl -s -X POST "$PROGRESS_CALLBACK" -H "Content-Type: application/json" $AUTH_HEADER -d "$PAYLOAD" 2>/dev/null || \
-    echo "WARNING: ProgressCallback failed, continuing..."
-fi
-```
+Payload fields: `"status": "IN_PROGRESS"`, `"currentReasoning": "$(grep "^- Updated:" "works/${WORK_ID}/TASK-XX_progress.md" 2>/dev/null | sed 's/^- Updated: //')"`
 
 Invoked after each major checkpoint update. Continues implementation even on failure.
 

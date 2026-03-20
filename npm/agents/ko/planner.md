@@ -47,19 +47,9 @@ WORK (일)          — 사용자 요청의 목표 단위
 ```bash
 # 1. 기존 WORK 확인
 ls -d works/WORK-* 2>/dev/null | sort -V | tail -1
-
-# 2. CLAUDE.md 언어 설정 확인
-grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null
-
-# 3. 기술 스택
-cat package.json 2>/dev/null | head -50
-cat pyproject.toml 2>/dev/null | head -30
-cat Cargo.toml 2>/dev/null | head -20
-cat go.mod 2>/dev/null | head -10
-
-# 4. 구조
-find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) | grep -v node_modules | head -30
 ```
+
+→ 탐색 명령 (2~4단계): `shared-prompt-sections.md` § 11 참조
 
 ### 3-3. Requirement.md 분석 + WORK 디렉토리 확인
 
@@ -132,16 +122,7 @@ TASK 파일 생성 시 반드시 동일 디렉토리에 `TASK-XX_progress.md` �
 ### 3-8. Output Language Rule
 
 → 우선순위 규칙: `shared-prompt-sections.md` § 1 참조
-
-planner 고유 로케일 감지:
-```
-1. CLAUDE.md → "Language: xx" 확인
-2. 없으면 사용자에게 언어 질문
-3. 없으면 시스템 로케일 자동 감지
-   - Windows: powershell -c "[CultureInfo]::CurrentCulture.TwoLetterISOLanguageName"
-   - Linux/Mac: locale | grep LANG | grep -oP '[a-z]{2}' | head -1
-   - Fallback: "en"
-```
+→ 로케일 감지: `shared-prompt-sections.md` § 9 참조
 
 PLAN.md `> Language:` 필드에 resolved language 기록. 모든 산출물을 해당 언어로 작성.
 
