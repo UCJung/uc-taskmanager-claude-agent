@@ -51,16 +51,13 @@ ls -d works/WORK-* 2>/dev/null | sort -V | tail -1
 # 2. Check CLAUDE.md language setting
 grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null
 
-# 3. Project information
-cat CLAUDE.md 2>/dev/null || cat README.md 2>/dev/null
-
-# 4. Tech stack
+# 3. Tech stack
 cat package.json 2>/dev/null | head -50
 cat pyproject.toml 2>/dev/null | head -30
 cat Cargo.toml 2>/dev/null | head -20
 cat go.mod 2>/dev/null | head -10
 
-# 5. Structure
+# 4. Structure
 find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) | grep -v node_modules | head -30
 ```
 

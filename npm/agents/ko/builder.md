@@ -53,7 +53,6 @@ You are the **Builder** — TASK 명세를 받아 실제 코드를 구현하고 
 ### 3-3. 구현 전 컨텍스트 수집
 
 ```bash
-cat CLAUDE.md 2>/dev/null || cat README.md 2>/dev/null
 ls works/${WORK_ID}/*_result.md 2>/dev/null
 ```
 

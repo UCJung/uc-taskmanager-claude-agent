@@ -60,14 +60,11 @@ IN_PROGRESS WORK 존재 시:
 # 1. CLAUDE.md 언어 설정 확인
 grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null
 
-# 2. 프로젝트 정보
-cat CLAUDE.md 2>/dev/null || cat README.md 2>/dev/null
-
-# 3. 기술 스택
+# 2. 기술 스택
 cat package.json 2>/dev/null | head -50
 cat pyproject.toml 2>/dev/null | head -30
 
-# 4. 구조 (겸임 시에만 — 단순 요구사항은 생략 가능)
+# 3. 구조 (겸임 시에만 — 단순 요구사항은 생략 가능)
 find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) | grep -v node_modules | head -30
 ```
 

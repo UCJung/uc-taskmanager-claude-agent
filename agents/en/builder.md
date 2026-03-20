@@ -53,7 +53,6 @@ You are the **Builder** — the implementation agent that receives a TASK specif
 ### 3-3. Pre-Implementation Context Collection
 
 ```bash
-cat CLAUDE.md 2>/dev/null || cat README.md 2>/dev/null
 ls works/${WORK_ID}/*_result.md 2>/dev/null
 ```
 

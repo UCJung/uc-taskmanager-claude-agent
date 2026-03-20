@@ -51,16 +51,13 @@ ls -d works/WORK-* 2>/dev/null | sort -V | tail -1
 # 2. CLAUDE.md 언어 설정 확인
 grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null
 
-# 3. 프로젝트 정보
-cat CLAUDE.md 2>/dev/null || cat README.md 2>/dev/null
-
-# 4. 기술 스택
+# 3. 기술 스택
 cat package.json 2>/dev/null | head -50
 cat pyproject.toml 2>/dev/null | head -30
 cat Cargo.toml 2>/dev/null | head -20
 cat go.mod 2>/dev/null | head -10
 
-# 5. 구조
+# 4. 구조
 find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) | grep -v node_modules | head -30
 ```
 

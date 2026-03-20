@@ -60,14 +60,11 @@ When IN_PROGRESS WORK exists:
 # 1. Check CLAUDE.md language setting
 grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null
 
-# 2. Project information
-cat CLAUDE.md 2>/dev/null || cat README.md 2>/dev/null
-
-# 3. Tech stack
+# 2. Tech stack
 cat package.json 2>/dev/null | head -50
 cat pyproject.toml 2>/dev/null | head -30
 
-# 4. Structure (only when assuming Planner — skip for simple requirements)
+# 3. Structure (only when assuming Planner — skip for simple requirements)
 find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) | grep -v node_modules | head -30
 ```
 
