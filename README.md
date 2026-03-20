@@ -1,5 +1,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Claude_Code-Subagents-6b5ce7?style=for-the-badge&logo=anthropic&logoColor=white" />
+  <img src="https://img.shields.io/badge/Claude_Marketplace-Plugin-00a67e?style=for-the-badge&logo=anthropic&logoColor=white" />
   <img src="https://img.shields.io/badge/Language_Agnostic-Any_Stack-27ae60?style=for-the-badge" />
   <img src="https://img.shields.io/badge/License-GPLv3-f5a623?style=for-the-badge" />
 </p>
@@ -8,21 +9,36 @@
 
 **Universal Claude Task Manager** — A general-purpose task pipeline subagent system for Claude Code CLI.
 
+Available as a **Claude Marketplace Plugin** and as an **npm CLI** (`uctm`). Install once, use `[]`-tagged requests to trigger automated multi-agent pipelines.
+
 **[한국어 문서 (Korean)](README_KO.md)**
 
 ---
 
 ## Quick Start
 
+### Option 1: Claude Marketplace Plugin (Recommended)
+
+Install directly from the Claude Marketplace — no npm or CLI setup required:
+
+1. Open [Claude Marketplace](https://claude.ai/marketplace) (or `platform.claude.com/plugins`)
+2. Search for **uc-taskmanager**
+3. Click **Install Plugin**
+4. Open Claude Code — the 6 pipeline agents are immediately available
+
+### Option 2: npm CLI
+
 ```bash
 npm install -g uctm
 cd your-project
 uctm init --lang en   # English agents
-uctm init --lang ko   # 한국어 에이전트
+uctm init --lang ko   # 한국어 에이전트 (Korean — npm only)
 uctm init             # Interactive language selection
 ```
 
-Then start Claude Code and use pipeline tags:
+### Start Using
+
+Once installed (either method), start Claude Code and use pipeline tags:
 
 ```
 claude
@@ -232,7 +248,20 @@ This ensures Claude automatically delegates `[]`-tagged requests to the specifie
 
 ## Installation
 
-### npm (Recommended)
+### Claude Marketplace Plugin (Recommended for English)
+
+Install directly from the Claude Marketplace — no terminal required:
+
+1. Visit [Claude Marketplace](https://claude.ai/marketplace) (or `platform.claude.com/plugins`)
+2. Search for **uc-taskmanager**
+3. Click **Install Plugin**
+4. Claude Code automatically discovers agents from the plugin's `agents/` directory
+
+The Marketplace Plugin includes **English agents only** (6 core agents + 6 support files).
+
+> **Marketplace Plugin vs npm CLI**: The Plugin requires no installation steps and is always up to date. The npm CLI supports Korean agents (`--lang ko`) and project-level customization via `CLAUDE.md`.
+
+### npm CLI (All Languages + Customization)
 
 ```bash
 npm install -g uctm
@@ -258,6 +287,13 @@ mkdir -p .claude/agents
 cp /tmp/uc-tm/agents/en/*.md .claude/agents/   # or agents/ko/ for Korean
 rm -rf /tmp/uc-tm
 git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
+```
+
+### Local Plugin Test
+
+```bash
+# Test plugin locally before Marketplace submission
+claude --plugin-dir ./
 ```
 
 ### Verify
@@ -371,14 +407,29 @@ Main Claude → committer: Commit → result.md
 
 ### Agents
 
+Six agents work together in a clean, isolated pipeline:
+
 | Agent | Role | Model | Permission | MCP |
 |-------|------|-------|------------|-----|
-| **specifier** | `[]` tag detection, execution-mode판정(direct/pipeline/full), PLAN생성, WORK-LIST관리, direct 모드 구현(builder 겸임) | **opus** | read + dispatch + write | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
-| **planner** | Create WORK + decompose TASKs + generate PLAN.md(Execution-Mode:full) + pre-create progress templates | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
+| **specifier** | `[]` tag detection, execution-mode selection (direct/pipeline/full), PLAN creation, WORK-LIST management, direct mode implementation (acts as builder) | **opus** | read + dispatch + write | Serena (direct code edit), sequential-thinking (complexity check) |
+| **planner** | Create WORK + decompose TASKs + generate PLAN.md (full mode) + pre-create progress templates | **opus** | read-only | Serena (codebase exploration), sequential-thinking (task decomposition) |
 | **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch | — |
-| **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena(심볼단위탐색/편집) |
+| **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena (symbol-level explore/edit) |
 | **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification (read-only) | **haiku** | read + execute | — |
 | **committer** | Gate check (progress.md) → write result.md → git commit → COMMITTER DONE callback | **haiku** | read + write + git | — |
+
+### Support Files (included in Plugin)
+
+In addition to the 6 pipeline agents, the plugin includes 6 support files that agents reference at startup:
+
+| File | Purpose |
+|------|---------|
+| `agent-flow.md` | Pipeline orchestration rules — how Main Claude calls each agent in sequence |
+| `file-content-schema.md` | Single source of truth for all file formats (PLAN.md, TASK.md, progress.md, result.md) |
+| `shared-prompt-sections.md` | Shared prompt sections with cache_control — reduces repeated token cost up to 90% |
+| `context-policy.md` | Sliding window context transfer rules between agents |
+| `work-activity-log.md` | Activity log format for builder stage tracking |
+| `xml-schema.md` | XML communication format for dispatch and task-result messages |
 
 ---
 
@@ -859,31 +910,37 @@ Auto-detected from project files. No configuration needed.
 
 ```
 uc-taskmanager/
+├── .claude-plugin/          ← Plugin manifest (Marketplace)
+│   └── plugin.json          ← name, version, description, agents array (12 files)
+├── agents/                  ← Plugin standard location — en agents (12 files)
+│   ├── specifier.md         ← [] tag detection + execution-mode routing
+│   ├── planner.md           ← WORK creation + TASK decomposition
+│   ├── scheduler.md         ← DAG management + pipeline orchestration
+│   ├── builder.md           ← Code implementation
+│   ├── verifier.md          ← Build/lint/test verification
+│   ├── committer.md         ← git commit + result.md
+│   ├── agent-flow.md        ← Pipeline orchestration rules
+│   ├── file-content-schema.md  ← File format definitions
+│   ├── shared-prompt-sections.md  ← Cacheable shared sections
+│   ├── context-policy.md    ← Sliding window context rules
+│   ├── work-activity-log.md ← Activity log format
+│   ├── xml-schema.md        ← XML communication format
+│   └── ko/                  ← Korean agent prompts (12 files, npm CLI only)
 ├── package.json             ← npm package config (uctm)
 ├── bin/cli.mjs              ← CLI entry point (uctm init/update)
-├── lib/                     ← CLI implementation (constants, init, update)
-├── README.md                ← English (default)
+├── lib/                     ← CLI implementation (constants.mjs, init.mjs, update.mjs)
+├── README.md                ← English (default, this file)
 ├── README_KO.md             ← Korean
 ├── CLAUDE.md                ← Project-level Claude instructions (push procedure, language, agent call rules)
 ├── LICENSE
-├── agents/                  ← Distribution: copy these to install
-│   ├── ko/                  ← Korean agent prompts (12 files)
-│   │   ├── specifier.md, planner.md, scheduler.md, builder.md,
-│   │   ├── verifier.md, committer.md, agent-flow.md,
-│   │   ├── context-policy.md, xml-schema.md, shared-prompt-sections.md,
-│   │   ├── file-content-schema.md, work-activity-log.md
-│   └── en/                  ← English agent prompts (12 files, same structure)
 ├── .agent/                  ← Per-project configuration
 │   └── router_rule_config.json  ← Router execution-mode decision criteria
 ├── docs/                    ← Design specifications
 │   ├── spec_pipeline-architecture.md       ← Pipeline structure & agent roles (v1.2)
-│   ├── spec_pipeline-architecture_v1.1.md  ← Pipeline architecture spec v1.1
 │   ├── spec_sliding-window-context.md      ← Sliding window context design
 │   ├── spec_callback-integration.md        ← External system callback integration
 │   ├── pipeline-architecture-visual.html   ← Interactive pipeline visualization
 │   └── sliding-window-context-visual.html  ← Interactive sliding window visualization
-├── _TODO/                   ← Pending tasks and experiments
-│   └── bash-cli-pipeline-automation.md ← Server automation via claude -p (verified)
 └── works/                   ← WORK directories (auto-generated)
     ├── WORK-LIST.md          ← Master index
     ├── WORK-01/              ← all modes output here (direct/pipeline/full)
