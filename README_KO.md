@@ -18,6 +18,17 @@
 
 ## 빠른 시작
 
+### 옵션 1: Claude Marketplace Plugin (제출 준비 중)
+
+> Plugin 제출을 준비 중입니다. 출시 후에는 Marketplace에서 직접 설치할 수 있습니다 — npm이나 CLI 설정 불필요.
+
+1. [Claude Marketplace](https://claude.ai/marketplace) (또는 `platform.claude.com/plugins`) 접속
+2. **uc-taskmanager** 검색
+3. **Install Plugin** 클릭
+4. Claude Code를 열면 6개 파이프라인 에이전트가 바로 사용 가능
+
+### 옵션 2: npm CLI
+
 ```bash
 npm install -g uctm
 cd your-project
@@ -26,7 +37,9 @@ uctm init --lang en   # English agents
 uctm init             # 대화형 언어 선택
 ```
 
-Claude Code를 실행하고 파이프라인 태그를 사용하세요: []시작하는 지시를 내리면 Agent가 동작합니다.
+### 시작하기
+
+설치 완료 후 (두 방법 모두), Claude Code를 실행하고 파이프라인 태그를 사용하세요: []시작하는 지시를 내리면 Agent가 동작합니다.
 
 ```
 claude
@@ -115,7 +128,7 @@ WORK-31 개발 승인 요청
 이 Agent는 코드베이스 탐색 시 [Serena MCP](https://github.com/oraios/serena)를 우선 적용하게 지침을 내려놨다. 
 파일 전체를 읽는 대신 심볼 단위로 읽는다. (Serena 개발 팀 여러분 너무너무 감사합니다.)
 
-**(2) 세 가지 실행 모드로 서브에이전트 오버헤드 최소화.** WORK-PIPELINE은 총 6단계의 Agent가 순차적으로 동작한다. TASK 하나짜리 WORK에 6개의 Sub Agent를 실행시키면? 매번 초기 로딩에 토큰이 사용된다. 아깝다. 그래서 요구사항을 명세화하는 Agent가 복잡도에 따라 실행 방법을 결정한다. **direct** 모드는 다른 모든 절차를 위임받아 혼자 실행한다 — 추가 서브에이전트 세션 0개. 자세한 사항은 [세 가지 실행 모드](#개념-세-가지-실행-모드-execution-mode) 참고.
+**(2) 세 가지 실행 모드로 서브에이전트 오버헤드 최소화.** WORK-PIPELINE은 총 6단계의 Agent가 순차적으로 동작한다. TASK 하나짜리 WORK에 6개의 Sub Agent를 실행시키면? 매번 초기 로딩에 토큰이 사용된다. 아깝다. 그래서 요구사항을 명세화하는 Agent가 복잡도에 따라 실행 방법을 결정한다. **direct** 모드는 specifier → builder → committer의 최소 3단계만 실행 — 중간 단계(planner, scheduler, verifier) 생략. 자세한 사항은 [세 가지 실행 모드](#개념-세-가지-실행-모드-execution-mode) 참고.
 
 **(3) 구조화된 XML 통신.** Sub agent는 nest하게 sub agent를 실행시킬 수 없다. 그래서 모든 절차를 지휘하는 것은 Main Claude다. 
 * Agent 실행이 종료되고 다음 Agent를 실행시킬 때 Main Claude가 중간에 끼게 되어 데이터 통신을 두 번 하게 된다. 이 통신이 텍스트 덩어리다 — 
@@ -158,7 +171,7 @@ WORK의 TASK 간에 의존성을 관리한다. 병렬 실행도 의존관계에 
 > [버그수정] 로그인 에러 메시지 오타 수정
 ```
 
-Main Claude가 specifier를 호출하면 `execution-mode: direct`를 판정하여 specifier가 겸임으로 자체 세션에서 직접 처리. 추가 서브에이전트 호출 없음. WORK-NN 디렉토리 + PLAN + result.md + commit 자동 생성.
+Main Claude가 specifier를 호출하면 `execution-mode: direct`를 판정하고 dispatch XML을 반환합니다. Main Claude가 builder(구현)와 committer(커밋)를 순차 호출. WORK-NN 디렉토리 + PLAN + result.md + commit 자동 생성.
 
 ### 간단한 작업 (pipeline 모드)
 
@@ -293,20 +306,35 @@ scheduler가 `PROGRESS.md`와 `result.md` 파일을 읽어 현재 상태를 보�
 
 ## 설치
 
-### npm (권장)
+### Claude Marketplace Plugin (제출 준비 중)
+
+출시 후에는 터미널 없이 Claude Marketplace에서 직접 설치:
+
+1. [Claude Marketplace](https://claude.ai/marketplace) (또는 `platform.claude.com/plugins`) 접속
+2. **uc-taskmanager** 검색
+3. **Install Plugin** 클릭
+4. Claude Code가 plugin의 `agents/` 디렉토리에서 에이전트를 자동으로 인식
+
+Marketplace Plugin은 **영어 에이전트만 포함**합니다 (6개 핵심 에이전트 + 6개 참조 문서).
+
+> **Marketplace Plugin vs npm CLI**: Plugin은 설치 단계 없이 항상 최신 상태를 유지합니다. npm CLI는 한국어 에이전트(`--lang ko`)와 `CLAUDE.md`를 통한 프로젝트별 커스터마이징을 지원합니다.
+
+### npm CLI (전체 언어 지원 + 커스터마이징)
 
 ```bash
 npm install -g uctm
 
 # 프로젝트별 설치 (에이전트 + 설정 복사 + CLAUDE.md 업데이트)
 cd your-project
-uctm init
+uctm init --lang ko          # 한국어 에이전트
+uctm init --lang en          # English agents
+uctm init                    # 대화형 언어 선택
 
 # 전역 설치 (~/.claude/agents/에 복사)
-uctm init --global
+uctm init --global --lang ko
 
-# uctm 업그레이드 후 에이전트 파일 갱신
-uctm update
+# uctm 업그레이드 후 에이전트 파일 갱신 (--lang 필수)
+uctm update --lang ko
 ```
 
 ### 수동 설치
@@ -314,9 +342,16 @@ uctm update
 ```bash
 git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
 mkdir -p .claude/agents
-cp /tmp/uc-tm/agents/*.md .claude/agents/
+cp /tmp/uc-tm/agents/ko/*.md .claude/agents/   # 또는 agents/en/ (영어)
 rm -rf /tmp/uc-tm
 git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
+```
+
+### 로컬 Plugin 테스트
+
+```bash
+# Marketplace 제출 전 로컬에서 Plugin 테스트
+claude --plugin-dir ./
 ```
 
 ### 설치 확인
@@ -344,7 +379,7 @@ Main Claude가 `[]` 태그를 감지하면 **specifier** 서브에이전트를 �
               execution-mode 판정
                     │
       ├─ direct  (빌드/테스트 검증 불필요)
-      │   → specifier가 겸임으로 자체 세션에서 모든 것을 처리 — 추가 서브에이전트 호출 0
+      │   → specifier가 dispatch XML 반환 → Main Claude가 builder → committer 순차 호출
       │
       ├─ pipeline  (빌드/테스트 필요, 단일 도메인, 순차 처리)
       │   → Main Claude가 순차 호출: builder → verifier → committer
@@ -376,10 +411,12 @@ Main Claude → builder(sonnet) → verifier(haiku) → committer(haiku)
 
 ### direct 모드 (초단순)
 
-Main Claude가 specifier를 호출하면 specifier가 겸임으로 자체 세션에서 모든 것을 처리. 추가 서브에이전트 호출 없음.
+Main Claude가 specifier를 호출하면 dispatch XML을 반환합니다. Main Claude가 builder(구현)와 committer(커밋)를 순차 호출합니다.
 
 ```
-Main Claude → specifier: 분석 → 구현 → self-check → 커밋 → result.md
+Main Claude → specifier: 분석 → dispatch XML 반환 → [Main Claude로 복귀]
+Main Claude → builder: 구현 → self-check → [Main Claude로 복귀]
+Main Claude → committer: 커밋 → result.md
 ```
 
 ---
@@ -420,23 +457,37 @@ Main Claude → specifier: 분석 → 구현 → self-check → 커밋 → resul
 ### direct 모드 (초단순)
 
 ```
-  specifier (겸임)
- ┌────────────────────────────────────────────────┐
- │ 판정 → 구현 → self-check → 커밋 → result.md    │
- └────────────────────────────────────────────────┘
-  (빌드/테스트 불필요 — 추가 서브에이전트 세션 0개)
+  specifier        builder                                 committer
+ ┌──────────┐     ┌──────────────────────────────┐        ┌──────────┐
+ │ 분석     │────▶│ 구현 → self-check             │───────▶│커밋      │
+ │ dispatch │     └──────────────────────────────┘        │→ result  │
+ └──────────┘      (빌드/테스트 불필요)                    └──────────┘
 ```
 
 ### 에이전트
 
 | 에이전트 | 역할 | 모델 | 권한 | MCP |
 |----------|------|------|------|-----|
-| **specifier** | `[]` 태그 감지, execution-mode 판정(direct/pipeline/full), PLAN 생성, WORK-LIST 관리; direct 모드 시 구현까지 겸임 | **sonnet** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
+| **specifier** | `[]` 태그 감지, execution-mode 판정(direct/pipeline/full), PLAN 생성, WORK-LIST 관리, dispatch XML 반환 | **opus** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
 | **planner** | WORK 생성 + TASK 분해 + PLAN.md(Execution-Mode:full) + progress 템플릿 선생성 | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
 | **scheduler** | 특정 WORK의 DAG 관리 + [B→V→C]×N 파이프라인 실행 | **haiku** | read + dispatch | — |
 | **builder** | 코드 구현 + progress.md 체크포인트 기록 | **sonnet** | full access | Serena(심볼단위탐색/편집) |
 | **verifier** | progress gate 검사 → 빌드/린트/테스트 검증 (읽기 전용) | **haiku** | read + execute | — |
 | **committer** | gate 검사 → result.md 생성 → git commit → COMMITTER DONE 콜백 | **haiku** | read + write + git | — |
+
+### 참조 문서 (Plugin에 포함)
+
+6개 파이프라인 에이전트 외에도 plugin은 에이전트가 시작 시 참조하는 6개 참조 문서를 포함합니다.
+이 파일들은 `plugin/skills/sdd-pipeline/references/`에 위치합니다 (`agents/en/`에서 동기화):
+
+| 파일 | 용도 |
+|------|------|
+| `agent-flow.md` | 파이프라인 오케스트레이션 규칙 — Main Claude가 각 에이전트를 순차 호출하는 방식 |
+| `file-content-schema.md` | 모든 파일 포맷(PLAN.md, TASK.md, progress.md, result.md)의 단일 정보원 |
+| `shared-prompt-sections.md` | cache_control이 적용된 공통 프롬프트 섹션 — 반복 토큰 비용을 최대 90% 절감 |
+| `context-policy.md` | 에이전트 간 슬라이딩 윈도우 컨텍스트 전달 규칙 |
+| `work-activity-log.md` | builder 단계 추적을 위한 Activity log 포맷 |
+| `xml-schema.md` | dispatch 및 task-result 메시지의 XML 통신 포맷 |
 
 ---
 
@@ -478,27 +529,23 @@ specifier가 `works/WORK-LIST.md`를 마스터 인덱스로 관리합니다:
 
 | 상태 | 의미 |
 |------|------|
-| `IN_PROGRESS` | TASK 진행 중 — 아직 push 안 됨 |
-| `COMPLETED` | 모든 TASK 커밋 완료 + git push 완료 |
+| `IN_PROGRESS` | TASK 진행 중 |
+| `COMPLETED` | 모든 TASK 커밋 완료 — committer가 자동으로 변경 |
 
 - **IN_PROGRESS**: 새 WORK 생성 전 specifier가 확인
-- **COMPLETED**: `git push` 시점에 갱신 — **Agent가 갱신하지 않음**
+- **COMPLETED**: 마지막 TASK 완료 시 **committer가 자동으로 WORK-LIST를 COMPLETED로 변경**
 
 #### git push 절차
 
 Claude에게 push를 요청하면 (`"push 해줘"`, `"git push"`), Claude가 아래 순서를 자동으로 처리합니다:
 
 ```
-1. works/WORK-LIST.md 열기
-2. IN_PROGRESS 상태인 WORK 전체 확인
-3. 해당 WORK 상태 → COMPLETED, 날짜 업데이트
-4. git add works/WORK-LIST.md
-5. git commit -m "chore: WORK-LIST 갱신 — WORK-XX COMPLETED"
-6. git push
+1. 에이전트 동기화 — agents/ 원본을 npm/agents/, plugin/agents/로 복사
+2. README.md 확인 — 변경 내용이 반영되어 있는지 확인, 누락 시 업데이트
+3. git push
 ```
 
-> **Agent(builder / committer / scheduler)는 WORK-LIST를 COMPLETED로 갱신하지 않습니다.**
-> COMPLETED 갱신은 오직 push 시점에만 수행합니다. Agent가 `🎉 WORK 완료!` 메시지를 출력하더라도 WORK-LIST 갱신은 하지 않습니다.
+> **WORK-LIST COMPLETED 변경은 committer가 자동 수행**합니다 — push 시점이 아니라 마지막 TASK 완료 시점에 갱신됩니다. push 절차에서는 WORK-LIST를 별도로 변경하지 않습니다.
 
 ---
 
@@ -740,7 +787,7 @@ specifier는 프로젝트 루트의 `.agent/router_rule_config.json`을 읽어 �
 ### 세 가지 실행 모드
 
 Main Claude가 specifier를 호출하면, specifier가 복잡도에 맞는 `execution-mode`를 판정합니다:
-- **direct**: 1줄 오타 수정 — Main Claude가 specifier만 호출, specifier가 겸임으로 구현, 추가 서브에이전트 세션 0개
+- **direct**: 1줄 오타 수정 — Main Claude가 specifier 호출 → dispatch XML 반환 → builder(구현) + committer(커밋) 순차 호출
 - **pipeline**: 중간 규모 수정 — Main Claude가 builder → verifier → committer 순차 호출. Main Claude는 오케스트레이터 역할만 하므로 컨텍스트 사용 최소화
 - **full**: 복잡한 기능 — 전체 계획, 분해, 추적
 
@@ -937,16 +984,16 @@ uc-taskmanager/
 │   └── README.md
 ├── .claude/                 ← 로컬 Claude 설정 (커밋하지 않음)
 │   └── settings.local.json
-├── .agent/                  ← 프로젝트별 설정
-│   └── router_rule_config.json  ← Router execution-mode 판정 기준
 ├── README.md                ← English (기본, 이 파일)
 ├── README_KO.md             ← 한국어
 ├── CLAUDE.md                ← 프로젝트 지침 (push 절차, 언어, 에이전트 호출 규칙)
 ├── LICENSE
 ├── docs/                    ← 설계 명세
 │   ├── spec_pipeline-architecture.md       ← 파이프라인 구조 및 에이전트 역할 (v1.2)
+│   ├── spec_pipeline-architecture_v1.1.md  ← 파이프라인 아키텍처 v1.1 (보관)
 │   ├── spec_sliding-window-context.md      ← 슬라이딩 윈도우 컨텍스트 설계
 │   ├── spec_callback-integration.md        ← 외부 시스템 콜백 연동 가이드
+│   ├── spec_SDD_with_ucagent_requirement.md ← SDD 요구사항관리 시스템 설계
 │   ├── pipeline-architecture-visual.html   ← 인터랙티브 파이프라인 시각화
 │   └── sliding-window-context-visual.html  ← 인터랙티브 슬라이딩 윈도우 시각화
 └── works/                   ← WORK 디렉토리 (자동 생성)
@@ -1006,6 +1053,12 @@ Serena는 매 시작 시 웹 대시보드를 브라우저에서 엽니다. 이�
 ```
 
 대시보드는 `http://localhost:PORT`에서 계속 사용 가능합니다 — 시작 시 자동으로 열리지 않을 뿐입니다.
+
+---
+
+## 더 큰 그림
+
+이 에이전트는 **SDD 기반 요구사항관리 및 자동 개발 시스템**과 연계되어 동작하도록 설계되었습니다 — 요구사항관리 → 자동 개발 → 계획 및 산출물을 연결하는 서버 애플리케이션입니다. 전체 시스템 아키텍처는 [`docs/spec_SDD_with_ucagent_requirement.md`](docs/spec_SDD_with_ucagent_requirement.md)에 문서화되어 있습니다. 이를 참고하여 자신의 필요에 맞는 시스템을 구축하세요.
 
 ---
 

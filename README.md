@@ -135,7 +135,7 @@ I'm cost-conscious (honestly). So this agent applies four token-saving strategie
 **(1) Serena MCP for codebase analysis.**
 The agent prioritizes [Serena MCP](https://github.com/oraios/serena) for code exploration — reading symbols instead of entire files. (Huge thanks to the Serena team.)
 
-**(2) Three execution modes to minimize subagent overhead.** The WORK-PIPELINE has 6 agent stages running sequentially. For a single-TASK WORK, that's 6 subagent sessions — each consuming tokens just to boot up. Wasteful. So the specifier agent decides the execution mode based on complexity: **direct** mode handles everything in a single session with zero additional subagent calls. See [Three Execution Modes](#concept-three-execution-modes).
+**(2) Three execution modes to minimize subagent overhead.** The WORK-PIPELINE has 6 agent stages running sequentially. For a single-TASK WORK, that's 6 subagent sessions — each consuming tokens just to boot up. Wasteful. So the specifier agent decides the execution mode based on complexity: **direct** mode uses only 3 agent calls (specifier → builder → committer), skipping planner, scheduler, and verifier. See [Three Execution Modes](#concept-three-execution-modes).
 
 **(3) Structured XML communication.** Subagents can't nest — Main Claude orchestrates everything.
 * When one agent finishes and the next agent starts, Main Claude sits in between, causing data to be transmitted twice. This communication is a blob of text —
@@ -178,7 +178,7 @@ Six subagents work across any project and any language, automatically handling *
 > [bugfix] Fix typo in login error message
 ```
 
-Main Claude calls specifier, which selects `execution-mode: direct`. Specifier itself (acting as builder) implements the change + committer commits. Creates WORK-NN directory + PLAN + result.md + commit.
+Main Claude calls specifier, which selects `execution-mode: direct` and returns a dispatch XML. Main Claude then calls builder (implements the change) and committer (commits). Creates WORK-NN directory + PLAN + result.md + commit.
 
 ### Quick Task (pipeline mode)
 
@@ -396,7 +396,7 @@ User Request → Main Claude (orchestrator)
               execution-mode returned
                     │
       ├─ direct  (no build/test required)
-      │   → specifier acts as builder + Main Claude calls committer
+      │   → specifier returns dispatch XML → Main Claude calls builder → committer
       │
       ├─ pipeline  (build/test required, single domain, sequential)
       │   → Main Claude calls: builder → verifier → committer (in sequence)
@@ -428,10 +428,11 @@ Main Claude → builder(sonnet) → verifier(haiku) → committer(haiku)
 
 ### direct mode (Trivial)
 
-Main Claude calls specifier, which determines direct mode and implements the change itself. Main Claude then calls committer.
+Main Claude calls specifier, which determines direct mode and returns a dispatch XML. Main Claude then calls builder (implements the change) and committer (commits).
 
 ```
-Main Claude → specifier: Analyze → Implement → Self-verify → [back to Main Claude]
+Main Claude → specifier: Analyze → return dispatch XML → [back to Main Claude]
+Main Claude → builder: Implement → Self-check → [back to Main Claude]
 Main Claude → committer: Commit → result.md
 ```
 
@@ -473,11 +474,11 @@ Main Claude → committer: Commit → result.md
 ### direct mode (Trivial)
 
 ```
-  specifier                                          committer
- ┌──────────────────────────────────┐               ┌──────────┐
- │ Analyze → Implement → Self-check │──────────────▶│Commit    │
- └──────────────────────────────────┘               │→ result  │
-  (no build/test required)                          └──────────┘
+  specifier        builder                            committer
+ ┌──────────┐     ┌──────────────────────────┐       ┌──────────┐
+ │ Analyze  │────▶│ Implement → Self-check   │──────▶│Commit    │
+ │ dispatch │     └──────────────────────────┘       │→ result  │
+ └──────────┘      (no build/test required)          └──────────┘
 ```
 
 ### Agents
@@ -486,7 +487,7 @@ Six agents work together in a clean, isolated pipeline:
 
 | Agent | Role | Model | Permission | MCP |
 |-------|------|-------|------------|-----|
-| **specifier** | `[]` tag detection, execution-mode selection (direct/pipeline/full), PLAN creation, WORK-LIST management, direct mode implementation (acts as builder) | **opus** | read + dispatch + write | Serena (direct code edit), sequential-thinking (complexity check) |
+| **specifier** | `[]` tag detection, execution-mode selection (direct/pipeline/full), PLAN creation, WORK-LIST management, returns dispatch XML for all modes | **opus** | read + dispatch | Serena (codebase exploration), sequential-thinking (complexity check) |
 | **planner** | Create WORK + decompose TASKs + generate PLAN.md (full mode) + pre-create progress templates | **opus** | read-only | Serena (codebase exploration), sequential-thinking (task decomposition) |
 | **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch | — |
 | **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena (symbol-level explore/edit) |
@@ -547,27 +548,23 @@ The specifier maintains `works/WORK-LIST.md` as the master index:
 
 | Status | Meaning |
 |--------|---------|
-| `IN_PROGRESS` | TASKs in progress — not yet pushed |
-| `COMPLETED` | All TASKs committed + git push done |
+| `IN_PROGRESS` | TASKs in progress |
+| `COMPLETED` | All TASKs committed — set automatically by committer |
 
 - **IN_PROGRESS**: specifier checks this before creating new WORKs
-- **COMPLETED**: updated at `git push` time — **not by agents**
+- **COMPLETED**: committer automatically updates WORK-LIST to COMPLETED when the last TASK completes
 
 #### git push Procedure
 
 When you ask Claude to push (`"push this"`, `"git push"`), Claude handles the full sequence automatically:
 
 ```
-1. Open works/WORK-LIST.md
-2. Find all IN_PROGRESS WORKs
-3. Change status → COMPLETED, update date
-4. git add works/WORK-LIST.md
-5. git commit -m "chore: update WORK-LIST — WORK-XX COMPLETED"
-6. git push
+1. Agent sync — copy agents/ source to npm/agents/ and plugin/agents/
+2. Check README.md — update if changes are missing
+3. git push
 ```
 
-> **Agents (builder / committer / scheduler) never update WORK-LIST to COMPLETED.**
-> COMPLETED is only set at push time. If an agent outputs `🎉 WORK complete!`, that is a status message — not a WORK-LIST update.
+> **WORK-LIST COMPLETED is set by committer** when the last TASK completes — not at push time. The push procedure no longer includes a WORK-LIST update step.
 
 ---
 
@@ -809,7 +806,7 @@ For a monorepo with strict build requirements:
 ### Three Execution Modes
 
 The specifier matches effort to complexity via `execution-mode`:
-- **direct**: 1-line typo fix — Main Claude calls specifier, which implements the change itself + committer commits. Minimal subagent overhead.
+- **direct**: 1-line typo fix — Main Claude calls specifier, which returns a dispatch XML. Main Claude then calls builder (implements) + committer (commits). Minimal subagent overhead.
 - **pipeline**: Moderate fix — Main Claude calls builder → verifier → committer in sequence. Main Claude only orchestrates, minimizing its own context usage
 - **full**: Complex features — full planning, decomposition, and tracking
 
@@ -1032,8 +1029,10 @@ uc-taskmanager/
 ├── LICENSE
 ├── docs/                    ← Design specifications
 │   ├── spec_pipeline-architecture.md       ← Pipeline structure & agent roles (v1.2)
+│   ├── spec_pipeline-architecture_v1.1.md  ← Pipeline architecture v1.1 (archived)
 │   ├── spec_sliding-window-context.md      ← Sliding window context design
 │   ├── spec_callback-integration.md        ← External system callback integration
+│   ├── spec_SDD_with_ucagent_requirement.md ← SDD requirement management system design
 │   ├── pipeline-architecture-visual.html   ← Interactive pipeline visualization
 │   └── sliding-window-context-visual.html  ← Interactive sliding window visualization
 └── works/                   ← WORK directories (auto-generated)
