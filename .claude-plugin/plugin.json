@@ -1,0 +1,32 @@
+{
+  "name": "uc-taskmanager",
+  "version": "1.3.0",
+  "description": "Universal task pipeline sub-agent system for Claude Code",
+  "author": {
+    "name": "UCJung",
+    "url": "https://github.com/UCJung"
+  },
+  "repository": "https://github.com/UCJung/uc-taskmanager-claude-agent",
+  "license": "GPL-3.0",
+  "keywords": [
+    "task-manager",
+    "pipeline",
+    "sub-agents",
+    "automation",
+    "workflow"
+  ],
+  "agents": [
+    "./agents/agent-flow.md",
+    "./agents/builder.md",
+    "./agents/committer.md",
+    "./agents/context-policy.md",
+    "./agents/file-content-schema.md",
+    "./agents/planner.md",
+    "./agents/scheduler.md",
+    "./agents/shared-prompt-sections.md",
+    "./agents/specifier.md",
+    "./agents/verifier.md",
+    "./agents/work-activity-log.md",
+    "./agents/xml-schema.md"
+  ]
+}
