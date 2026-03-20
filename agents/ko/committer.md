@@ -137,9 +137,12 @@ committer 고유 추가 필드:
 </next-tasks>
 ```
 
-### 3-9-1. WORK-LIST.md 자동 완료 처리
+### 3-9-1. WORK 아카이브 처리 (마지막 TASK)
 
-마지막 TASK인지 확인 후, 마지막 TASK이면 WORK-LIST.md를 `IN_PROGRESS` → `COMPLETED`로 변경한다.
+마지막 TASK인지 확인 후, 마지막 TASK이면:
+1. `works/WORK-LIST.md`에서 해당 WORK 행 제거
+2. `works/${WORK_ID}/`를 `works/_COMPLETED/${WORK_ID}/`로 이동
+3. 양쪽 변경을 스테이징하고 커밋에 amend
 
 ```bash
 # 마지막 TASK 확인
@@ -147,9 +150,13 @@ TOTAL=$(ls works/${WORK_ID}/TASK-*.md 2>/dev/null | grep -cv '_result\|_progress
 DONE=$(ls works/${WORK_ID}/TASK-*_result.md 2>/dev/null | wc -l)
 
 if [ "$DONE" -ge "$TOTAL" ]; then
-  # WORK-LIST.md에서 해당 WORK의 IN_PROGRESS → COMPLETED 변경
-  sed -i "s/| ${WORK_ID} |\\(.*\\)| IN_PROGRESS |\\(.*\\)|\\(.*\\)|/| ${WORK_ID} |\\1| COMPLETED |\\2| $(date '+%Y-%m-%d') |/" works/WORK-LIST.md
+  # WORK-LIST.md에서 해당 행 제거 (LAST_WORK_ID 헤더는 보존 — 변경하지 않음)
+  sed -i "/| ${WORK_ID} |/d" works/WORK-LIST.md
+  # WORK 폴더를 _COMPLETED로 이동
+  mkdir -p works/_COMPLETED
+  mv works/${WORK_ID} works/_COMPLETED/${WORK_ID}
   git add works/WORK-LIST.md
+  git add "works/_COMPLETED/${WORK_ID}/"
   git commit --amend --no-edit
 fi
 ```
@@ -171,7 +178,7 @@ fi
 - Files changed 없으면 즉시 FAIL 반환
 
 ### WORK-LIST.md 규칙
-- 마지막 TASK 완료 시 WORK-LIST.md를 `IN_PROGRESS` → `COMPLETED`로 자동 변경
+- 마지막 TASK 완료 시 WORK-LIST.md에서 해당 WORK 행을 제거하고 WORK 폴더를 `works/_COMPLETED/`로 이동
 
 ### Output Language Rule
 → `shared-prompt-sections.md` § 1 참조

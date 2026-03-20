@@ -125,13 +125,23 @@ echo "$DONE / $TOTAL"
 
 파일: `works/WORK-LIST.md`
 
+**포맷:**
+```
+LAST_WORK_ID: WORK-XX
+
+| WORK | 제목 | 상태 | 생성일 | 완료일 |
+|------|------|------|--------|--------|
+| WORK-NN | ... | IN_PROGRESS | YYYY-MM-DD | |
+```
+
 | 상태 | 시점 |
 |------|------|
 | `IN_PROGRESS` | WORK 디렉토리 생성 시 추가 |
-| `COMPLETED` | 마지막 TASK 완료 시 committer가 자동 변경 |
 
-- WORK 디렉토리 생성 시 반드시 IN_PROGRESS 추가
-- committer: 마지막 TASK commit 후 WORK-LIST.md를 `IN_PROGRESS` → `COMPLETED`로 변경
+- WORK-LIST.md에는 `IN_PROGRESS` 행만 존재 — COMPLETED 행 없음
+- `LAST_WORK_ID` 헤더는 지금까지 생성된 최고 WORK ID를 추적
+- specifier: WORK 생성 시 IN_PROGRESS 행 추가 + `LAST_WORK_ID` 갱신
+- committer: 마지막 TASK 완료 시 WORK 행을 WORK-LIST.md에서 제거하고 `works/${WORK_ID}/`를 `works/_COMPLETED/${WORK_ID}/`로 이동
 
 ---
 

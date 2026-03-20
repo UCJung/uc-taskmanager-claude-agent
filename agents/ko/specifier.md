@@ -42,13 +42,10 @@ You are the **Specifier** — 사용자 요청을 요구사항으로 명세화�
 ### 3-2. WORK ID 결정
 
 ```bash
-WORK_FS=$(ls -d works/WORK-* 2>/dev/null | grep -oP 'WORK-\K\d+' | sort -n | tail -1)
-WORK_FS=${WORK_FS:-0}
-WORK_LIST=$(grep -oP '^WORK-\K\d+' works/WORK-LIST.md 2>/dev/null | sort -n | tail -1)
-WORK_LIST=${WORK_LIST:-0}
-WORK_MAX=$(( WORK_FS > WORK_LIST ? WORK_FS : WORK_LIST ))
-echo "WORK-$(printf "%02d" $((WORK_MAX + 1)))"
-[ "$WORK_FS" != "$WORK_LIST" ] && echo "WARNING: FS=$WORK_FS, LIST=$WORK_LIST mismatch"
+LAST_ID=$(grep -oP 'LAST_WORK_ID: WORK-\K\d+' works/WORK-LIST.md 2>/dev/null)
+LAST_ID=${LAST_ID:-0}
+NEW_ID=$(printf "%02d" $((LAST_ID + 1)))
+echo "WORK-${NEW_ID}"
 ```
 
 IN_PROGRESS WORK 존재 시:
@@ -109,7 +106,7 @@ Requirement.md 작성 완료 후, **요구사항 자체의 복잡도**로 판단
 5.  PLAN.md 생성 (Execution-Mode: direct) → file-content-schema.md § 1
 6.  TASK-00.md 생성 → file-content-schema.md § 2
 7.  TASK-00_progress.md 생성 (Status: PENDING) → file-content-schema.md § 3
-8.  WORK-LIST.md IN_PROGRESS 추가
+8.  WORK-LIST.md IN_PROGRESS 행 추가 + LAST_WORK_ID 갱신
 9.  log_work PLAN "Requirement.md, PLAN.md, TASK-00.md 생성 완료 (겸임)"
 10. 생성된 산출물 요약을 사용자에게 제시하고 승인 요청 (요구사항 + 설계 통합 검토)
 11. dispatch XML 반환. **호출은 Main Claude가 수행한다.**
@@ -129,7 +126,7 @@ Requirement.md 작성 완료 후, **요구사항 자체의 복잡도**로 판단
 1.  mkdir works/WORK-NN/
 2.  log_work INIT "WORK-NN 생성 — Planner 위임"
 3.  Requirement.md 생성 → § 3-4
-4.  WORK-LIST.md IN_PROGRESS 추가
+4.  WORK-LIST.md IN_PROGRESS 행 추가 + LAST_WORK_ID 갱신
 5.  log_work REF "참조: ..."
 6.  생성된 Requirement.md 요약을 사용자에게 제시하고 기획 승인 요청
 7.  dispatch XML 반환. **호출은 Main Claude가 수행한다.**
@@ -173,7 +170,7 @@ specifier 고유 규칙:
 ### WORK-LIST.md 규칙
 → `.claude/agents/shared-prompt-sections.md` § 8 참조
 
-- WORK 생성 시: `IN_PROGRESS` 추가
+- WORK 생성 시: `IN_PROGRESS` 행 추가 + `LAST_WORK_ID` 헤더 갱신
 
 ### 파일명 규칙
 - TASK 파일명: `TASK-XX.md` 형식
