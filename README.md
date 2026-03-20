@@ -7,7 +7,7 @@
 
 # uc-taskmanager
 
-**Universal Claude Task Manager** — A general-purpose task pipeline subagent system for Claude Code CLI.
+**Universal Claude Task Manager** — An SDD (Specification-Driven Development) WORK-PIPELINE agent for Claude Code. It formalizes your requirements into specifications, builds execution plans (WORK) from those specs, decomposes them into small tasks (TASK), analyzes dependency graphs (DAG), and automatically executes TASKs sequentially or in parallel based on dependencies.
 
 Available as a **Claude Marketplace Plugin** and as an **npm CLI** (`uctm`). Install once, use `[]`-tagged requests to trigger automated multi-agent pipelines.
 
@@ -57,32 +57,54 @@ That's it. The specifier analyzes your request, plans the work, and executes thr
 
 ---
 
-## Why This Project Exists
+## What Makes This Pipeline Different
 
-My first experience with vibe coding was genuinely mind-blowing — ideas turned into working software faster than I'd ever imagined. But as the project grew, three problems became impossible to ignore:
+### 1. Process Excellence Over Methodology
 
-1. **Quality degradation in long sessions.** Continuing to develop in a single ongoing conversation caused the AI's output to gradually degrade — more hallucinations, more inconsistencies, increasing drift from the original intent as the context window filled up.
+Unlike TDD or DDD which focus on *how to write better code*, this agent focuses on *how to execute development procedures well*. It systematizes the full pipeline — **Requirement → Specification → WORK Plan → TASK Execution → TASK Result** — and preserves end-to-end traceability from requirement to delivery. When each TASK completes, it auto-commits to git.
 
-2. **No trace of decisions.** In a conversational flow, requirements change, designs shift, and implementations diverge — but none of it is recorded. When something breaks three weeks later, you're left with no trail to follow.
+**How to use it:**
 
-3. **Traceability collapses at scale.** The bigger the project grew, the harder it became to know what was built, why it was built that way, and where to look when something needed to change.
+**(1)** Give Claude CLI an instruction in the form `[WORK Start] your requirement`. Any instruction starting with `[]` triggers the agent.
 
-I built uc-taskmanager to solve exactly these problems. Each request flows through an isolated subagent pipeline — the context is always clean, never polluted by what came before. Every decision, every plan, every result is written to files that stay with the project.
+**(2)** The agent writes a requirement specification, then asks for your approval. Review `works/WORK-NN/Requirement.md` — if it looks good, say "approve". This advances to the WORK planning stage.
 
-**SDD (Specification-Driven Development)** is the underlying philosophy:
+**(3)** The agent builds an execution plan, then asks again. Review `works/WORK-NN/PLAN.md` and the `TASK-NN.md` files — if they look good, say "approve". Each TASK then runs automatically through build → verify → commit. Dependencies determine sequential vs parallel execution. (Up to 5 TASKs can run in parallel.)
 
-> Code is no longer the asset.
-> **Requirements → Architecture → Design** — these are the real assets now.
-> Code is just the output.
+**(4)** Each TASK produces `works/WORK-NN/TASK-NN_result.md`. Review the results. Once all TASKs finish, the WORK is done. Check the acceptance criteria in Requirement.md, test it yourself, and decide whether to push and merge. All source code and artifacts are stored in git.
 
-When you provide a requirement as input, the system:
+**Want to rollback?** Just say `WORK-NN rollback` — commit hashes are stored in the files, so only that WORK's commits are reverted.
 
-1. **Plans** — creates an execution plan with dependency graphs
-2. **Decomposes** — breaks the plan into concrete TASKs
-3. **Executes** — runs each TASK through isolated Claude AI subagents (build → verify → commit)
-4. **Accumulates** — every requirement, plan, and result is preserved as a traceable artifact
+**Too much ceremony for a simple button rename?** Add "auto" to skip approvals:
+```
+[WORK start] Change the submit button label to "Send" — auto
+```
 
-Each step runs in an **isolated subagent pipeline**, so your context stays clean and every decision is documented.
+### 2. Token Economy
+
+I'm cost-conscious (honestly). So this agent applies four token-saving strategies:
+
+**(1) Serena MCP for codebase analysis.** The agent prioritizes [Serena MCP](https://github.com/oraios/serena) for code exploration — reading symbols instead of entire files. (Huge thanks to the Serena team.)
+
+**(2) Three execution modes to minimize subagent overhead.** The WORK-PIPELINE has 6 agent stages running sequentially. For a single-TASK WORK, that's 6 subagent sessions — each consuming tokens just to boot up. Wasteful. So the specifier agent decides the execution mode based on complexity: **direct** mode handles everything in a single session with zero additional subagent calls. See [Three Execution Modes](#concept-three-execution-modes).
+
+**(3) Structured XML communication.** Subagents can't nest — Main Claude orchestrates everything, meaning data passes through Main Claude between agents. That's text being parsed twice. So agent-to-agent communication is standardized as XML — less ambiguity, less re-parsing, and it makes agent logs much easier to monitor. See [Structured Agent Communication](#structured-agent-communication).
+
+**(4) Sliding Window Context Transfer.** Agent A finishes and tells B what it did. B finishes and tells C what A did plus what B did. But does C really need A's full details? No — B summarizes A's work and passes only the essentials. *One degree of separation = just a name and phone number, not a full biography.* This concept applies to both inter-agent handoffs and inter-TASK dependencies. Testing shows ~20-30% token savings. See [Sliding Window Context Transfer](#sliding-window-context-transfer).
+
+**"Why not skip agents entirely and do everything in one session?"** See [Context Isolation](#context-isolation). In long sessions, AI gradually loses coherence — like sudden memory loss mid-conversation. Strict context isolation prevents this and directly impacts output quality.
+
+### 3. Dependency-Aware Parallel Execution
+
+TASKs within a WORK have dependency management via DAG. Parallel execution only happens when TASKs have no mutual dependencies — meaning no source code conflicts from concurrent edits.
+
+I've also built a **requirement management system** that integrates with this pipeline. It manages requirements per project. Queue up requirements before bed, and by morning they're all developed — your to-do list just shifts to *reviewing* instead of *coding*. WORKs execute in parallel across projects too (cross-project dependencies don't exist).
+
+### What's Next
+
+Currently designing a **RAG-based system** to store accumulated artifacts and query similar past requirements during specification analysis — for faster and more accurate requirement decomposition. (If enough data accumulates, who knows — maybe a fine-tuned LLM behind an MCP someday.)
+
+> **Tip for prompting AI agents**: Think of it like SQL WHERE clause ordering. The first condition should narrow the dataset the most — and if it hits an index, even better. That's why I maintain a glossary with terms and source code entry points, and have the agent reference it. My tokens are precious.
 
 ---
 
