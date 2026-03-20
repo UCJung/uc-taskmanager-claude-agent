@@ -3,7 +3,7 @@
 > WORK: WORK-30 — Claude Marketplace Plugin 형식 전환
 > Completed: 2026-03-20 11:40
 > Status: **DONE**
-> Commit: f164e65
+> Commit: 1745cf0
 
 ## Summary
 
