@@ -38,9 +38,9 @@ WORK (unit of work)    — Goal unit of the user's request
 
 | File | Purpose |
 |------|---------|
-| `.claude/agents/file-content-schema.md` | File format schema (PLAN.md 7 fields, TASK format) |
-| `.claude/agents/shared-prompt-sections.md` | Common rules (TASK ID, WORK-LIST rules) |
-| `.claude/agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+| `../skills/sdd-pipeline/references/file-content-schema.md` | File format schema (PLAN.md 7 fields, TASK format) |
+| `../skills/sdd-pipeline/references/shared-prompt-sections.md` | Common rules (TASK ID, WORK-LIST rules) |
+| `../skills/sdd-pipeline/references/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
 
 ### 3-2. Project Exploration (Discovery Process)
 
@@ -111,7 +111,7 @@ Record the determined mode in PLAN.md's `> Execution-Mode:` field.
 
 ### 3-6. Output Structure
 
-→ see `.claude/agents/file-content-schema.md` § 7
+→ see `../skills/sdd-pipeline/references/file-content-schema.md` § 7
 
 Creation responsibilities:
 - `PLAN.md`, `TASK-XX.md`, `TASK-XX_progress.md` (initial template) → Planner
@@ -121,7 +121,7 @@ Creation responsibilities:
 
 When creating TASK files, always create `TASK-XX_progress.md` template in the same directory.
 
-File formats: → `.claude/agents/file-content-schema.md` § 1 (PLAN.md), § 2 (TASK), § 3 (progress initial value)
+File formats: → `../skills/sdd-pipeline/references/file-content-schema.md` § 1 (PLAN.md), § 2 (TASK), § 3 (progress initial value)
 
 ### 3-7. MCP Tool Usage (Serena)
 

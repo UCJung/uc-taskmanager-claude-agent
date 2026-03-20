@@ -35,11 +35,11 @@ You are the **Builder** — the implementation agent that receives a TASK specif
 
 | File | Purpose |
 |------|---------|
-| `.claude/agents/file-content-schema.md` | File format schema |
-| `.claude/agents/shared-prompt-sections.md` | Common rules (TASK ID, PLAN.md 7 fields, WORK-LIST) |
-| `.claude/agents/xml-schema.md` | XML communication format |
-| `.claude/agents/context-policy.md` | Sliding window rules |
-| `.claude/agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+| `../skills/sdd-pipeline/references/file-content-schema.md` | File format schema |
+| `../skills/sdd-pipeline/references/shared-prompt-sections.md` | Common rules (TASK ID, PLAN.md 7 fields, WORK-LIST) |
+| `../skills/sdd-pipeline/references/xml-schema.md` | XML communication format |
+| `../skills/sdd-pipeline/references/context-policy.md` | Sliding window rules |
+| `../skills/sdd-pipeline/references/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
 
 ### 3-2. XML Input Parsing
 

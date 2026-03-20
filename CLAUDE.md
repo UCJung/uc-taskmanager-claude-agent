@@ -13,7 +13,10 @@
 1. **에이전트 동기화** — agents/ 원본을 npm/agents, plugin/agents로 복사
    - agents/en/*.md → npm/agents/*.md
    - agents/ko/*.md → npm/agents/ko/*.md
-   - agents/en/*.md → plugin/agents/*.md
+   - 에이전트 6개(specifier, planner, scheduler, builder, verifier, committer):
+     agents/en/*.md → plugin/agents/*.md (복사 후 `.claude/agents/` → `../skills/sdd-pipeline/references/` 경로 치환)
+   - 참조 문서 6개(agent-flow, file-content-schema, shared-prompt-sections, context-policy, xml-schema, work-activity-log):
+     agents/en/*.md → plugin/skills/sdd-pipeline/references/*.md (복사 후 `.claude/agents/` → `../skills/sdd-pipeline/references/` 경로 치환)
 2. **README.md 업데이트** — 이번 작업에서 추가/변경된 내용이 README에 반영되어 있는지 확인하고, 누락된 내용이 있으면 업데이트한다
 3. **git push**
 
@@ -28,14 +31,4 @@ README 업데이트 범위:
 ko
 CommitLanguage: en
 
-## Agent 호출 규칙
 
-`[]` 태그로 시작하는 요청 → `.claude/agents/agent-flow.md` 를 읽고 파이프라인을 실행한다.
-
-- **Main Claude가 오케스트레이터**다. 모든 에이전트 호출은 Main Claude가 직접 수행한다.
-- `[]` 태그 감지 시 → specifier 호출 (첫 번째 에이전트)
-- 각 에이전트는 작업 완료 후 결과(dispatch XML 또는 task-result XML)만 반환한다.
-- Main Claude가 반환값을 받아 다음 에이전트를 순서대로 호출한다.
-- 파이프라인 흐름은 `.claude/agents/agent-flow.md` 기준을 따른다.
-
-예: `[추가기능]`, `[버그수정]`, `[리팩토링]`, `[WORK 시작]` 등

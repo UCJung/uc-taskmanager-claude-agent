@@ -332,7 +332,7 @@ Once published, install directly from the Claude Marketplace — no terminal req
 3. Click **Install Plugin**
 4. Claude Code automatically discovers agents from the plugin's `agents/` directory
 
-The Marketplace Plugin includes **English agents only** (6 core agents + 6 support files).
+The Marketplace Plugin includes **English agents only** (6 core agents in `agents/` + 6 support files in `skills/sdd-pipeline/references/`).
 
 > **Marketplace Plugin vs npm CLI**: The Plugin requires no installation steps and is always up to date. The npm CLI supports Korean agents (`--lang ko`) and project-level customization via `CLAUDE.md`.
 
@@ -495,7 +495,8 @@ Six agents work together in a clean, isolated pipeline:
 
 ### Support Files (included in Plugin)
 
-In addition to the 6 pipeline agents, the plugin includes 6 support files that agents reference at startup:
+In addition to the 6 pipeline agents, the plugin includes 6 support files that agents reference at startup.
+These are located in `plugin/skills/sdd-pipeline/references/` (synced from `agents/en/`):
 
 | File | Purpose |
 |------|---------|
@@ -1011,10 +1012,20 @@ uc-taskmanager/
 │   ├── .npmignore
 │   └── LICENSE
 ├── plugin/                  ← Claude Marketplace Plugin
-│   ├── agents/              ← Synced from agents/en/
+│   ├── agents/              ← Synced from agents/en/ (6 core agents)
+│   ├── skills/              ← Plugin skills (reference docs)
+│   │   ├── sdd-pipeline/
+│   │   │   ├── SKILL.md     ← Skill manifest
+│   │   │   └── references/  ← Synced from agents/en/ (6 support files)
+│   │   ├── work-pipeline/
+│   │   │   └── SKILL.md
+│   │   └── work-status/
+│   │       └── SKILL.md
 │   ├── .claude-plugin/
 │   │   └── plugin.json      ← Plugin manifest (name, version, agents array)
 │   └── README.md
+├── .claude/                 ← Local Claude settings (not committed)
+│   └── settings.local.json
 ├── README.md                ← English (default, this file)
 ├── README_KO.md             ← Korean
 ├── CLAUDE.md                ← Project-level Claude instructions (push procedure, language, agent call rules)

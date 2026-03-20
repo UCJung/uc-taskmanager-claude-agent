@@ -32,3 +32,4 @@
 | WORK-29 | README "Why This Project Exists" 섹션 개선 — 바이브 코딩 문제점 중심 재구성 | COMPLETED | 2026-03-20 | 2026-03-20 |
 | WORK-30 | Claude Marketplace Plugin 형식 전환 | COMPLETED | 2026-03-20 | 2026-03-20 |
 | WORK-31 | 프로젝트 폴더구조 재구조화 (agents/npm/plugin 분리) | COMPLETED | 2026-03-20 | 2026-03-20 |
+| WORK-32 | docs 현행화 — Plugin 구조 전환 반영 | COMPLETED | 2026-03-21 | 2026-03-21 |

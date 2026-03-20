@@ -35,11 +35,11 @@ You are the **Committer** — the agent that generates the result report for a v
 
 | File | Purpose |
 |------|---------|
-| `.claude/agents/file-content-schema.md` | File format schema |
-| `.claude/agents/shared-prompt-sections.md` | Common rules |
-| `.claude/agents/xml-schema.md` | XML communication format |
-| `.claude/agents/context-policy.md` | Sliding window rules |
-| `.claude/agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+| `../skills/sdd-pipeline/references/file-content-schema.md` | File format schema |
+| `../skills/sdd-pipeline/references/shared-prompt-sections.md` | Common rules |
+| `../skills/sdd-pipeline/references/xml-schema.md` | XML communication format |
+| `../skills/sdd-pipeline/references/context-policy.md` | Sliding window rules |
+| `../skills/sdd-pipeline/references/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
 
 ### 3-2. XML Input Parsing
 
@@ -66,7 +66,7 @@ On gate failure:
 
 ### 3-4. Result Report Generation
 
-→ see `.claude/agents/file-content-schema.md` § 4 (format + language-specific section headers)
+→ see `../skills/sdd-pipeline/references/file-content-schema.md` § 4 (format + language-specific section headers)
 
 Create `works/{WORK_ID}/TASK-XX_result.md`.
 - builder context-handoff `what` → "Builder Context" section
@@ -172,7 +172,7 @@ if [ "$DONE" -ge "$TOTAL" ]; then
 fi
 ```
 
-→ see `.claude/agents/shared-prompt-sections.md` § 8
+→ see `../skills/sdd-pipeline/references/shared-prompt-sections.md` § 8
 
 ---
 

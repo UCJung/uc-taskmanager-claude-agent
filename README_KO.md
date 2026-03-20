@@ -897,39 +897,54 @@ CommentLanguage: en
 
 ```
 uc-taskmanager/
-├── package.json             ← npm 패키지 설정 (uctm)
-├── bin/cli.mjs              ← CLI 진입점 (uctm init/update)
-├── lib/                     ← CLI 구현 (constants, init, update)
-├── README.md                ← English (기본)
+├── agents/                  ← 에이전트 소스 (여기서 편집 — 권위 있는 원본)
+│   ├── en/                  ← 영어 에이전트 프롬프트 (12개 파일)
+│   │   ├── specifier.md     ← [] 태그 감지 + execution-mode 라우팅
+│   │   ├── planner.md       ← WORK 생성 + TASK 분해
+│   │   ├── scheduler.md     ← DAG 관리 + 파이프라인 오케스트레이션
+│   │   ├── builder.md       ← 코드 구현
+│   │   ├── verifier.md      ← 빌드/린트/테스트 검증
+│   │   ├── committer.md     ← git commit + result.md
+│   │   ├── agent-flow.md    ← 파이프라인 오케스트레이션 규칙
+│   │   ├── file-content-schema.md  ← 파일 포맷 정의
+│   │   ├── shared-prompt-sections.md  ← 캐시 가능 공통 섹션
+│   │   ├── context-policy.md    ← 슬라이딩 윈도우 컨텍스트 규칙
+│   │   ├── work-activity-log.md ← Activity log 포맷
+│   │   └── xml-schema.md    ← XML 통신 포맷
+│   └── ko/                  ← 한국어 에이전트 프롬프트 (12개 파일)
+├── npm/                     ← npm 패키지 (uctm으로 배포)
+│   ├── agents/              ← agents/en/에서 동기화 (+ ko/ 하위 폴더)
+│   │   └── ko/              ← agents/ko/에서 동기화
+│   ├── bin/cli.mjs          ← CLI 진입점 (uctm init/update)
+│   ├── lib/                 ← CLI 구현 (constants.mjs, init.mjs, update.mjs)
+│   ├── .agent/              ← npm에 번들된 기본 라우터 설정
+│   │   └── router_rule_config.json
+│   ├── package.json         ← npm 패키지 설정
+│   ├── .npmignore
+│   └── LICENSE
+├── plugin/                  ← Claude Marketplace Plugin
+│   ├── agents/              ← agents/en/에서 동기화 (6개 핵심 에이전트)
+│   ├── skills/              ← Plugin skills (참조 문서)
+│   │   ├── sdd-pipeline/
+│   │   │   ├── SKILL.md     ← Skill 매니페스트
+│   │   │   └── references/  ← agents/en/에서 동기화 (6개 참조 문서)
+│   │   ├── work-pipeline/
+│   │   │   └── SKILL.md
+│   │   └── work-status/
+│   │       └── SKILL.md
+│   ├── .claude-plugin/
+│   │   └── plugin.json      ← Plugin 매니페스트 (name, version, agents 배열)
+│   └── README.md
+├── .claude/                 ← 로컬 Claude 설정 (커밋하지 않음)
+│   └── settings.local.json
+├── .agent/                  ← 프로젝트별 설정
+│   └── router_rule_config.json  ← Router execution-mode 판정 기준
+├── README.md                ← English (기본, 이 파일)
 ├── README_KO.md             ← 한국어
 ├── CLAUDE.md                ← 프로젝트 지침 (push 절차, 언어, 에이전트 호출 규칙)
 ├── LICENSE
-├── agents/                  ← 배포용: 이 파일들을 복사하여 설치
-│   ├── ko/                  ← 한국어 에이전트
-│   │   ├── specifier.md     ← execution-mode 판정 (direct/pipeline/full) + direct 겸임 구현
-│   │   ├── planner.md       ← WORK 생성 + TASK 분해
-│   │   ├── scheduler.md     ← WORK별 파이프라인 실행 (슬라이딩 윈도우 dispatch)
-│   │   ├── builder.md       ← 코드 구현 + progress.md 체크포인트 기록
-│   │   ├── verifier.md      ← 검증 (context-handoff 기반, read-only)
-│   │   └── committer.md     ← gate 검사 → result.md → git commit
-│   ├── en/                  ← English agents (same structure)
-│   │   ├── specifier.md
-│   │   ├── planner.md
-│   │   ├── scheduler.md
-│   │   ├── builder.md
-│   │   ├── verifier.md
-│   │   └── committer.md
-│   ├── context-policy.md    ← 슬라이딩 윈도우 컨텍스트 전달 정책
-│   ├── xml-schema.md        ← 에이전트 간 XML 통신 스키마
-│   ├── shared-prompt-sections.md  ← 캐시 가능 공통 섹션 (출력 언어, 빌드 명령어)
-│   ├── file-content-schema.md     ← 파일 포맷 스키마 (PLAN.md, TASK.md, result.md)
-│   ├── agent-flow.md        ← Main Claude 오케스트레이션 흐름 (direct/pipeline/full)
-│   └── work-activity-log.md      ← Activity log 규칙 (log_work 함수, STAGE 테이블)
-├── .agent/                  ← 프로젝트별 설정
-│   └── router_rule_config.json  ← Router execution-mode 판정 기준
 ├── docs/                    ← 설계 명세
 │   ├── spec_pipeline-architecture.md       ← 파이프라인 구조 및 에이전트 역할 (v1.2)
-│   ├── spec_pipeline-architecture_v1.1.md  ← 파이프라인 아키텍처 스펙 v1.1
 │   ├── spec_sliding-window-context.md      ← 슬라이딩 윈도우 컨텍스트 설계
 │   ├── spec_callback-integration.md        ← 외부 시스템 콜백 연동 가이드
 │   ├── pipeline-architecture-visual.html   ← 인터랙티브 파이프라인 시각화

@@ -5,7 +5,7 @@ description: Triggers the WORK-PIPELINE when a user request starts with a [] tag
 
 # WORK-PIPELINE Trigger
 
-When the user's message starts with a `[]` tag, start the WORK-PIPELINE by reading `.claude/agents/agent-flow.md` and following the orchestration flow.
+When the user's message starts with a `[]` tag, start the WORK-PIPELINE by reading `../skills/sdd-pipeline/references/agent-flow.md` and following the orchestration flow.
 
 ## Trigger Detection
 
