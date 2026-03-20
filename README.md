@@ -910,31 +910,40 @@ Auto-detected from project files. No configuration needed.
 
 ```
 uc-taskmanager/
-├── .claude-plugin/          ← Plugin manifest (Marketplace)
-│   └── plugin.json          ← name, version, description, agents array (12 files)
-├── agents/                  ← Plugin standard location — en agents (12 files)
-│   ├── specifier.md         ← [] tag detection + execution-mode routing
-│   ├── planner.md           ← WORK creation + TASK decomposition
-│   ├── scheduler.md         ← DAG management + pipeline orchestration
-│   ├── builder.md           ← Code implementation
-│   ├── verifier.md          ← Build/lint/test verification
-│   ├── committer.md         ← git commit + result.md
-│   ├── agent-flow.md        ← Pipeline orchestration rules
-│   ├── file-content-schema.md  ← File format definitions
-│   ├── shared-prompt-sections.md  ← Cacheable shared sections
-│   ├── context-policy.md    ← Sliding window context rules
-│   ├── work-activity-log.md ← Activity log format
-│   ├── xml-schema.md        ← XML communication format
-│   └── ko/                  ← Korean agent prompts (12 files, npm CLI only)
-├── package.json             ← npm package config (uctm)
-├── bin/cli.mjs              ← CLI entry point (uctm init/update)
-├── lib/                     ← CLI implementation (constants.mjs, init.mjs, update.mjs)
+├── agents/                  ← Agent source (edit here — authoritative)
+│   ├── en/                  ← English agent prompts (12 files)
+│   │   ├── specifier.md     ← [] tag detection + execution-mode routing
+│   │   ├── planner.md       ← WORK creation + TASK decomposition
+│   │   ├── scheduler.md     ← DAG management + pipeline orchestration
+│   │   ├── builder.md       ← Code implementation
+│   │   ├── verifier.md      ← Build/lint/test verification
+│   │   ├── committer.md     ← git commit + result.md
+│   │   ├── agent-flow.md    ← Pipeline orchestration rules
+│   │   ├── file-content-schema.md  ← File format definitions
+│   │   ├── shared-prompt-sections.md  ← Cacheable shared sections
+│   │   ├── context-policy.md    ← Sliding window context rules
+│   │   ├── work-activity-log.md ← Activity log format
+│   │   └── xml-schema.md    ← XML communication format
+│   └── ko/                  ← Korean agent prompts (12 files)
+├── npm/                     ← npm package (published as `uctm`)
+│   ├── agents/              ← Synced from agents/en/ (+ ko/ subfolder)
+│   │   └── ko/              ← Synced from agents/ko/
+│   ├── bin/cli.mjs          ← CLI entry point (uctm init/update)
+│   ├── lib/                 ← CLI implementation (constants.mjs, init.mjs, update.mjs)
+│   ├── .agent/              ← Default router config bundled with npm
+│   │   └── router_rule_config.json
+│   ├── package.json         ← npm package config
+│   ├── .npmignore
+│   └── LICENSE
+├── plugin/                  ← Claude Marketplace Plugin
+│   ├── agents/              ← Synced from agents/en/
+│   ├── .claude-plugin/
+│   │   └── plugin.json      ← Plugin manifest (name, version, agents array)
+│   └── README.md
 ├── README.md                ← English (default, this file)
 ├── README_KO.md             ← Korean
 ├── CLAUDE.md                ← Project-level Claude instructions (push procedure, language, agent call rules)
 ├── LICENSE
-├── .agent/                  ← Per-project configuration
-│   └── router_rule_config.json  ← Router execution-mode decision criteria
 ├── docs/                    ← Design specifications
 │   ├── spec_pipeline-architecture.md       ← Pipeline structure & agent roles (v1.2)
 │   ├── spec_sliding-window-context.md      ← Sliding window context design
