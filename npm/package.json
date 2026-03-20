@@ -9,8 +9,7 @@
   "files": [
     "bin/",
     "lib/",
-    "agents/*.md",
-    "agents/ko/",
+    "agents/",
     ".agent/"
   ],
   "engines": {
