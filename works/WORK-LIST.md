@@ -30,4 +30,4 @@
 | WORK-27 | COMPLETED 자동 변경 + PLAN.md 요구사항 필드 개선 | COMPLETED | 2026-03-20 | 2026-03-20 |
 | WORK-28 | Router→Specifier 전환 반영 — docs 및 README 현행화 | COMPLETED | 2026-03-20 | 2026-03-20 |
 | WORK-29 | README "Why This Project Exists" 섹션 개선 — 바이브 코딩 문제점 중심 재구성 | COMPLETED | 2026-03-20 | 2026-03-20 |
-| WORK-30 | Claude Marketplace Plugin 형식 전환 | IN_PROGRESS | 2026-03-20 | |
+| WORK-30 | Claude Marketplace Plugin 형식 전환 | COMPLETED | 2026-03-20 | 2026-03-20 |
