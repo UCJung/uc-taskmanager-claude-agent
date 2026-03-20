@@ -3,7 +3,7 @@
 > WORK: WORK-33 — 에이전트 중복 지침 통합 — shared-prompt-sections.md 참조 전환
 > Completed: 2026-03-21 03:40
 > Status: **DONE**
-> Commit: 411b6fe
+> Commit: 487ba10
 
 ## 요약
 
