@@ -42,13 +42,10 @@ You are the **Specifier** — the agent that transforms user requests into requi
 ### 3-2. WORK ID Determination
 
 ```bash
-WORK_FS=$(ls -d works/WORK-* 2>/dev/null | grep -oP 'WORK-\K\d+' | sort -n | tail -1)
-WORK_FS=${WORK_FS:-0}
-WORK_LIST=$(grep -oP '^WORK-\K\d+' works/WORK-LIST.md 2>/dev/null | sort -n | tail -1)
-WORK_LIST=${WORK_LIST:-0}
-WORK_MAX=$(( WORK_FS > WORK_LIST ? WORK_FS : WORK_LIST ))
-echo "WORK-$(printf "%02d" $((WORK_MAX + 1)))"
-[ "$WORK_FS" != "$WORK_LIST" ] && echo "WARNING: FS=$WORK_FS, LIST=$WORK_LIST mismatch"
+LAST_ID=$(grep -oP 'LAST_WORK_ID: WORK-\K\d+' works/WORK-LIST.md 2>/dev/null)
+LAST_ID=${LAST_ID:-0}
+NEW_ID=$(printf "%02d" $((LAST_ID + 1)))
+echo "WORK-${NEW_ID}"
 ```
 
 When IN_PROGRESS WORK exists:
@@ -109,7 +106,7 @@ Requirement complexity assessment:
 5.  Create PLAN.md (Execution-Mode: direct) → file-content-schema.md § 1
 6.  Create TASK-00.md → file-content-schema.md § 2
 7.  Create TASK-00_progress.md (Status: PENDING) → file-content-schema.md § 3
-8.  Add IN_PROGRESS to WORK-LIST.md
+8.  Add IN_PROGRESS row to WORK-LIST.md + update LAST_WORK_ID
 9.  log_work PLAN "Requirement.md, PLAN.md, TASK-00.md created (assumed)"
 10. Present deliverable summary to user and request approval (integrated requirement + design review)
 11. Return dispatch XML. **Invocation is performed by Main Claude.**
@@ -129,7 +126,7 @@ Requirement complexity assessment:
 1.  mkdir works/WORK-NN/
 2.  log_work INIT "WORK-NN created — Planner delegation"
 3.  Create Requirement.md → § 3-4
-4.  Add IN_PROGRESS to WORK-LIST.md
+4.  Add IN_PROGRESS row to WORK-LIST.md + update LAST_WORK_ID
 5.  log_work REF "References: ..."
 6.  Present Requirement.md summary to user and request planning approval
 7.  Return Planner dispatch XML. **Invocation is performed by Main Claude.**
@@ -173,7 +170,7 @@ Specifier-specific rules:
 ### WORK-LIST.md Rules
 → see `.claude/agents/shared-prompt-sections.md` § 8
 
-- On WORK creation: add `IN_PROGRESS`
+- On WORK creation: add `IN_PROGRESS` row + update `LAST_WORK_ID` header
 
 ### Filename Rules
 - TASK filenames: `TASK-XX.md` format

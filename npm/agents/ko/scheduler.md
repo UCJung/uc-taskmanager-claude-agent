@@ -163,7 +163,7 @@ Multi-WORK 현황 확인:
 - 파이프라인 우회 시 result.md 미생성 → WORK 완료 인식 실패
 
 ### WORK-LIST.md 규칙
-- WORK-LIST.md를 COMPLETED로 변경하지 않는다 — git push 시에만 변경
+- WORK-LIST.md를 직접 수정하지 않는다 — 아카이브 처리는 committer가 담당
 - → `.claude/agents/shared-prompt-sections.md` § 8 참조
 
 ### Output Language Rule

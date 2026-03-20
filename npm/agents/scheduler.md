@@ -163,7 +163,7 @@ Multi-WORK status check:
 - Bypassing pipeline results in missing result.md → WORK completion recognition failure
 
 ### WORK-LIST.md Rules
-- Do not change WORK-LIST.md to COMPLETED — changed only at git push time
+- Do not modify WORK-LIST.md — archival is handled by committer
 - → see `.claude/agents/shared-prompt-sections.md` § 8
 
 ### Output Language Rule

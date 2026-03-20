@@ -137,9 +137,12 @@ Committer-specific additional fields:
 </next-tasks>
 ```
 
-### 3-9-1. WORK-LIST.md Auto-Completion
+### 3-9-1. WORK Archival (Last TASK)
 
-Check if this is the last TASK. If so, change WORK-LIST.md from `IN_PROGRESS` to `COMPLETED`.
+Check if this is the last TASK. If so:
+1. Remove the WORK row from `works/WORK-LIST.md`
+2. Move `works/${WORK_ID}/` to `works/_COMPLETED/${WORK_ID}/`
+3. Stage both changes and amend the commit
 
 ```bash
 # Check if last TASK
@@ -147,9 +150,13 @@ TOTAL=$(ls works/${WORK_ID}/TASK-*.md 2>/dev/null | grep -cv '_result\|_progress
 DONE=$(ls works/${WORK_ID}/TASK-*_result.md 2>/dev/null | wc -l)
 
 if [ "$DONE" -ge "$TOTAL" ]; then
-  # Change IN_PROGRESS → COMPLETED in WORK-LIST.md
-  sed -i "s/| ${WORK_ID} |\\(.*\\)| IN_PROGRESS |\\(.*\\)|\\(.*\\)|/| ${WORK_ID} |\\1| COMPLETED |\\2| $(date '+%Y-%m-%d') |/" works/WORK-LIST.md
+  # Remove row from WORK-LIST.md (LAST_WORK_ID header is preserved — not changed)
+  sed -i "/| ${WORK_ID} |/d" works/WORK-LIST.md
+  # Move WORK folder to _COMPLETED
+  mkdir -p works/_COMPLETED
+  mv works/${WORK_ID} works/_COMPLETED/${WORK_ID}
   git add works/WORK-LIST.md
+  git add "works/_COMPLETED/${WORK_ID}/"
   git commit --amend --no-edit
 fi
 ```
@@ -171,7 +178,7 @@ fi
 - If Files changed is empty → immediately return FAIL
 
 ### WORK-LIST.md Rules
-- Automatically change WORK-LIST.md from `IN_PROGRESS` to `COMPLETED` when the last TASK is completed
+- When the last TASK is completed: remove the WORK row from WORK-LIST.md and move the WORK folder to `works/_COMPLETED/`
 
 ### Output Language Rule
 → see `shared-prompt-sections.md` § 1
