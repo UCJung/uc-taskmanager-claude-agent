@@ -1,15 +1,21 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Claude_Code-Subagents-6b5ce7?style=for-the-badge&logo=anthropic&logoColor=white" />
-  <img src="https://img.shields.io/badge/Claude_Marketplace-Plugin-00a67e?style=for-the-badge&logo=anthropic&logoColor=white" />
+  <img src="https://img.shields.io/badge/Claude_Marketplace-Preparing-f5a623?style=for-the-badge&logo=anthropic&logoColor=white" />
   <img src="https://img.shields.io/badge/Language_Agnostic-Any_Stack-27ae60?style=for-the-badge" />
   <img src="https://img.shields.io/badge/License-GPLv3-f5a623?style=for-the-badge" />
 </p>
 
 # uc-taskmanager
 
-**Universal Claude Task Manager** — An SDD (Specification-Driven Development) WORK-PIPELINE agent for Claude Code. It formalizes your requirements into specifications, builds execution plans (WORK) from those specs, decomposes them into small tasks (TASK), analyzes dependency graphs (DAG), and automatically executes TASKs sequentially or in parallel based on dependencies.
+Requirements Analysis & Development 6-Agent Full Pipeline + DAG-Based Orchestration + Sliding Window Context Management
 
-Available as a **Claude Marketplace Plugin** and as an **npm CLI** (`uctm`). Install once, use `[]`-tagged requests to trigger automated multi-agent pipelines.
+**Universal Claude Task Manager** — A WORK-PIPELINE Agent that executes SDD (Specification-Driven Development) for Claude Code.
+It formalizes user requirements into specifications,
+builds execution plans (WORK) from those specs,
+decomposes them into small tasks (TASK) and analyzes dependency graphs (DAG),
+then automatically executes TASKs sequentially or in parallel based on dependencies.
+
+Available as a **Claude Marketplace Plugin** (preparing for submission) and as an **npm CLI** (`uctm`). Install once, use `[]`-tagged requests to trigger automated multi-agent pipelines.
 
 **[한국어 문서 (Korean)](README_KO.md)**
 
@@ -17,9 +23,9 @@ Available as a **Claude Marketplace Plugin** and as an **npm CLI** (`uctm`). Ins
 
 ## Quick Start
 
-### Option 1: Claude Marketplace Plugin (Recommended)
+### Option 1: Claude Marketplace Plugin (Preparing for Submission)
 
-Install directly from the Claude Marketplace — no npm or CLI setup required:
+> Plugin submission is in preparation. Once published, install directly from the Marketplace — no npm or CLI setup required.
 
 1. Open [Claude Marketplace](https://claude.ai/marketplace) (or `platform.claude.com/plugins`)
 2. Search for **uc-taskmanager**
@@ -53,44 +59,91 @@ claude --dangerously-skip-permissions
 
 > **Warning**: Only use bypass mode in isolated environments or when you trust the pipeline fully. See [Claude Code Permissions](https://code.claude.com/docs/en/permissions) for details.
 
-That's it. The specifier analyzes your request, plans the work, and executes through isolated subagent pipelines.
+The agents analyze your request, plan the work, and execute through isolated subagent pipelines.
 
 ---
 
 ## What Makes This Pipeline Different
 
-### 1. Process Excellence Over Methodology
+### 1. Procedures Must Be Executed Properly and Recorded
 
-Unlike TDD or DDD which focus on *how to write better code*, this agent focuses on *how to execute development procedures well*. It systematizes the full pipeline — **Requirement → Specification → WORK Plan → TASK Execution → TASK Result** — and preserves end-to-end traceability from requirement to delivery. When each TASK completes, it auto-commits to git.
+* Rather than focusing on *writing better code* (like TDD or DDD), this agent focuses on **executing development procedures properly**.
+* It systematizes the full pipeline: **Requirement (user) → Specification → WORK Plan → Per-TASK Execution Plan → Per-TASK Execution/Verification/Completion → Per-TASK Result Storage** (WORK PIPELINE)
+* The result: end-to-end records from requirement to delivery, providing full traceability.
 
-**How to use it:**
+**How to work with this AI Agent:**
 
-**(1)** Give Claude CLI an instruction in the form `[WORK Start] your requirement`. Any instruction starting with `[]` triggers the agent.
+* **Start**: Give a prompt starting with `[]` to trigger the WORK-PIPELINE
+```
+[game-dev] Build a brick breaker game in HTML
+```
 
-**(2)** The agent writes a requirement specification, then asks for your approval. Review `works/WORK-NN/Requirement.md` — if it looks good, say "approve". This advances to the WORK planning stage.
+* **Requirement Analysis**: The agent analyzes your requirement and asks for approval. Review `works/WORK-NN/Requirement.md` and type **"approve"** to proceed.
+```
+{Requirement specification content}
+If you approve Requirement.md, I will call the Planner to create PLAN.md + TASK decomposition.
+Let me know if you want to modify anything.
+```
 
-**(3)** The agent builds an execution plan, then asks again. Review `works/WORK-NN/PLAN.md` and the `TASK-NN.md` files — if they look good, say "approve". Each TASK then runs automatically through build → verify → commit. Dependencies determine sequential vs parallel execution. (Up to 5 TASKs can run in parallel.)
+* **WORK Execution Plan**: The agent builds an execution plan and asks again. Review `works/WORK-NN/PLAN.md` and `TASK-NN.md`, then type **"approve"** to proceed.
+```
+WORK-31 Development Approval Request
 
-**(4)** Each TASK produces `works/WORK-NN/TASK-NN_result.md`. Review the results. Once all TASKs finish, the WORK is done. Check the acceptance criteria in Requirement.md, test it yourself, and decide whether to push and merge. All source code and artifacts are stored in git.
+  Project folder structure reorganization ~~~~~~~ / ########
 
-**Want to rollback?** Just say `WORK-NN rollback` — commit hashes are stored in the files, so only that WORK's commits are reverted.
+  ┌─────────┬─────────────────────────┐
+  │  Item   │        Details          │
+  ├─────────┼─────────────────────────┤
+  │ Mode    │ full                    │
+  ├─────────┼─────────────────────────┤
+  │ TASKs   │ 6 (TASK-00 ~ TASK-05)  │
+  └─────────┴─────────────────────────┘
 
-**Too much ceremony for a simple button rename?** Add "auto" to skip approvals:
+  DAG Structure
+
+  TASK-00 (move agents/ en files → en/ subdirectory)
+     ├─→ TASK-01 (~~~~~~~~~~~~) ─→ TASK-03 (#########)
+     ├─→ TASK-02 (create plugin/) ─→ TASK-04 (????????)
+     └─────────────────────────────────→ TASK-05 ($$$$$$$$$)
+
+  - TASK-01/02 parallel, TASK-03/04 parallel, TASK-05 final integration
+  - If approved, scheduler → builder → verifier → committer pipeline will execute.
+
+  Proceed?
+```
+* Per-TASK: build → verify → commit repeats automatically for each TASK.
+```
+● TASK-05 committed. Updating PROGRESS.md and finalizing WORK-31.
+```
+* When TASKs complete, verify via `works/WORK-NN/TASK-NN_result.md` and actual testing.
+```
+  push, merge
+```
+
+**Want to rollback?** Type `WORK-NN rollback`. Commit hashes are stored in the files, so only that WORK's changes are reverted.
+
+**Too much ceremony for a simple button rename?**
 ```
 [WORK start] Change the submit button label to "Send" — auto
 ```
+Add "auto" to skip all approval steps and run the entire process automatically.
 
 ### 2. Token Economy
 
 I'm cost-conscious (honestly). So this agent applies four token-saving strategies:
 
-**(1) Serena MCP for codebase analysis.** The agent prioritizes [Serena MCP](https://github.com/oraios/serena) for code exploration — reading symbols instead of entire files. (Huge thanks to the Serena team.)
+**(1) Serena MCP for codebase analysis.**
+The agent prioritizes [Serena MCP](https://github.com/oraios/serena) for code exploration — reading symbols instead of entire files. (Huge thanks to the Serena team.)
 
 **(2) Three execution modes to minimize subagent overhead.** The WORK-PIPELINE has 6 agent stages running sequentially. For a single-TASK WORK, that's 6 subagent sessions — each consuming tokens just to boot up. Wasteful. So the specifier agent decides the execution mode based on complexity: **direct** mode handles everything in a single session with zero additional subagent calls. See [Three Execution Modes](#concept-three-execution-modes).
 
-**(3) Structured XML communication.** Subagents can't nest — Main Claude orchestrates everything, meaning data passes through Main Claude between agents. That's text being parsed twice. So agent-to-agent communication is standardized as XML — less ambiguity, less re-parsing, and it makes agent logs much easier to monitor. See [Structured Agent Communication](#structured-agent-communication).
+**(3) Structured XML communication.** Subagents can't nest — Main Claude orchestrates everything.
+* When one agent finishes and the next agent starts, Main Claude sits in between, causing data to be transmitted twice. This communication is a blob of text —
+* The receiving side has to parse it again. So we standardized the communication format as XML.
+* Every bit helps.
+* (This also made agent log monitoring much easier.) See [Structured Agent Communication](#structured-agent-communication).
 
-**(4) Sliding Window Context Transfer.** Agent A finishes and tells B what it did. B finishes and tells C what A did plus what B did. But does C really need A's full details? No — B summarizes A's work and passes only the essentials. *One degree of separation = just a name and phone number, not a full biography.* This concept applies to both inter-agent handoffs and inter-TASK dependencies. Testing shows ~20-30% token savings. See [Sliding Window Context Transfer](#sliding-window-context-transfer).
+**(4) Sliding Window Context Transfer.** Agent A finishes and tells B what it did. B finishes and tells C what A did plus what B did. But does C really need A's full details? So B passes its own work in full to C, and summarizes A's work. **One degree of separation = just a name and phone number** — you don't need to know their personality. If curious, just ask them directly. Testing shows ~20-30% token savings. See [Sliding Window Context Transfer](#sliding-window-context-transfer).
 
 **"Why not skip agents entirely and do everything in one session?"** See [Context Isolation](#context-isolation). In long sessions, AI gradually loses coherence — like sudden memory loss mid-conversation. Strict context isolation prevents this and directly impacts output quality.
 
@@ -104,7 +157,7 @@ I've also built a **requirement management system** that integrates with this pi
 
 Currently designing a **RAG-based system** to store accumulated artifacts and query similar past requirements during specification analysis — for faster and more accurate requirement decomposition. (If enough data accumulates, who knows — maybe a fine-tuned LLM behind an MCP someday.)
 
-> **Tip for prompting AI agents**: Think of it like SQL WHERE clause ordering. The first condition should narrow the dataset the most — and if it hits an index, even better. That's why I maintain a glossary with terms and source code entry points, and have the agent reference it. My tokens are precious.
+> **Tip for prompting AI agents**: Think of it like SQL WHERE clause ordering (developers only). The first condition should narrow the dataset the most — and if it hits an index, even better. That's why I maintain a glossary with terms and source code entry points, and have the agent reference it. My tokens are precious.
 
 ---
 
@@ -270,9 +323,9 @@ This ensures Claude automatically delegates `[]`-tagged requests to the specifie
 
 ## Installation
 
-### Claude Marketplace Plugin (Recommended for English)
+### Claude Marketplace Plugin (Preparing for Submission)
 
-Install directly from the Claude Marketplace — no terminal required:
+Once published, install directly from the Claude Marketplace — no terminal required:
 
 1. Visit [Claude Marketplace](https://claude.ai/marketplace) (or `platform.claude.com/plugins`)
 2. Search for **uc-taskmanager**
