@@ -17,8 +17,12 @@
      agents/en/*.md → plugin/agents/*.md (복사 후 `.claude/agents/` → `../skills/sdd-pipeline/references/` 경로 치환)
    - 참조 문서 6개(agent-flow, file-content-schema, shared-prompt-sections, context-policy, xml-schema, work-activity-log):
      agents/en/*.md → plugin/skills/sdd-pipeline/references/*.md (복사 후 `.claude/agents/` → `../skills/sdd-pipeline/references/` 경로 치환)
-2. **README.md 업데이트** — 이번 작업에서 추가/변경된 내용이 README에 반영되어 있는지 확인하고, 누락된 내용이 있으면 업데이트한다
-3. **git push**
+2. **DONE WORK 일괄 완료 처리** — WORK-LIST.md에서 DONE 상태인 WORK를 찾아 COMPLETED로 전환한다
+   - WORK-LIST.md에서 `DONE` 상태인 행을 모두 찾아 제거
+   - 해당 WORK 폴더(`works/WORK-NN/`)를 `works/_COMPLETED/`로 이동
+   - 변경사항 스테이징 (`git add`)
+3. **README.md 업데이트** — 이번 작업에서 추가/변경된 내용이 README에 반영되어 있는지 확인하고, 누락된 내용이 있으면 업데이트한다
+4. **git push**
 
 README 업데이트 범위:
 - 새로운 에이전트 또는 기능이 추가된 경우 해당 섹션 반영
