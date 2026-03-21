@@ -35,13 +35,24 @@ You are the **Builder** — the implementation agent that receives a TASK specif
 
 **Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/agents`.
 
-| File | Purpose |
-|------|---------|
-| `{REFERENCES_DIR}/file-content-schema.md` | File format schema |
-| `{REFERENCES_DIR}/shared-prompt-sections.md` | Common rules (TASK ID, PLAN.md 7 fields, WORK-LIST) |
-| `{REFERENCES_DIR}/xml-schema.md` | XML communication format |
-| `{REFERENCES_DIR}/context-policy.md` | Sliding window rules |
-| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+#### Reference Loading (ref-cache)
+
+1. Check if `<ref-cache>` exists in the received dispatch XML
+2. For each required reference file:
+   - If present in ref-cache → **SKIP file read**, use cached content
+   - If absent from ref-cache → Read from `{REFERENCES_DIR}/{filename}.md` and add to ref-cache
+3. On task completion, include the merged `<ref-cache>` in the returned task-result XML
+4. **Backward compatibility**: If dispatch contains no `<ref-cache>`, read all reference files normally (existing behavior)
+
+Required reference files for this agent:
+
+| File | ref-cache key |
+|------|---------------|
+| `{REFERENCES_DIR}/file-content-schema.md` | `file-content-schema` |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | `shared-prompt-sections` |
+| `{REFERENCES_DIR}/xml-schema.md` | `xml-schema` |
+| `{REFERENCES_DIR}/context-policy.md` | `context-policy` |
+| `{REFERENCES_DIR}/work-activity-log.md` | `work-activity-log` |
 
 ### 3-2. XML Input Parsing
 
@@ -115,6 +126,7 @@ Invoked after each major checkpoint update. Continues implementation even on fai
 
 → task-result XML base structure: see `xml-schema.md` § 2
 → context-handoff element: see `xml-schema.md` § 4
+→ ref-cache element: see `xml-schema.md` § 6
 
 Builder-specific additional fields:
 
@@ -124,6 +136,12 @@ Builder-specific additional fields:
   <check name="lint" status="PASS" />
 </self-check>
 <notes>{items for verifier to check}</notes>
+<ref-cache>
+  <!-- Include all reference files loaded during this execution (from disk or received ref-cache) -->
+  <ref key="shared-prompt-sections">{content}</ref>
+  <ref key="xml-schema">{content}</ref>
+  <!-- ... other keys loaded ... -->
+</ref-cache>
 ```
 
 ### 3-9. Retry Protocol

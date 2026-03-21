@@ -669,6 +669,20 @@ Each agent file follows a consistent four-section structure:
 
 `file-content-schema.md` is the single authoritative definition for all file formats (PLAN.md, TASK.md, progress.md, result.md). Agents reference it instead of embedding format specs inline — eliminating duplication across 6 agent files.
 
+### ref-cache: Reference File Caching
+
+Each agent reads 4-5 shared reference files (shared-prompt-sections.md, file-content-schema.md, xml-schema.md, etc.) on startup — totaling ~26 file reads across a full pipeline. **ref-cache** eliminates this redundancy:
+
+1. **First agent** reads reference files normally and returns `<ref-cache>` in its result XML
+2. **Main Claude** copies ref-cache into the next agent's dispatch
+3. **Subsequent agents** use cached content instead of reading files from disk
+
+Phase 2 (selective delivery) further reduces token usage by passing only the sections each agent needs — not the full file contents. The section mapping per agent is defined in `agent-flow.md`.
+
+**Measured impact** (direct mode, 3 agents):
+- File reads: 14 → 5 (**-64%**)
+- Token usage: ~85K → ~72K (**-15%**)
+
 ### WORK ID Assignment Strategy
 
 WORK IDs are assigned based on a **filesystem-first approach**:

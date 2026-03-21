@@ -38,13 +38,24 @@ You are the **Scheduler** — WORK 파이프라인 실행 에이전트.
 
 **REFERENCES_DIR 결정**: 입력에서 `REFERENCES_DIR=...` 라인 또는 `<references-dir>` XML 요소를 확인. 해당 절대 경로를 사용. 없으면 기본값 `.claude/agents` 사용.
 
-| 파일 | 목적 |
-|------|------|
-| `{REFERENCES_DIR}/file-content-schema.md` | 파일 포맷 스키마 |
-| `{REFERENCES_DIR}/shared-prompt-sections.md` | 공통 규칙 |
-| `{REFERENCES_DIR}/xml-schema.md` | XML 통신 포맷 |
-| `{REFERENCES_DIR}/context-policy.md` | 슬라이딩 윈도우 규칙 |
-| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
+#### Reference Loading (ref-cache)
+
+1. 수신한 dispatch XML에 `<ref-cache>`가 있는지 확인한다
+2. 필요한 참조 파일별로:
+   - ref-cache에 있으면 → **파일 읽기 SKIP**, 캐시된 내용 사용
+   - ref-cache에 없으면 → `{REFERENCES_DIR}/{filename}.md`에서 읽고 ref-cache에 추가
+3. 작업 완료 시 병합된 `<ref-cache>`를 반환 dispatch XML에 포함한다
+4. **하위 호환성**: dispatch에 `<ref-cache>`가 없으면 기존 방식대로 모든 참조 파일을 읽는다 (기존 동작 유지)
+
+이 에이전트의 필수 참조 파일:
+
+| 파일 | ref-cache key |
+|------|---------------|
+| `{REFERENCES_DIR}/file-content-schema.md` | `file-content-schema` |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | `shared-prompt-sections` |
+| `{REFERENCES_DIR}/xml-schema.md` | `xml-schema` |
+| `{REFERENCES_DIR}/context-policy.md` | `context-policy` |
+| `{REFERENCES_DIR}/work-activity-log.md` | `work-activity-log` |
 
 ### 3-2. WORK 식별 및 초기 로드
 
@@ -88,6 +99,7 @@ WORK 내 TASK만 처리. 다른 WORK 접근 금지.
 각 단계 시작 전 Pipeline Stage Callback 전송 (§ 3-6 참조).
 
 → dispatch XML 포맷: `xml-schema.md` § 1 참조 (to="builder", action="implement")
+→ 이전 task-result의 `<ref-cache>`를 dispatch XML에 포함 (`xml-schema.md` § 6 및 `agent-flow.md` ref-cache 체인 전파 참조)
 
 아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
 
@@ -115,6 +127,7 @@ FAIL → builder 재시도 (최대 3회). 3회 실패 → 파이프라인 중단
 
 → dispatch XML 포맷: `xml-schema.md` § 1 참조 (to="verifier", action="verify")
 → 슬라이딩 윈도우 (Builder→Verifier): `context-policy.md` Scheduler 디스패치 섹션 참조
+→ builder task-result의 `<ref-cache>`를 dispatch XML에 포함 (`xml-schema.md` § 6 참조)
 
 아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
 
@@ -123,6 +136,7 @@ FAIL → builder 재시도 (최대 3회). 3회 실패 → 파이프라인 중단
 → dispatch XML 포맷: `xml-schema.md` § 1 참조 (to="committer", action="commit")
 → 슬라이딩 윈도우 (Verifier FULL + Builder SUMMARY): `context-policy.md` Scheduler 디스패치 섹션 참조
 → TASK 간 의존성 전달: `context-policy.md` TASK 간 의존성 전달 섹션 참조
+→ verifier task-result의 `<ref-cache>`를 dispatch XML에 포함 (`xml-schema.md` § 6 참조)
 
 아래 dispatch XML을 생성하여 반환한다. **호출은 Main Claude가 수행한다.**
 

@@ -8,6 +8,13 @@ XML communication format definition for uc-taskmanager agents.
 
 ```xml
 <dispatch to="{receiver}" work="{WORK_ID}" task="{TASK_ID}" execution-mode="{direct|pipeline|full}">
+  <ref-cache>                                        <!-- optional -->
+    <ref key="shared-prompt-sections">{file content}</ref>
+    <ref key="file-content-schema">{file content}</ref>
+    <ref key="xml-schema">{file content}</ref>
+    <ref key="context-policy">{file content}</ref>
+    <ref key="work-activity-log">{file content}</ref>
+  </ref-cache>
   <references-dir>{absolute path to references directory}</references-dir>
   <context>
     <project>{project name}</project>
@@ -47,6 +54,13 @@ XML communication format definition for uc-taskmanager agents.
     <check name="{type}" status="{PASS|FAIL|N/A}">{output}</check>
   </verification>
   <notes>{notes}</notes>
+  <ref-cache>                                        <!-- optional -->
+    <ref key="shared-prompt-sections">{file content}</ref>
+    <ref key="file-content-schema">{file content}</ref>
+    <ref key="xml-schema">{file content}</ref>
+    <ref key="context-policy">{file content}</ref>
+    <ref key="work-activity-log">{file content}</ref>
+  </ref-cache>
 </task-result>
 ```
 
@@ -107,3 +121,39 @@ Invariants (regardless of mode):
 | `TASK-XX_result.md` | Committer | Committer |
 | COMMITTER DONE callback | Committer | Committer |
 | `WORK-LIST.md` IN_PROGRESS | Specifier | Specifier |
+
+---
+
+## 6. ref-cache Element Definition
+
+`<ref-cache>` is an optional container element that carries pre-loaded reference file contents within dispatch and task-result XML. When present, receiving agents MUST use these contents instead of reading files from disk.
+
+### Structure
+
+```xml
+<ref-cache>
+  <ref key="{filename-without-extension}">{full file content}</ref>
+  ...
+</ref-cache>
+```
+
+| Element | Required | Description |
+|---------|----------|-------------|
+| `<ref-cache>` | Optional | Container for cached reference files. Omit entirely if no cache is available. |
+| `<ref key="...">` | — | Individual reference file. `key` is the filename without extension (e.g., `shared-prompt-sections`). |
+
+### Recognized Keys
+
+| Key | Corresponding File |
+|-----|--------------------|
+| `shared-prompt-sections` | `{REFERENCES_DIR}/shared-prompt-sections.md` |
+| `file-content-schema` | `{REFERENCES_DIR}/file-content-schema.md` |
+| `xml-schema` | `{REFERENCES_DIR}/xml-schema.md` |
+| `context-policy` | `{REFERENCES_DIR}/context-policy.md` |
+| `work-activity-log` | `{REFERENCES_DIR}/work-activity-log.md` |
+
+### Backward Compatibility
+
+- Dispatch or task-result XML without `<ref-cache>` is fully valid — agents fall back to reading files from `REFERENCES_DIR`.
+- Agents that do not yet support ref-cache simply ignore the element and read files normally.
+- Partial ref-cache (only some keys present) is allowed — missing keys are read from disk.

@@ -34,12 +34,23 @@ You are the **Specifier** — 사용자 요청을 요구사항으로 명세화�
 
 **REFERENCES_DIR 결정**: 입력에서 `REFERENCES_DIR=...` 라인을 확인. 해당 절대 경로를 사용. 없으면 기본값 `.claude/agents` 사용.
 
-| 파일 | 목적 |
-|------|------|
-| `{REFERENCES_DIR}/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md, TASK, Requirement.md 포맷) |
-| `{REFERENCES_DIR}/shared-prompt-sections.md` | 공통 규칙 (TASK ID 패턴, WORK-LIST 규칙, log_work 함수) |
-| `{REFERENCES_DIR}/xml-schema.md` | XML 통신 포맷 (dispatch / task-result 구조) |
-| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
+#### Reference Loading (ref-cache)
+
+1. 수신한 dispatch XML에 `<ref-cache>`가 있는지 확인한다
+2. 필요한 참조 파일별로:
+   - ref-cache에 있으면 → **파일 읽기 SKIP**, 캐시된 내용 사용
+   - ref-cache에 없으면 → `{REFERENCES_DIR}/{filename}.md`에서 읽고 ref-cache에 추가
+3. 작업 완료 시 병합된 `<ref-cache>`를 반환 dispatch XML에 포함한다
+4. **하위 호환성**: dispatch에 `<ref-cache>`가 없으면 기존 방식대로 모든 참조 파일을 읽는다 (기존 동작 유지)
+
+이 에이전트의 필수 참조 파일:
+
+| 파일 | ref-cache key |
+|------|---------------|
+| `{REFERENCES_DIR}/file-content-schema.md` | `file-content-schema` |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | `shared-prompt-sections` |
+| `{REFERENCES_DIR}/xml-schema.md` | `xml-schema` |
+| `{REFERENCES_DIR}/work-activity-log.md` | `work-activity-log` |
 
 ### 3-2. WORK ID 결정
 
@@ -116,6 +127,7 @@ Requirement.md 작성 완료 후, **요구사항 자체의 복잡도**로 판단
 ```
 
 → dispatch XML 포맷: `xml-schema.md` § 1 참조 (to="builder", task="TASK-00", execution-mode="direct")
+→ 로드한 모든 참조 파일을 포함한 `<ref-cache>` 추가 (`xml-schema.md` § 6 참조)
 
 ### 3-7. Planner 위임 — 복잡 요구사항 (pipeline/full)
 
@@ -136,6 +148,7 @@ Requirement.md 작성 완료 후, **요구사항 자체의 복잡도**로 판단
 ```
 
 → dispatch XML 포맷: `xml-schema.md` § 1 참조 (to="planner", execution-mode="full")
+→ 로드한 모든 참조 파일을 포함한 `<ref-cache>` 추가 (`xml-schema.md` § 6 참조)
 
 ### 3-8. Output Language Rule
 

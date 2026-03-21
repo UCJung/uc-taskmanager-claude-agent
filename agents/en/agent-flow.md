@@ -213,8 +213,24 @@ builder (ref-cache in) → skips file reads → returns task-result with <ref-ca
 verifier → committer → ...
 ```
 
+### Phase 2: Selective Section Delivery
+
+Instead of passing full reference files, Main Claude extracts only the sections each agent needs. This reduces dispatch token size by 50-70%.
+
+**Main Claude reads reference files once at pipeline start**, then delivers condensed `<ref-cache>` per agent using this mapping:
+
+| Agent | shared-prompt-sections | file-content-schema | xml-schema | context-policy | work-activity-log |
+|-------|:---:|:---:|:---:|:---:|:---:|
+| **specifier** | §1,§7,§8,§9,§11 | §0,§1,§2,§3 | §1,§3 | — | full |
+| **planner** | §1,§2,§11 | §1,§2,§3 | — | — | full |
+| **scheduler** | §4,§8,§10 | §1,§6 | §1,§3,§4,§5 | full | full |
+| **builder** | §1,§2,§10,§12 | §2,§3 | §1,§2,§4 | Builder section | full |
+| **verifier** | §1,§2,§12 | — | §1,§2,§4 | Verifier section | full |
+| **committer** | §1,§2,§8,§10 | §3,§4,§5,§6,§7 | §1,§2,§4 | Committer+Retry | full |
+
+**Delivery format**: Condense each `<ref key="">` to contain only the needed sections, not the full file. Use one-line summaries for simple rules, keep full content only for templates and code blocks.
+
 ### Constraints
 
-- **Never modify ref-cache contents** — Main Claude passes the block through verbatim; do NOT alter `<ref>` values.
-- **Do not reconstruct ref-cache** — if a task-result lacks `<ref-cache>`, do not attempt to build one manually. Let the agent read from disk.
 - **ref-cache does not replace REFERENCES_DIR** — always pass `REFERENCES_DIR` (or `<references-dir>`) in every dispatch regardless of ref-cache presence, for backward compatibility.
+- **Agents may still read files** — if ref-cache content is insufficient, agents fall back to reading from disk.
