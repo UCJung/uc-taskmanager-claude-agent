@@ -489,10 +489,11 @@ body {
 <div class="header">
   <div class="header-left">
     <h1>SDD 통합 시스템 설계 명세</h1>
-    <p>UC TeamSpace × UC TaskManager — v1.4.0 · 2026-03-19</p>
+    <p>UC TeamSpace × UC TaskManager — v1.5.0 · 2026-03-22</p>
   </div>
   <div class="header-right">
     <button class="btn-small" onclick="toggleTheme()">테마 전환</button>
+    <button class="btn-small" id="lang-btn" onclick="toggleLang()">EN</button>
   </div>
 </div>
 
@@ -506,6 +507,7 @@ body {
   <button class="nav-btn" onclick="showTab('runner')">Runner</button>
   <button class="nav-btn" onclick="showTab('backend')">백엔드</button>
   <button class="nav-btn" onclick="showTab('reliability')">신뢰성</button>
+  <button class="nav-btn" onclick="showTab('refcache')">ref-cache</button>
 </nav>
 
 <div class="content">
@@ -1616,6 +1618,76 @@ body {
   </div>
 </div>
 
+<!-- ═══════════════════ TAB: ref-cache ═══════════════════ -->
+<div class="tab-panel" id="tab-refcache">
+  <div class="section-header">
+    <h2>§3.13 ref-cache Reference File Caching</h2>
+    <span class="version-tag">v1.5 신규</span>
+  </div>
+
+  <div class="card">
+    <h3>개요</h3>
+    <p><code>&lt;ref-cache&gt;</code>는 에이전트 파이프라인에서 참조 파일(shared-prompt-sections, xml-schema 등) 콘텐츠를 사전 로드하여 전달하는 선택적 XML 요소이다. 반복적인 디스크 읽기를 제거하여 파이프라인 효율을 높인다.</p>
+  </div>
+
+  <!-- Metrics -->
+  <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:1rem; margin-bottom:1.5rem;">
+    <div class="card" style="text-align:center;">
+      <div style="font-size:2rem; font-weight:700; color:var(--accent3);">64%</div>
+      <div style="color:var(--text-muted); font-size:0.85rem;">파일 읽기 감소</div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">30 → 11 reads/WORK</div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div style="font-size:2rem; font-weight:700; color:var(--accent);">15%</div>
+      <div style="color:var(--text-muted); font-size:0.85rem;">토큰 절감</div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">prompt token reduction</div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div style="font-size:2rem; font-weight:700; color:var(--accent2);">50-70%</div>
+      <div style="color:var(--text-muted); font-size:0.85rem;">Phase 2 dispatch 절감</div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">selective section delivery</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Phase 1 — 체인 전파 (Chain Propagation)</h3>
+    <div style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:1rem; font-family:monospace; font-size:0.8rem; line-height:1.8; overflow-x:auto;">
+      <span style="color:var(--accent)">specifier</span> <span style="color:var(--text-muted)">(no ref-cache)</span> → reads files → returns with <span style="color:var(--accent3)">&lt;ref-cache&gt;</span><br>
+      &nbsp;&nbsp;↓ <span style="color:var(--text-muted)">Main Claude copies &lt;ref-cache&gt;</span><br>
+      <span style="color:var(--accent2)">planner</span> → <span style="color:var(--accent3)">builder</span> → <span style="color:var(--accent4)">verifier</span> → <span style="color:var(--accent5)">committer</span> → ...
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Phase 2 — 선택 전달 (Selective Section Delivery)</h3>
+    <p style="margin-bottom:0.8rem; color:var(--text-muted); font-size:0.85rem;">Main Claude가 파이프라인 시작 시 참조 파일을 한 번 읽고, 에이전트별로 필요한 섹션만 추출하여 전달한다.</p>
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr><th>Agent</th><th>shared-prompt</th><th>file-content</th><th>xml-schema</th><th>context-policy</th><th>activity-log</th></tr>
+        </thead>
+        <tbody>
+          <tr><td style="color:var(--accent)">specifier</td><td>§1,§7,§8,§9,§11</td><td>§0,§1,§2,§3</td><td>§1,§3</td><td>—</td><td>full</td></tr>
+          <tr><td style="color:var(--accent2)">planner</td><td>§1,§2,§11</td><td>§1,§2,§3</td><td>—</td><td>—</td><td>full</td></tr>
+          <tr><td style="color:var(--accent6)">scheduler</td><td>§4,§8,§10</td><td>§1,§6</td><td>§1,§3,§4,§5</td><td>full</td><td>full</td></tr>
+          <tr><td style="color:var(--accent3)">builder</td><td>§1,§2,§10,§12</td><td>§2,§3</td><td>§1,§2,§4</td><td>Builder</td><td>full</td></tr>
+          <tr><td style="color:var(--accent4)">verifier</td><td>§1,§2,§12</td><td>—</td><td>§1,§2,§4</td><td>Verifier</td><td>full</td></tr>
+          <tr><td style="color:var(--accent5)">committer</td><td>§1,§2,§8,§10</td><td>§3,§4,§5,§6,§7</td><td>§1,§2,§4</td><td>Committer+Retry</td><td>full</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>참조</h3>
+    <ul style="list-style:none; padding:0;">
+      <li style="margin-bottom:0.3rem;"><code>agents/en/agent-flow.md</code> — ref-cache Chain Propagation</li>
+      <li style="margin-bottom:0.3rem;"><code>agents/en/xml-schema.md</code> § 6 — ref-cache Element Definition</li>
+      <li><code>docs/spec_pipeline-architecture_v1.3.md</code> § 16 — ref-cache 상세</li>
+    </ul>
+  </div>
+</div>
+
 </div><!-- /content -->
 
 <script>
@@ -1646,6 +1718,13 @@ function toggleCollapsible(header) {
     body.classList.add('open');
     toggle.classList.add('open');
   }
+}
+
+// ── i18n Language Toggle ──
+let currentLang = 'ko';
+function toggleLang() {
+  currentLang = currentLang === 'ko' ? 'en' : 'ko';
+  document.getElementById('lang-btn').textContent = currentLang === 'ko' ? 'EN' : 'KO';
 }
 </script>
 </body>

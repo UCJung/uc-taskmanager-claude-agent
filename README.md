@@ -1045,13 +1045,15 @@ uc-taskmanager/
 ├── CLAUDE.md                ← Project-level Claude instructions (push procedure, language, agent call rules)
 ├── LICENSE
 ├── docs/                    ← Design specifications
-│   ├── spec_pipeline-architecture.md       ← Pipeline structure & agent roles
-│   ├── spec_pipeline-architecture_v1.2.md  ← Pipeline architecture v1.2 (Specifier-based, 3-stage status)
+│   ├── spec_pipeline-architecture_v1.3.md  ← Pipeline architecture v1.3 (ref-cache, Specifier-based)
 │   ├── spec_sliding-window-context.md      ← Sliding window context design
 │   ├── spec_callback-integration.md        ← External system callback integration
-│   ├── spec_SDD_with_ucagent_requirement.md ← SDD requirement management system design
-│   ├── pipeline-architecture-visual.html   ← Interactive pipeline visualization
-│   └── sliding-window-context-visual.html  ← Interactive sliding window visualization
+│   ├── spec_SDD_with_ucagent_requirement.md ← SDD v1.5 requirement management system design
+│   ├── pipeline-architecture-v1.3-visual.html ← Interactive pipeline visualization (with ref-cache tab)
+│   ├── SDD-requirement-visual.html         ← Interactive SDD visualization (with ref-cache tab)
+│   ├── callback-integration-visual.html    ← Interactive callback visualization
+│   ├── sliding-window-context-visual.html  ← Interactive sliding window visualization
+│   └── _archive/                           ← Legacy docs (Router-based)
 └── works/                   ← WORK directories (auto-generated)
     ├── WORK-LIST.md          ← Master index
     ├── WORK-01/              ← all modes output here (direct/pipeline/full)

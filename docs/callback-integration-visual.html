@@ -64,22 +64,20 @@ body {
 [data-theme="light"] .header {
   background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
 }
-.header h1 { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
-.header h1 span { color: var(--text-muted); font-weight: 400; font-size: 0.85rem; margin-left: 0.5rem; }
-.header-actions { display: flex; gap: 0.5rem; align-items: center; }
-.theme-toggle, .save-btn {
+.header-left h1 { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+.header-left h1 span { color: var(--text-muted); font-weight: 400; font-size: 0.8rem; margin-left: 0.5rem; }
+.header-right { display: flex; gap: 0.5rem; align-items: center; }
+.btn {
   background: var(--bg-card);
   border: 1px solid var(--border);
   color: var(--text);
   padding: 0.4rem 0.8rem;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   transition: all 0.2s;
 }
-.theme-toggle:hover { border-color: var(--accent); }
-.save-btn { border-color: var(--accent3); color: var(--accent3); }
-.save-btn:hover { background: rgba(52,211,153,0.1); }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ── Nav ── */
 .nav {
@@ -415,10 +413,13 @@ body {
 <body data-theme="dark">
 
 <div class="header">
-  <h1>uc-taskmanager <span>Callback Integration</span></h1>
-  <div class="header-actions">
-    <button class="save-btn" onclick="savePNG()">Save as PNG</button>
-    <button class="theme-toggle" onclick="toggleTheme()">Theme</button>
+  <div class="header-left">
+    <h1>uc-taskmanager <span>Callback Integration</span></h1>
+  </div>
+  <div class="header-right">
+    <button class="btn" onclick="savePNG()">Save as PNG</button>
+    <button class="btn" onclick="toggleTheme()">Theme</button>
+    <button class="btn" id="lang-btn" onclick="toggleLang()">EN</button>
   </div>
 </div>
 
@@ -1170,6 +1171,13 @@ function savePNG() {
     ">닫기</button>
   `;
   document.body.appendChild(msg);
+}
+
+// ── i18n Language Toggle ──
+let currentLang = 'ko';
+function toggleLang() {
+  currentLang = currentLang === 'ko' ? 'en' : 'ko';
+  document.getElementById('lang-btn').textContent = currentLang === 'ko' ? 'EN' : 'KO';
 }
 </script>
 </body>

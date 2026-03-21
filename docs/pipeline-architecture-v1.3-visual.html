@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>uc-taskmanager Pipeline Architecture v1.2</title>
+<title>uc-taskmanager Pipeline Architecture v1.3</title>
 <style>
 :root {
   --bg: #0f172a;
@@ -530,7 +530,7 @@ tr:hover td { background: var(--bg-card-hover); }
 
 <div class="header">
   <div class="header-left">
-    <h1>uc-taskmanager <span>Pipeline Architecture</span> <span class="version-badge">v1.1</span></h1>
+    <h1>uc-taskmanager <span>Pipeline Architecture</span> <span class="version-badge">v1.3</span></h1>
   </div>
   <div class="header-right">
     <button class="btn" id="save-png-btn" onclick="savePng()">Save as PNG</button>
@@ -549,13 +549,14 @@ tr:hover td { background: var(--bg-card-hover); }
   <button class="nav-btn" onclick="showTab('files', this)" data-i18n="nav.files">파일 구조</button>
   <button class="nav-btn" onclick="showTab('callbacks', this)" data-i18n="nav.callbacks">콜백 통합</button>
   <button class="nav-btn" onclick="showTab('mcp', this)" data-i18n="nav.mcp">MCP 도구</button>
+  <button class="nav-btn" onclick="showTab('refcache', this)" data-i18n="nav.refcache">ref-cache</button>
 </nav>
 
 <div class="content">
 
 <!-- ═══════════════════ TAB: 개요 ═══════════════════ -->
 <div id="tab-overview" class="tab-panel active">
-  <div class="section-title">🏗️ Pipeline Architecture v1.2 개요</div>
+  <div class="section-title">🏗️ Pipeline Architecture v1.3 개요</div>
   <div class="section-desc" data-i18n="overview.desc">
     uc-taskmanager는 Claude Code CLI 위에서 동작하는 <strong>멀티 에이전트 작업 파이프라인 시스템</strong>이다.<br>
     사용자 요청을 분석하여 복잡도에 따라 세 가지 execution-mode 중 하나로 라우팅하고, 각 TASK를 에이전트 파이프라인으로 자동 처리한다.
@@ -1457,6 +1458,150 @@ CallbackToken: &lt;bearer-token&gt;
   </div>
 </div>
 
+<!-- ═══════════════════ TAB: ref-cache ═══════════════════ -->
+<div id="tab-refcache" class="tab-panel">
+  <div class="section-title" data-i18n="refcache.title">📦 ref-cache Reference File Caching</div>
+  <div class="section-desc" data-i18n="refcache.desc">에이전트 파이프라인에서 참조 파일 콘텐츠를 사전 로드하여 전달하는 선택적 XML 요소. 반복적인 디스크 읽기를 제거하여 파이프라인 효율을 높인다.</div>
+
+  <!-- Metrics -->
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:1rem; margin-bottom:1.5rem;">
+    <div class="card" style="text-align:center;">
+      <div style="font-size:2rem; font-weight:700; color:var(--accent3);">64%</div>
+      <div style="color:var(--text-muted); font-size:0.85rem;" data-i18n="refcache.metric.reads">파일 읽기 감소</div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">30 → 11 reads/WORK</div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div style="font-size:2rem; font-weight:700; color:var(--accent);">15%</div>
+      <div style="color:var(--text-muted); font-size:0.85rem;" data-i18n="refcache.metric.tokens">토큰 절감</div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">prompt token reduction</div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div style="font-size:2rem; font-weight:700; color:var(--accent2);">50-70%</div>
+      <div style="color:var(--text-muted); font-size:0.85rem;" data-i18n="refcache.metric.selective">Phase 2 dispatch 절감</div>
+      <div style="font-size:0.75rem; color:var(--text-muted);">selective section delivery</div>
+    </div>
+  </div>
+
+  <!-- Phase 1: Chain Propagation -->
+  <div class="card">
+    <div class="card-title" data-i18n="refcache.phase1.title">🔗 Phase 1 — 체인 전파 (Chain Propagation)</div>
+    <div style="margin-bottom:1rem;">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num" style="background:rgba(56,189,248,0.15); color:var(--node-specifier)">1</div>
+          <div class="step-text" data-i18n="refcache.phase1.step1">첫 에이전트(specifier) — ref-cache 없음. 디스크에서 참조 파일 정상 읽기</div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:rgba(56,189,248,0.15); color:var(--node-specifier)">2</div>
+          <div class="step-text" data-i18n="refcache.phase1.step2">task-result 반환 시 읽은 참조 파일을 &lt;ref-cache&gt; 블록에 포함</div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:rgba(129,140,248,0.15); color:var(--accent2)">3</div>
+          <div class="step-text" data-i18n="refcache.phase1.step3">Main Claude — 이전 task-result의 &lt;ref-cache&gt;를 다음 dispatch XML에 복사</div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:rgba(52,211,153,0.15); color:var(--node-builder)">4</div>
+          <div class="step-text" data-i18n="refcache.phase1.step4">수신 에이전트 — &lt;ref-cache&gt; 존재 시 디스크 읽기 생략, 캐시에서 참조</div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:rgba(148,163,184,0.08); color:var(--text-muted)">5</div>
+          <div class="step-text" data-i18n="refcache.phase1.step5">ref-cache 미지원 에이전트 — 무시하고 디스크에서 읽기 (하위 호환)</div>
+        </div>
+      </div>
+    </div>
+    <!-- Flow diagram -->
+    <div style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:1rem; font-family:monospace; font-size:0.8rem; line-height:1.8; overflow-x:auto;">
+      <span style="color:var(--node-specifier)">specifier</span> <span style="color:var(--text-muted)">(no ref-cache in)</span> → reads files → returns task-result with <span style="color:var(--accent3)">&lt;ref-cache&gt;</span><br>
+      &nbsp;&nbsp;↓ <span style="color:var(--text-muted)">Main Claude copies &lt;ref-cache&gt; into dispatch</span><br>
+      <span style="color:var(--node-planner)">planner</span> <span style="color:var(--text-muted)">(ref-cache in)</span> → skips file reads → returns task-result with <span style="color:var(--accent3)">&lt;ref-cache&gt;</span><br>
+      &nbsp;&nbsp;↓ <span style="color:var(--text-muted)">Main Claude copies &lt;ref-cache&gt; into dispatch</span><br>
+      <span style="color:var(--node-builder)">builder</span> <span style="color:var(--text-muted)">(ref-cache in)</span> → skips file reads → returns with <span style="color:var(--accent3)">&lt;ref-cache&gt;</span><br>
+      &nbsp;&nbsp;↓<br>
+      <span style="color:var(--node-verifier)">verifier</span> → <span style="color:var(--node-committer)">committer</span> → ...
+    </div>
+  </div>
+
+  <!-- XML Structure -->
+  <div class="card">
+    <div class="card-title" data-i18n="refcache.xml.title">📋 ref-cache XML 구조</div>
+    <div class="file-tree" style="font-size:0.8rem;">
+&lt;ref-cache&gt;<br>
+&nbsp;&nbsp;&lt;ref key="<span style="color:var(--accent)">shared-prompt-sections</span>"&gt;{file content}&lt;/ref&gt;<br>
+&nbsp;&nbsp;&lt;ref key="<span style="color:var(--accent)">file-content-schema</span>"&gt;{file content}&lt;/ref&gt;<br>
+&nbsp;&nbsp;&lt;ref key="<span style="color:var(--accent)">xml-schema</span>"&gt;{file content}&lt;/ref&gt;<br>
+&nbsp;&nbsp;&lt;ref key="<span style="color:var(--accent)">context-policy</span>"&gt;{file content}&lt;/ref&gt;<br>
+&nbsp;&nbsp;&lt;ref key="<span style="color:var(--accent)">work-activity-log</span>"&gt;{file content}&lt;/ref&gt;<br>
+&lt;/ref-cache&gt;
+    </div>
+  </div>
+
+  <!-- Recognized Keys table -->
+  <div class="card">
+    <div class="card-title" data-i18n="refcache.keys.title">🔑 Recognized Keys</div>
+    <div class="route-table-wrap">
+      <table class="mcp-table">
+        <thead><tr><th>Key</th><th data-i18n="refcache.keys.file">대응 파일</th></tr></thead>
+        <tbody>
+          <tr><td><code>shared-prompt-sections</code></td><td><code>{REFERENCES_DIR}/shared-prompt-sections.md</code></td></tr>
+          <tr><td><code>file-content-schema</code></td><td><code>{REFERENCES_DIR}/file-content-schema.md</code></td></tr>
+          <tr><td><code>xml-schema</code></td><td><code>{REFERENCES_DIR}/xml-schema.md</code></td></tr>
+          <tr><td><code>context-policy</code></td><td><code>{REFERENCES_DIR}/context-policy.md</code></td></tr>
+          <tr><td><code>work-activity-log</code></td><td><code>{REFERENCES_DIR}/work-activity-log.md</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Phase 2: Selective Section Delivery -->
+  <div class="card">
+    <div class="card-title" data-i18n="refcache.phase2.title">🎯 Phase 2 — 선택 전달 (Selective Section Delivery)</div>
+    <div style="margin-bottom:0.8rem; color:var(--text-muted); font-size:0.85rem;" data-i18n="refcache.phase2.desc">
+      Main Claude가 파이프라인 시작 시 참조 파일을 한 번 읽고, 에이전트별로 필요한 섹션만 추출하여 전달한다.
+    </div>
+    <div class="route-table-wrap">
+      <table class="mcp-table">
+        <thead>
+          <tr>
+            <th>Agent</th>
+            <th>shared-prompt-sections</th>
+            <th>file-content-schema</th>
+            <th>xml-schema</th>
+            <th>context-policy</th>
+            <th>work-activity-log</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="mcp-agent" style="color:var(--node-specifier)">specifier</td><td>§1,§7,§8,§9,§11</td><td>§0,§1,§2,§3</td><td>§1,§3</td><td>—</td><td>full</td></tr>
+          <tr><td class="mcp-agent" style="color:var(--node-planner)">planner</td><td>§1,§2,§11</td><td>§1,§2,§3</td><td>—</td><td>—</td><td>full</td></tr>
+          <tr><td class="mcp-agent" style="color:var(--node-scheduler)">scheduler</td><td>§4,§8,§10</td><td>§1,§6</td><td>§1,§3,§4,§5</td><td>full</td><td>full</td></tr>
+          <tr><td class="mcp-agent" style="color:var(--node-builder)">builder</td><td>§1,§2,§10,§12</td><td>§2,§3</td><td>§1,§2,§4</td><td>Builder section</td><td>full</td></tr>
+          <tr><td class="mcp-agent" style="color:var(--node-verifier)">verifier</td><td>§1,§2,§12</td><td>—</td><td>§1,§2,§4</td><td>Verifier section</td><td>full</td></tr>
+          <tr><td class="mcp-agent" style="color:var(--node-committer)">committer</td><td>§1,§2,§8,§10</td><td>§3,§4,§5,§6,§7</td><td>§1,§2,§4</td><td>Committer+Retry</td><td>full</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Constraints -->
+  <div class="card">
+    <div class="card-title" data-i18n="refcache.constraints.title">⚠️ 제약 조건</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:rgba(251,191,36,0.15); color:var(--warn)">!</div>
+        <div class="step-text" data-i18n="refcache.constraint1">ref-cache는 REFERENCES_DIR을 대체하지 않음 — 호환성을 위해 항상 REFERENCES_DIR을 dispatch에 포함</div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:rgba(251,191,36,0.15); color:var(--warn)">!</div>
+        <div class="step-text" data-i18n="refcache.constraint2">에이전트는 ref-cache가 불충분하면 디스크에서 파일 읽기 가능 (fallback)</div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:rgba(251,191,36,0.15); color:var(--warn)">!</div>
+        <div class="step-text" data-i18n="refcache.constraint3">ref-cache 없는 dispatch/task-result도 완전히 유효 — 하위 호환 보장</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /content -->
 
 <script>
@@ -1510,10 +1655,11 @@ const i18n = {
   'nav.files': { ko: '파일 구조', en: 'File Structure' },
   'nav.callbacks': { ko: '콜백 통합', en: 'Callbacks' },
   'nav.mcp': { ko: 'MCP 도구', en: 'MCP Tools' },
+  'nav.refcache': { ko: 'ref-cache', en: 'ref-cache' },
   // Header
   'header.theme': { ko: '테마 전환', en: 'Toggle Theme' },
   // Overview tab
-  'overview.title': { ko: '🏗️ Pipeline Architecture v1.2 개요', en: '🏗️ Pipeline Architecture v1.2 Overview' },
+  'overview.title': { ko: '🏗️ Pipeline Architecture v1.3 개요', en: '🏗️ Pipeline Architecture v1.3 Overview' },
   'overview.desc': {
     ko: 'uc-taskmanager는 Claude Code CLI 위에서 동작하는 <strong>멀티 에이전트 작업 파이프라인 시스템</strong>이다.<br>사용자 요청을 분석하여 복잡도에 따라 세 가지 execution-mode 중 하나로 라우팅하고, 각 TASK를 에이전트 파이프라인으로 자동 처리한다.',
     en: 'uc-taskmanager is a <strong>multi-agent task pipeline system</strong> running on Claude Code CLI.<br>It analyzes user requests and routes them to one of three execution-modes based on complexity, automatically processing each TASK through the agent pipeline.'
@@ -1582,6 +1728,27 @@ const i18n = {
   'callbacks.desc': { ko: '외부 시스템과의 연동을 위한 3종 콜백. 모든 모드에서 COMMITTER DONE 콜백(TaskCallback) 전송은 불변 보장된다.', en: '3 types of callbacks for external system integration. COMMITTER DONE callback (TaskCallback) transmission is invariantly guaranteed in all modes.' },
   // MCP tab
   'mcp.title': { ko: '🔧 MCP 도구 현황', en: '🔧 MCP Tools Status' },
+  // ref-cache tab
+  'refcache.title': { ko: '📦 ref-cache Reference File Caching', en: '📦 ref-cache Reference File Caching' },
+  'refcache.desc': { ko: '에이전트 파이프라인에서 참조 파일 콘텐츠를 사전 로드하여 전달하는 선택적 XML 요소. 반복적인 디스크 읽기를 제거하여 파이프라인 효율을 높인다.', en: 'Optional XML element that pre-loads and passes reference file contents through the agent pipeline. Eliminates redundant disk reads to improve pipeline efficiency.' },
+  'refcache.metric.reads': { ko: '파일 읽기 감소', en: 'File Read Reduction' },
+  'refcache.metric.tokens': { ko: '토큰 절감', en: 'Token Savings' },
+  'refcache.metric.selective': { ko: 'Phase 2 dispatch 절감', en: 'Phase 2 Dispatch Reduction' },
+  'refcache.phase1.title': { ko: '🔗 Phase 1 — 체인 전파 (Chain Propagation)', en: '🔗 Phase 1 — Chain Propagation' },
+  'refcache.phase1.step1': { ko: '첫 에이전트(specifier) — ref-cache 없음. 디스크에서 참조 파일 정상 읽기', en: 'First agent (specifier) — no ref-cache. Reads reference files from disk normally' },
+  'refcache.phase1.step2': { ko: 'task-result 반환 시 읽은 참조 파일을 &lt;ref-cache&gt; 블록에 포함', en: 'Includes loaded reference files in &lt;ref-cache&gt; block when returning task-result' },
+  'refcache.phase1.step3': { ko: 'Main Claude — 이전 task-result의 &lt;ref-cache&gt;를 다음 dispatch XML에 복사', en: 'Main Claude — copies &lt;ref-cache&gt; from previous task-result into next dispatch XML' },
+  'refcache.phase1.step4': { ko: '수신 에이전트 — &lt;ref-cache&gt; 존재 시 디스크 읽기 생략, 캐시에서 참조', en: 'Receiving agent — skips disk reads when &lt;ref-cache&gt; present, reads from cache' },
+  'refcache.phase1.step5': { ko: 'ref-cache 미지원 에이전트 — 무시하고 디스크에서 읽기 (하위 호환)', en: 'Agents without ref-cache support — ignore and read from disk (backward compatible)' },
+  'refcache.xml.title': { ko: '📋 ref-cache XML 구조', en: '📋 ref-cache XML Structure' },
+  'refcache.keys.title': { ko: '🔑 Recognized Keys', en: '🔑 Recognized Keys' },
+  'refcache.keys.file': { ko: '대응 파일', en: 'Corresponding File' },
+  'refcache.phase2.title': { ko: '🎯 Phase 2 — 선택 전달 (Selective Section Delivery)', en: '🎯 Phase 2 — Selective Section Delivery' },
+  'refcache.phase2.desc': { ko: 'Main Claude가 파이프라인 시작 시 참조 파일을 한 번 읽고, 에이전트별로 필요한 섹션만 추출하여 전달한다.', en: 'Main Claude reads reference files once at pipeline start, then extracts and delivers only the sections each agent needs.' },
+  'refcache.constraints.title': { ko: '⚠️ 제약 조건', en: '⚠️ Constraints' },
+  'refcache.constraint1': { ko: 'ref-cache는 REFERENCES_DIR을 대체하지 않음 — 호환성을 위해 항상 REFERENCES_DIR을 dispatch에 포함', en: 'ref-cache does NOT replace REFERENCES_DIR — always include REFERENCES_DIR in dispatch for compatibility' },
+  'refcache.constraint2': { ko: '에이전트는 ref-cache가 불충분하면 디스크에서 파일 읽기 가능 (fallback)', en: 'Agents may still read files from disk if ref-cache is insufficient (fallback)' },
+  'refcache.constraint3': { ko: 'ref-cache 없는 dispatch/task-result도 완전히 유효 — 하위 호환 보장', en: 'Dispatch/task-result without ref-cache is fully valid — backward compatibility guaranteed' },
 };
 
 function toggleLang() {

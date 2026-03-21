@@ -1,7 +1,7 @@
 # UC TeamSpace × UC TaskManager — 통합 시스템 설계 명세서 (SDD)
 
-> Version: 1.4.0
-> Date: 2026-03-19
+> Version: 1.5.0
+> Date: 2026-03-22
 > Author: Claude Code (claude-sonnet-4-6) — v1.0~v1.3 + v1.4 현행화 (claude-opus-4-6)
 > Scope: WORK-PIPELINE (uc-taskmanager) + Runner + 요구사항 관리 (uc-teamspace)
 
@@ -16,6 +16,7 @@
 | 1.2.0 | 2026-03-14 | 에이전트 프롬프트 9건 역분석으로 §3 WORK-PIPELINE 대폭 확장 |
 | 1.3.0 | 2026-03-14 | execution-mode 속성 설계. Router 3경로 산출물 구조 통일, PLAN.md Execution-Mode 필드 추가, XML dispatch 속성 확장, 에이전트별 모드 반응 규칙 정의. S-TASK 산출물 누락 문제 근본 해결 |
 | 1.4.0 | 2026-03-19 | 프로젝트 현행화. 파일 경로 `tasks/multi-tasks/` → `works/`, TASK 파일명 프리픽스 제거(`TASK-XX.md`), 구분자 언더스코어 전환(`TASK-XX_progress.md`), mini-PLAN → PLAN.md 통일, Router 모델 Opus 승격, Planner/Router MCP 도구 추가, execution-mode 판정 기준 `router_rule_config.json` 반영, 에이전트 파일 12개 현행화 |
+| 1.5.0 | 2026-03-22 | ref-cache Reference File Caching 서브섹션 추가 (§3.13). Phase 1 체인 전파 + Phase 2 선택 전달, 측정 지표(파일 읽기 64% 감소, 토큰 15% 절감), 파이프라인 스펙 참조 |
 
 ---
 
@@ -37,6 +38,7 @@
     - [3.10 외부 시스템 콜백 (v1.2 신규)](#310-외부-시스템-콜백-v12-신규)
     - [3.11 파일 I/O 권한 매트릭스 (v1.2 신규)](#311-파일-io-권한-매트릭스-v12-신규)
     - [3.12 에이전트별 execution-mode 반응 규칙 (v1.3 신규)](#312-에이전트별-execution-mode-반응-규칙-v13-신규)
+    - [3.13 ref-cache Reference File Caching (v1.5 신규)](#313-ref-cache-reference-file-caching-v15-신규)
   - [4. Runner (scripts/runner.ts)](#4-runner-scriptsrunnerts)
     - [4.1 역할 및 위치](#41-역할-및-위치)
     - [4.2 시작 흐름](#42-시작-흐름)
@@ -777,6 +779,46 @@ PLAN.md의 `## Tasks` 섹션에 TASK 전체 내용(Files, Acceptance Criteria, V
 | WORK-LIST.md IN_PROGRESS 추가 | Router | Router | 현황 관리 |
 
 ---
+
+### 3.13 ref-cache Reference File Caching (v1.5 신규)
+
+`<ref-cache>`는 에이전트 파이프라인에서 참조 파일(shared-prompt-sections, xml-schema 등) 콘텐츠를 사전 로드하여 전달하는 선택적 XML 요소이다. 반복적인 디스크 읽기를 제거하여 파이프라인 효율을 높인다.
+
+#### Phase 1 — 체인 전파
+
+첫 에이전트(specifier)가 참조 파일을 읽고 task-result에 `<ref-cache>`를 포함하면, Main Claude가 이를 다음 에이전트 dispatch에 그대로 복사한다.
+
+```
+specifier (no ref-cache) → reads files → returns with <ref-cache>
+  ↓ Main Claude copies <ref-cache>
+planner (ref-cache in) → skips file reads → returns with <ref-cache>
+  ↓
+builder → verifier → committer → ...
+```
+
+#### Phase 2 — 선택 전달 (Selective Section Delivery)
+
+Main Claude가 파이프라인 시작 시 참조 파일을 한 번 읽고, 에이전트별로 필요한 섹션만 추출하여 전달한다. 전체 파일 대비 dispatch 토큰 50~70% 절감.
+
+| Agent | shared-prompt-sections | file-content-schema | xml-schema | context-policy | work-activity-log |
+|-------|:---:|:---:|:---:|:---:|:---:|
+| specifier | §1,§7,§8,§9,§11 | §0,§1,§2,§3 | §1,§3 | — | full |
+| planner | §1,§2,§11 | §1,§2,§3 | — | — | full |
+| scheduler | §4,§8,§10 | §1,§6 | §1,§3,§4,§5 | full | full |
+| builder | §1,§2,§10,§12 | §2,§3 | §1,§2,§4 | Builder section | full |
+| verifier | §1,§2,§12 | — | §1,§2,§4 | Verifier section | full |
+| committer | §1,§2,§8,§10 | §3,§4,§5,§6,§7 | §1,§2,§4 | Committer+Retry | full |
+
+#### 측정 결과
+
+| 지표 | Before | After | 개선 |
+|------|--------|-------|------|
+| 파일 읽기 횟수 | 30회/WORK | 11회/WORK | **64% 감소** |
+| 프롬프트 토큰 | baseline | -15% | **15% 절감** |
+
+> 상세 구현: `agents/en/agent-flow.md` § ref-cache Chain Propagation
+> XML 스키마: `agents/en/xml-schema.md` § 6 ref-cache Element Definition
+> 파이프라인 스펙: `docs/spec_pipeline-architecture_v1.3.md` § 16
 
 ---
 

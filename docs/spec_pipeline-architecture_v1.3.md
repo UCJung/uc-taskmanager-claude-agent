@@ -1,4 +1,4 @@
-# Pipeline Architecture Spec v1.2
+# Pipeline Architecture Spec v1.3
 
 > uc-taskmanager — 에이전트 파이프라인 전체 구조 명세 (agents/ 12개 파일 기반 전면 재작성)
 
@@ -409,6 +409,10 @@ dispatcher (Specifier 또는 Scheduler)
 ```xml
 <dispatch to="builder" work="WORK-NN" task="TASK-XX"
           execution-mode="pipeline|full">
+  <ref-cache>                                        <!-- optional -->
+    <ref key="shared-prompt-sections">{file content}</ref>
+    <ref key="xml-schema">{file content}</ref>
+  </ref-cache>
   <context>
     <project>uc-taskmanager</project>
     <language>ko</language>
@@ -455,6 +459,10 @@ dispatcher (Specifier 또는 Scheduler)
     <incomplete>미완료</incomplete>
   </context-handoff>
   <notes>verifier 확인 사항</notes>
+  <ref-cache>                                        <!-- optional -->
+    <ref key="shared-prompt-sections">{file content}</ref>
+    <ref key="xml-schema">{file content}</ref>
+  </ref-cache>
 </task-result>
 ```
 
@@ -730,6 +738,72 @@ CallbackToken: <bearer-token>
 
 ---
 
+## 16. ref-cache Reference File Caching
+
+> v1.3 신규 (WORK-41)
+
+`<ref-cache>`는 에이전트 파이프라인에서 참조 파일 콘텐츠를 사전 로드하여 전달하는 선택적 XML 요소이다.
+반복적인 디스크 읽기를 제거하여 파이프라인 효율을 높인다.
+
+### 16.1 Phase 1 — 체인 전파
+
+파이프라인에서 첫 에이전트(specifier)가 참조 파일을 읽고 task-result에 `<ref-cache>`를 포함하면,
+Main Claude가 이를 다음 에이전트 dispatch에 그대로 복사한다.
+
+```
+specifier (no ref-cache) → reads files → returns task-result with <ref-cache>
+  ↓ Main Claude copies <ref-cache>
+planner (ref-cache in) → skips file reads → returns with <ref-cache>
+  ↓ Main Claude copies <ref-cache>
+builder → verifier → committer → ...
+```
+
+**규칙:**
+
+1. 첫 에이전트 — ref-cache 없음, 디스크에서 참조 파일 정상 읽기
+2. task-result 반환 — 읽은 참조 파일을 `<ref-cache>` 블록에 포함
+3. Main Claude 전파 — 이전 task-result의 `<ref-cache>`를 다음 dispatch XML에 복사
+4. 수신 에이전트 — `<ref-cache>` 존재 시 디스크 읽기 생략
+5. ref-cache 미지원 에이전트 — 무시하고 디스크에서 읽기
+
+### 16.2 Phase 2 — 선택 전달 (Selective Section Delivery)
+
+Main Claude가 파이프라인 시작 시 참조 파일을 한 번 읽고, 에이전트별로 필요한 섹션만 추출하여 전달한다.
+
+| Agent | shared-prompt-sections | file-content-schema | xml-schema | context-policy | work-activity-log |
+|-------|:---:|:---:|:---:|:---:|:---:|
+| specifier | §1,§7,§8,§9,§11 | §0,§1,§2,§3 | §1,§3 | — | full |
+| planner | §1,§2,§11 | §1,§2,§3 | — | — | full |
+| scheduler | §4,§8,§10 | §1,§6 | §1,§3,§4,§5 | full | full |
+| builder | §1,§2,§10,§12 | §2,§3 | §1,§2,§4 | Builder section | full |
+| verifier | §1,§2,§12 | — | §1,§2,§4 | Verifier section | full |
+| committer | §1,§2,§8,§10 | §3,§4,§5,§6,§7 | §1,§2,§4 | Committer+Retry | full |
+
+### 16.3 Recognized Keys
+
+| Key | Corresponding File |
+|-----|----|  
+| `shared-prompt-sections` | `{REFERENCES_DIR}/shared-prompt-sections.md` |
+| `file-content-schema` | `{REFERENCES_DIR}/file-content-schema.md` |
+| `xml-schema` | `{REFERENCES_DIR}/xml-schema.md` |
+| `context-policy` | `{REFERENCES_DIR}/context-policy.md` |
+| `work-activity-log` | `{REFERENCES_DIR}/work-activity-log.md` |
+
+### 16.4 측정 결과
+
+| 지표 | Before | After | 개선 |
+|------|--------|-------|------|
+| 파일 읽기 횟수 | 30회/WORK | 11회/WORK | **64% 감소** |
+| 프롬프트 토큰 | baseline | -15% | **15% 절감** |
+
+### 16.5 제약 조건
+
+- **ref-cache는 REFERENCES_DIR을 대체하지 않는다** — 호환성을 위해 항상 `REFERENCES_DIR`(또는 `<references-dir>`)을 dispatch에 포함
+- 에이전트는 ref-cache가 불충분하면 디스크에서 파일 읽기 가능
+- ref-cache 없는 dispatch/task-result도 완전히 유효 — 에이전트가 디스크 읽기로 fallback
+
+---
+
 ## 15. 관련 문서
 
 | 문서 | 위치 | 내용 |
@@ -750,6 +824,12 @@ CallbackToken: <bearer-token>
 ---
 
 ## 변경사항
+
+### v1.3 (2026-03-22, WORK-41)
+
+1. **ref-cache 섹션 추가 (§16)**: Phase 1 체인 전파 + Phase 2 선택 전달 규칙, recognized keys, 측정 결과, 제약 조건.
+2. **통신 포맷 XML (§7)**: dispatch/task-result XML 예시에 `<ref-cache>` 요소 추가.
+3. **버전**: v1.3으로 bump.
 
 ### v1.2 (2026-03-21, WORK-37)
 

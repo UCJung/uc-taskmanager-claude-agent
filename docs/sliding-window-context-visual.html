@@ -58,23 +58,20 @@ body {
 [data-theme="light"] .header {
   background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
 }
-.header h1 {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--accent);
-}
-.header h1 span { color: var(--text-muted); font-weight: 400; font-size: 0.85rem; margin-left: 0.5rem; }
-.theme-toggle {
+.header-left h1 { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+.header-left h1 span { color: var(--text-muted); font-weight: 400; font-size: 0.8rem; margin-left: 0.5rem; }
+.header-right { display: flex; gap: 0.5rem; align-items: center; }
+.btn {
   background: var(--bg-card);
   border: 1px solid var(--border);
   color: var(--text);
   padding: 0.4rem 0.8rem;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   transition: all 0.2s;
 }
-.theme-toggle:hover { border-color: var(--accent); }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
 .nav {
   background: var(--bg-card);
   border-bottom: 1px solid var(--border);
@@ -566,8 +563,13 @@ body {
 <body>
 
 <div class="header">
-  <h1>Sliding Window Context Transfer <span>uc-taskmanager</span></h1>
-  <button class="theme-toggle" onclick="toggleTheme()">Light / Dark</button>
+  <div class="header-left">
+    <h1>Sliding Window Context Transfer <span>uc-taskmanager</span></h1>
+  </div>
+  <div class="header-right">
+    <button class="btn" onclick="toggleTheme()">Theme</button>
+    <button class="btn" id="lang-btn" onclick="toggleLang()">EN</button>
+  </div>
 </div>
 
 <nav class="nav">
@@ -1284,6 +1286,13 @@ const observer = new IntersectionObserver(entries => {
 });
 const tokenChart = document.getElementById('token-chart');
 if (tokenChart) observer.observe(tokenChart);
+
+// ── i18n Language Toggle ──
+let currentLang = 'ko';
+function toggleLang() {
+  currentLang = currentLang === 'ko' ? 'en' : 'ko';
+  document.getElementById('lang-btn').textContent = currentLang === 'ko' ? 'EN' : 'KO';
+}
 </script>
 
 </body>
