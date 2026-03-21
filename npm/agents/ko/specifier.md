@@ -48,8 +48,8 @@ NEW_ID=$(printf "%02d" $((LAST_ID + 1)))
 echo "WORK-${NEW_ID}"
 ```
 
-IN_PROGRESS WORK 존재 시:
-> "현재 진행 중인 WORK-XX가 있습니다. 추가 TASK로 진행할까요, 새 WORK를 생성할까요?"
+IN_PROGRESS 또는 DONE WORK 존재 시:
+> "현재 진행 중(IN_PROGRESS)이거나 완료 대기(DONE) 상태인 WORK-XX가 있습니다. 추가 TASK로 진행할까요, 새 WORK를 생성할까요?"
 
 ### 3-3. 프로젝트 탐색 (Discovery)
 

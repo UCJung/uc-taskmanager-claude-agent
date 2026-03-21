@@ -132,16 +132,20 @@ LAST_WORK_ID: WORK-XX
 | WORK | 제목 | 상태 | 생성일 | 완료일 |
 |------|------|------|--------|--------|
 | WORK-NN | ... | IN_PROGRESS | YYYY-MM-DD | |
+| WORK-MM | ... | DONE | YYYY-MM-DD | YYYY-MM-DD |
 ```
 
-| Status | Timing |
-|--------|--------|
-| `IN_PROGRESS` | Added when WORK directory is created |
+| Status | Meaning | Trigger |
+|--------|---------|---------|
+| `IN_PROGRESS` | WORK is being executed | specifier creates WORK |
+| `DONE` | All TASKs completed, awaiting review/push | committer completes last TASK |
+| `COMPLETED` | Archived to _COMPLETED/ | push merge (Main Claude batch processes all DONE) |
 
-- WORK-LIST.md contains only `IN_PROGRESS` rows — no COMPLETED rows
+Rules:
 - `LAST_WORK_ID` header tracks the highest WORK ID ever created
-- specifier: on WORK creation, add IN_PROGRESS row + update `LAST_WORK_ID`
-- committer: when last TASK is completed, remove the WORK row from WORK-LIST.md and move `works/${WORK_ID}/` to `works/_COMPLETED/${WORK_ID}/`
+- **specifier**: on WORK creation, add IN_PROGRESS row + update `LAST_WORK_ID`
+- **committer**: when last TASK is completed, change `IN_PROGRESS` → `DONE` and fill completion date (do NOT move folder or remove row)
+- **Main Claude** (push procedure): move all DONE WORKs to `works/_COMPLETED/`, remove their rows from WORK-LIST.md
 
 ---
 

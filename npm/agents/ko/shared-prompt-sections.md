@@ -132,16 +132,20 @@ LAST_WORK_ID: WORK-XX
 | WORK | 제목 | 상태 | 생성일 | 완료일 |
 |------|------|------|--------|--------|
 | WORK-NN | ... | IN_PROGRESS | YYYY-MM-DD | |
+| WORK-MM | ... | DONE | YYYY-MM-DD | YYYY-MM-DD |
 ```
 
-| 상태 | 시점 |
-|------|------|
-| `IN_PROGRESS` | WORK 디렉토리 생성 시 추가 |
+| 상태 | 의미 | 전환 시점 |
+|------|------|-----------|
+| `IN_PROGRESS` | WORK 실행 중 | specifier가 WORK 생성 시 |
+| `DONE` | 모든 TASK 완료, 리뷰/push 대기 중 | committer가 마지막 TASK 완료 시 |
+| `COMPLETED` | _COMPLETED/에 아카이브됨 | push merge (Main Claude가 DONE 일괄 처리) |
 
-- WORK-LIST.md에는 `IN_PROGRESS` 행만 존재 — COMPLETED 행 없음
+규칙:
 - `LAST_WORK_ID` 헤더는 지금까지 생성된 최고 WORK ID를 추적
-- specifier: WORK 생성 시 IN_PROGRESS 행 추가 + `LAST_WORK_ID` 갱신
-- committer: 마지막 TASK 완료 시 WORK 행을 WORK-LIST.md에서 제거하고 `works/${WORK_ID}/`를 `works/_COMPLETED/${WORK_ID}/`로 이동
+- **specifier**: WORK 생성 시 IN_PROGRESS 행 추가 + `LAST_WORK_ID` 갱신
+- **committer**: 마지막 TASK 완료 시 `IN_PROGRESS` → `DONE` 변경 + 완료일 기입 (폴더 이동 또는 행 제거 금지)
+- **Main Claude** (push 절차): DONE 상태의 WORK를 모두 `works/_COMPLETED/`로 이동 + WORK-LIST.md에서 해당 행 제거
 
 ---
 

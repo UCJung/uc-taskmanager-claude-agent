@@ -48,8 +48,8 @@ NEW_ID=$(printf "%02d" $((LAST_ID + 1)))
 echo "WORK-${NEW_ID}"
 ```
 
-When IN_PROGRESS WORK exists:
-> "There is an ongoing WORK-XX. Would you like to add TASKs to it, or create a new WORK?"
+When IN_PROGRESS or DONE WORK exists:
+> "There is an ongoing WORK-XX (IN_PROGRESS) or completed WORK-XX (DONE). Would you like to add TASKs to it, or create a new WORK?"
 
 ### 3-3. Project Exploration (Discovery)
 
