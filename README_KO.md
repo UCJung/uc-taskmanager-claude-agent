@@ -524,16 +524,18 @@ specifier가 `works/WORK-LIST.md`를 마스터 인덱스로 관리합니다:
 
 | WORK ID | Title | Status | Created |
 |---------|-------|--------|---------|
-| WORK-01 | 사용자 인증 기능 | COMPLETED | 2026-03-01 |
-| WORK-02 | 결제 기능 추가 | IN_PROGRESS | 2026-03-05 |
+| WORK-01 | 사용자 인증 기능 | DONE | 2026-03-01 | 2026-03-01 |
+| WORK-02 | 결제 기능 추가 | IN_PROGRESS | 2026-03-05 | |
 
 | 상태 | 의미 |
 |------|------|
-| `IN_PROGRESS` | TASK 진행 중 |
-| `COMPLETED` | 모든 TASK 커밋 완료 — committer가 자동으로 변경 |
+| `IN_PROGRESS` | WORK 생성됨, TASK 진행 중 |
+| `DONE` | 모든 TASK 커밋 완료 — committer가 마지막 TASK 완료 시 자동 변경 |
+| `COMPLETED` | `_COMPLETED/`로 아카이브 — push 절차에서 일괄 처리 |
 
 - **IN_PROGRESS**: 새 WORK 생성 전 specifier가 확인
-- **COMPLETED**: 마지막 TASK 완료 시 **committer가 자동으로 WORK-LIST를 COMPLETED로 변경**
+- **DONE**: 마지막 TASK 완료 시 committer가 IN_PROGRESS → DONE으로 자동 변경
+- **COMPLETED**: push 시 DONE 상태 WORK를 일괄 처리 — WORK-LIST에서 행 제거 + `works/_COMPLETED/`로 이동
 
 #### git push 절차
 
@@ -541,11 +543,12 @@ Claude에게 push를 요청하면 (`"push 해줘"`, `"git push"`), Claude가 아
 
 ```
 1. 에이전트 동기화 — agents/ 원본을 npm/agents/, plugin/agents/로 복사
-2. README.md 확인 — 변경 내용이 반영되어 있는지 확인, 누락 시 업데이트
-3. git push
+2. DONE WORK 일괄 완료 처리 — DONE 행 제거 + _COMPLETED/ 이동
+3. README.md 확인 — 변경 내용이 반영되어 있는지 확인, 누락 시 업데이트
+4. git push
 ```
 
-> **WORK-LIST COMPLETED 변경은 committer가 자동 수행**합니다 — push 시점이 아니라 마지막 TASK 완료 시점에 갱신됩니다. push 절차에서는 WORK-LIST를 별도로 변경하지 않습니다.
+> **DONE은 committer가 자동 설정** — 마지막 TASK 완료 시점. **COMPLETED는 push 시점**에 DONE WORK를 `_COMPLETED/`로 아카이브합니다.
 
 ---
 
@@ -989,8 +992,8 @@ uc-taskmanager/
 ├── CLAUDE.md                ← 프로젝트 지침 (push 절차, 언어, 에이전트 호출 규칙)
 ├── LICENSE
 ├── docs/                    ← 설계 명세
-│   ├── spec_pipeline-architecture.md       ← 파이프라인 구조 및 에이전트 역할 (v1.2)
-│   ├── spec_pipeline-architecture_v1.1.md  ← 파이프라인 아키텍처 v1.1 (보관)
+│   ├── spec_pipeline-architecture.md       ← 파이프라인 구조 및 에이전트 역할
+│   ├── spec_pipeline-architecture_v1.2.md  ← 파이프라인 아키텍처 v1.2 (Specifier 기반, 3단계 상태)
 │   ├── spec_sliding-window-context.md      ← 슬라이딩 윈도우 컨텍스트 설계
 │   ├── spec_callback-integration.md        ← 외부 시스템 콜백 연동 가이드
 │   ├── spec_SDD_with_ucagent_requirement.md ← SDD 요구사항관리 시스템 설계

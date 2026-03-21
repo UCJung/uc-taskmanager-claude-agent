@@ -543,16 +543,18 @@ The specifier maintains `works/WORK-LIST.md` as the master index:
 
 | WORK ID | Title | Status | Created |
 |---------|-------|--------|---------|
-| WORK-01 | User Authentication | COMPLETED | 2026-03-01 |
-| WORK-02 | Payment Integration | IN_PROGRESS | 2026-03-05 |
+| WORK-01 | User Authentication | DONE | 2026-03-01 | 2026-03-01 |
+| WORK-02 | Payment Integration | IN_PROGRESS | 2026-03-05 | |
 
 | Status | Meaning |
 |--------|---------|
-| `IN_PROGRESS` | TASKs in progress |
-| `COMPLETED` | All TASKs committed — set automatically by committer |
+| `IN_PROGRESS` | WORK created, TASKs in progress |
+| `DONE` | All TASKs committed — set automatically by committer on last TASK |
+| `COMPLETED` | Archived to `_COMPLETED/` — set during push procedure |
 
 - **IN_PROGRESS**: specifier checks this before creating new WORKs
-- **COMPLETED**: committer automatically updates WORK-LIST to COMPLETED when the last TASK completes
+- **DONE**: committer automatically changes IN_PROGRESS → DONE when the last TASK completes
+- **COMPLETED**: during push, DONE WORKs are batch-processed — rows removed from WORK-LIST and folders moved to `works/_COMPLETED/`
 
 #### git push Procedure
 
@@ -560,11 +562,12 @@ When you ask Claude to push (`"push this"`, `"git push"`), Claude handles the fu
 
 ```
 1. Agent sync — copy agents/ source to npm/agents/ and plugin/agents/
-2. Check README.md — update if changes are missing
-3. git push
+2. DONE WORK batch completion — remove DONE rows from WORK-LIST, move folders to _COMPLETED/
+3. Check README.md — update if changes are missing
+4. git push
 ```
 
-> **WORK-LIST COMPLETED is set by committer** when the last TASK completes — not at push time. The push procedure no longer includes a WORK-LIST update step.
+> **DONE is set by committer** when the last TASK completes. **COMPLETED** happens at push time when DONE WORKs are archived to `_COMPLETED/`.
 
 ---
 
@@ -1028,8 +1031,8 @@ uc-taskmanager/
 ├── CLAUDE.md                ← Project-level Claude instructions (push procedure, language, agent call rules)
 ├── LICENSE
 ├── docs/                    ← Design specifications
-│   ├── spec_pipeline-architecture.md       ← Pipeline structure & agent roles (v1.2)
-│   ├── spec_pipeline-architecture_v1.1.md  ← Pipeline architecture v1.1 (archived)
+│   ├── spec_pipeline-architecture.md       ← Pipeline structure & agent roles
+│   ├── spec_pipeline-architecture_v1.2.md  ← Pipeline architecture v1.2 (Specifier-based, 3-stage status)
 │   ├── spec_sliding-window-context.md      ← Sliding window context design
 │   ├── spec_callback-integration.md        ← External system callback integration
 │   ├── spec_SDD_with_ucagent_requirement.md ← SDD requirement management system design
