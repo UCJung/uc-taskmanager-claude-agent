@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDD 통합 시스템 설계 명세 — UC TaskManager v1.4</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --bg-card: #1e293b;
+  --bg-card-hover: #263348;
+  --bg-code: #0d1117;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent2: #818cf8;
+  --accent3: #34d399;
+  --accent4: #fb923c;
+  --accent5: #f472b6;
+  --accent6: #a78bfa;
+  --border: #334155;
+  --shadow: rgba(0,0,0,0.35);
+  --success: #34d399;
+  --fail: #f87171;
+  --warn: #fbbf24;
+  --opus: #a78bfa;
+  --sonnet: #38bdf8;
+  --haiku: #34d399;
+  --direct-color: #34d399;
+  --pipeline-color: #38bdf8;
+  --full-color: #a78bfa;
+}
+[data-theme="light"] {
+  --bg: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-code: #f0f4f8;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --shadow: rgba(0,0,0,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+.header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 1.2rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+[data-theme="light"] .header {
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+}
+.header-left h1 { font-size: 1.25rem; font-weight: 700; color: var(--accent); }
+.header-left p { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.1rem; }
+.header-right { display: flex; gap: 0.6rem; align-items: center; }
+.btn-small {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+.btn-small:hover { border-color: var(--accent); color: var(--accent); }
+.nav {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  position: sticky;
+  top: 61px;
+  z-index: 99;
+}
+.nav-btn {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-muted);
+  padding: 0.75rem 1.1rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.nav-btn:hover { color: var(--text); background: var(--bg-card-hover); }
+.nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.content { padding: 2rem; max-width: 1280px; margin: 0 auto; }
+.tab-panel { display: none; animation: fadeIn 0.25s ease; }
+.tab-panel.active { display: block; }
+@keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: translateY(0); } }
+
+/* Section */
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.section-desc { color: var(--text-muted); margin-bottom: 1.8rem; font-size: 0.9rem; line-height: 1.7; }
+.subsection { margin-bottom: 2rem; }
+.subsection-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.4rem;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: all 0.2s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+/* Grid */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.2rem; }
+@media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 0.18rem 0.65rem;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+.badge-opus { background: rgba(167,139,250,0.2); color: var(--opus); }
+.badge-sonnet { background: rgba(56,189,248,0.2); color: var(--sonnet); }
+.badge-haiku { background: rgba(52,211,153,0.2); color: var(--haiku); }
+.badge-direct { background: rgba(52,211,153,0.15); color: var(--direct-color); border: 1px solid rgba(52,211,153,0.3); }
+.badge-pipeline { background: rgba(56,189,248,0.15); color: var(--pipeline-color); border: 1px solid rgba(56,189,248,0.3); }
+.badge-full { background: rgba(167,139,250,0.15); color: var(--full-color); border: 1px solid rgba(167,139,250,0.3); }
+.badge-pass { background: rgba(52,211,153,0.2); color: var(--success); }
+.badge-fail { background: rgba(248,113,113,0.2); color: var(--fail); }
+.badge-warn { background: rgba(251,191,36,0.2); color: var(--warn); }
+
+/* Table */
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.8rem 0 1.2rem;
+  font-size: 0.83rem;
+}
+.tbl th, .tbl td {
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+.tbl th {
+  background: rgba(56,189,248,0.08);
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.tbl tr:hover td { background: var(--bg-card-hover); }
+.tbl td:first-child { font-weight: 500; white-space: nowrap; }
+
+/* Code */
+.code-block {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.8rem;
+  line-height: 1.75;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--text-muted);
+  margin: 0.8rem 0;
+}
+.code-block .kw { color: var(--accent); }
+.code-block .str { color: var(--accent3); }
+.code-block .cm { color: #64748b; font-style: italic; }
+.code-block .hl { color: var(--accent4); }
+
+/* Flow Diagrams */
+.flow-h {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  padding: 1rem 0;
+  justify-content: center;
+}
+.flow-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+.flow-box {
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-align: center;
+  border: 2px solid;
+  min-width: 90px;
+  transition: all 0.2s;
+  cursor: default;
+}
+.flow-box:hover { transform: scale(1.06); }
+.flow-box.opus { border-color: var(--opus); color: var(--opus); background: rgba(167,139,250,0.1); }
+.flow-box.sonnet { border-color: var(--sonnet); color: var(--sonnet); background: rgba(56,189,248,0.1); }
+.flow-box.haiku { border-color: var(--haiku); color: var(--haiku); background: rgba(52,211,153,0.1); }
+.flow-box.neutral { border-color: var(--border); color: var(--text-muted); background: var(--bg-card); }
+.flow-box.direct-box { border-color: var(--direct-color); color: var(--direct-color); background: rgba(52,211,153,0.1); }
+.flow-box.pipeline-box { border-color: var(--pipeline-color); color: var(--pipeline-color); background: rgba(56,189,248,0.1); }
+.flow-box.full-box { border-color: var(--full-color); color: var(--full-color); background: rgba(167,139,250,0.1); }
+.flow-label { font-size: 0.68rem; color: var(--text-muted); max-width: 100px; text-align: center; }
+.flow-arrow {
+  width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.flow-arrow.down { flex-direction: column; width: auto; height: 28px; font-size: 1.1rem; padding: 0.2rem 0; }
+
+/* Collapsible */
+.collapsible-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.9rem 1.2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s;
+}
+.collapsible-header:hover { border-color: var(--accent); background: var(--bg-card-hover); }
+.collapsible-header h3 { font-size: 0.95rem; font-weight: 600; }
+.collapsible-toggle { font-size: 1.1rem; color: var(--text-muted); transition: transform 0.2s; }
+.collapsible-toggle.open { transform: rotate(90deg); }
+.collapsible-body {
+  display: none;
+  padding: 1.2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  margin-bottom: 1rem;
+}
+.collapsible-body.open { display: block; animation: fadeIn 0.2s ease; }
+
+/* Agent Card */
+.agent-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.2rem;
+  transition: all 0.25s;
+  cursor: default;
+}
+.agent-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px var(--shadow); }
+.agent-card .agent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.8rem;
+}
+.agent-card .agent-name { font-size: 1rem; font-weight: 700; }
+.agent-card .agent-role { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem; }
+.agent-card .agent-tools { margin-top: 0.8rem; font-size: 0.75rem; color: var(--text-muted); }
+.agent-card .agent-tools strong { color: var(--text); }
+
+/* Mode comparison */
+.mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+@media (max-width: 800px) { .mode-grid { grid-template-columns: 1fr; } }
+.mode-card {
+  border-radius: 12px;
+  padding: 1.3rem;
+  border: 2px solid;
+  transition: all 0.25s;
+}
+.mode-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px var(--shadow); }
+.mode-card.direct { border-color: var(--direct-color); background: rgba(52,211,153,0.05); }
+.mode-card.pipeline { border-color: var(--pipeline-color); background: rgba(56,189,248,0.05); }
+.mode-card.full { border-color: var(--full-color); background: rgba(167,139,250,0.05); }
+.mode-card .mode-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+.mode-card.direct .mode-title { color: var(--direct-color); }
+.mode-card.pipeline .mode-title { color: var(--pipeline-color); }
+.mode-card.full .mode-title { color: var(--full-color); }
+.mode-card .mode-desc { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem; }
+.mode-card .mode-flow { font-size: 0.78rem; font-family: monospace; background: rgba(0,0,0,0.2); padding: 0.6rem 0.8rem; border-radius: 6px; color: var(--text-muted); }
+
+/* Window pills */
+.window-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 99px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid;
+}
+.window-pill.full { border-color: var(--success); color: var(--success); background: rgba(52,211,153,0.1); }
+.window-pill.summary { border-color: var(--warn); color: var(--warn); background: rgba(251,191,36,0.1); }
+.window-pill.drop { border-color: var(--fail); color: var(--fail); background: rgba(248,113,113,0.1); }
+
+/* Info box */
+.info-box {
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  margin: 1rem 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.info-box.info { background: rgba(56,189,248,0.08); border-left: 3px solid var(--accent); }
+.info-box.warn { background: rgba(251,191,36,0.08); border-left: 3px solid var(--warn); }
+.info-box.success { background: rgba(52,211,153,0.08); border-left: 3px solid var(--success); }
+.info-box.danger { background: rgba(248,113,113,0.08); border-left: 3px solid var(--fail); }
+
+/* Status dot */
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot-green { background: var(--success); }
+.dot-blue { background: var(--accent); }
+.dot-purple { background: var(--accent6); }
+.dot-orange { background: var(--accent4); }
+.dot-red { background: var(--fail); }
+.dot-yellow { background: var(--warn); }
+
+/* Retry level */
+.retry-level {
+  border-radius: 12px;
+  padding: 1.2rem;
+  border: 1px solid var(--border);
+  margin-bottom: 1rem;
+  position: relative;
+}
+.retry-level-num {
+  position: absolute;
+  top: -12px;
+  left: 16px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.6rem;
+  border-radius: 99px;
+}
+.retry-level.l1 { border-color: var(--warn); }
+.retry-level.l1 .retry-level-num { background: var(--warn); color: #000; }
+.retry-level.l2 { border-color: var(--accent4); }
+.retry-level.l2 .retry-level-num { background: var(--accent4); color: #000; }
+.retry-level.l3 { border-color: var(--accent2); }
+.retry-level.l3 .retry-level-num { background: var(--accent2); color: #fff; }
+.retry-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; }
+.retry-desc { font-size: 0.82rem; color: var(--text-muted); }
+
+/* State machine */
+.state-machine {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 1rem;
+  justify-content: center;
+}
+.state-node {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 2px solid;
+}
+.state-node.pending { border-color: var(--text-muted); color: var(--text-muted); }
+.state-node.running { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,0.08); }
+.state-node.done { border-color: var(--success); color: var(--success); background: rgba(52,211,153,0.08); }
+.state-node.failed { border-color: var(--fail); color: var(--fail); background: rgba(248,113,113,0.08); }
+.state-node.aborted { border-color: var(--warn); color: var(--warn); background: rgba(251,191,36,0.08); }
+.state-arrow { color: var(--text-muted); font-size: 1rem; }
+
+/* File structure */
+.file-tree {
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.8rem;
+  line-height: 1.8;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  color: var(--text-muted);
+}
+.file-tree .dir { color: var(--accent); }
+.file-tree .file { color: var(--text); }
+.file-tree .note { color: var(--text-muted); font-style: italic; }
+
+/* Version tag */
+.ver-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(56,189,248,0.15);
+  color: var(--accent);
+  letter-spacing: 0.3px;
+}
+
+/* Timeline */
+.timeline { position: relative; padding-left: 2rem; }
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+.timeline-item { position: relative; margin-bottom: 1.2rem; }
+.timeline-dot {
+  position: absolute;
+  left: -1.75rem;
+  top: 0.3rem;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-card);
+}
+.timeline-item .tl-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.3rem; }
+.timeline-item .tl-desc { font-size: 0.8rem; color: var(--text-muted); }
+
+/* Callback box */
+.callback-box {
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--border);
+  margin-bottom: 0.8rem;
+}
+.callback-box .cb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+.callback-box .cb-name { font-weight: 700; font-size: 0.9rem; }
+.callback-box .cb-agent { font-size: 0.75rem; color: var(--text-muted); }
+.callback-box .cb-payload { font-size: 0.78rem; color: var(--text-muted); font-family: monospace; }
+
+/* Cost table */
+.cost-row { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.6rem; }
+.cost-label { font-size: 0.82rem; min-width: 120px; }
+.cost-bar-bg { flex: 1; background: var(--border); border-radius: 99px; height: 8px; overflow: hidden; }
+.cost-bar { height: 8px; border-radius: 99px; transition: width 1s ease; }
+.cost-pct { font-size: 0.78rem; color: var(--text-muted); min-width: 40px; text-align: right; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>SDD 통합 시스템 설계 명세</h1>
+    <p>UC TeamSpace × UC TaskManager — v1.4.0 · 2026-03-19</p>
+  </div>
+  <div class="header-right">
+    <button class="btn-small" onclick="toggleTheme()">테마 전환</button>
+  </div>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showTab('overview')">시스템 개요</button>
+  <button class="nav-btn" onclick="showTab('agents')">에이전트</button>
+  <button class="nav-btn" onclick="showTab('execmodes')">실행 모드</button>
+  <button class="nav-btn" onclick="showTab('pipeline')">파이프라인</button>
+  <button class="nav-btn" onclick="showTab('context')">컨텍스트 핸드오프</button>
+  <button class="nav-btn" onclick="showTab('files')">파일 구조</button>
+  <button class="nav-btn" onclick="showTab('runner')">Runner</button>
+  <button class="nav-btn" onclick="showTab('backend')">백엔드</button>
+  <button class="nav-btn" onclick="showTab('reliability')">신뢰성</button>
+</nav>
+
+<div class="content">
+
+<!-- ===== TAB: 시스템 개요 ===== -->
+<div class="tab-panel active" id="tab-overview">
+  <div class="section-title">🏗 시스템 개요</div>
+  <div class="section-desc">
+    UC TeamSpace(팀 협업 플랫폼)와 UC TaskManager(Claude Code CLI 기반 자동 구현 파이프라인)가
+    Runner(scripts/runner.ts)를 통해 연결되는 3계층 통합 아키텍처다.
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">전체 시스템 연결 구조</div>
+    <div class="card">
+      <div class="flow-h" style="flex-direction:column; gap:0;">
+        <div class="flow-box neutral" style="min-width:280px; text-align:center; padding:0.8rem;">
+          uc-teamspace 프론트엔드 (React SPA)
+        </div>
+        <div class="flow-arrow down" style="display:flex;align-items:center;justify-content:center;">
+          <div style="font-size:0.7rem;color:var(--text-muted)">HTTP REST + SSE</div>
+          <div>↓</div>
+        </div>
+        <div class="flow-box neutral" style="min-width:280px; text-align:center; padding:0.8rem;">
+          uc-teamspace 백엔드 (NestJS)
+        </div>
+        <div class="flow-arrow down" style="display:flex;align-items:center;justify-content:center;">
+          <div style="font-size:0.7rem;color:var(--text-muted)">pull-based polling 5초 간격</div>
+          <div>↓</div>
+        </div>
+        <div class="flow-box sonnet" style="min-width:280px; text-align:center; padding:0.8rem;">
+          Runner (scripts/runner.ts) — 상주 daemon
+        </div>
+        <div class="flow-arrow down" style="display:flex;align-items:center;justify-content:center;">
+          <div style="font-size:0.7rem;color:var(--text-muted)">subprocess spawn</div>
+          <div>↓</div>
+        </div>
+        <div class="flow-box opus" style="min-width:280px; text-align:center; padding:0.8rem;">
+          Claude Code CLI (--output-format=stream-json)
+        </div>
+        <div class="flow-arrow down" style="display:flex;align-items:center;justify-content:center;">
+          <div style="font-size:0.7rem;color:var(--text-muted)">HTTP callback</div>
+          <div>↓</div>
+        </div>
+        <div class="flow-box full-box" style="min-width:280px; text-align:center; padding:0.8rem;">
+          uc-taskmanager WORK-PIPELINE 에이전트들
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">핵심 특징</div>
+    <div class="grid-3">
+      <div class="card">
+        <div style="font-size:1.8rem;margin-bottom:0.5rem;">🤖</div>
+        <div style="font-weight:700;margin-bottom:0.4rem;color:var(--accent)">멀티 에이전트 파이프라인</div>
+        <div style="font-size:0.82rem;color:var(--text-muted)">Router → Planner → Scheduler → Builder → Verifier → Committer. 6개 에이전트가 역할을 분담하여 요구사항을 자동 구현·검증·커밋한다.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:1.8rem;margin-bottom:0.5rem;">⚡</div>
+        <div style="font-weight:700;margin-bottom:0.4rem;color:var(--accent)">3단계 실행 모드</div>
+        <div style="font-size:0.82rem;color:var(--text-muted)">direct(Router 단독) / pipeline(B+V+C) / full(P+S+B+V+C). 복잡도에 따라 에이전트 호출 수를 최소화하여 토큰 비용을 절감한다.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:1.8rem;margin-bottom:0.5rem;">🔒</div>
+        <div style="font-weight:700;margin-bottom:0.4rem;color:var(--accent)">3중 재시도 메커니즘</div>
+        <div style="font-size:0.82rem;color:var(--text-muted)">Verifier FAIL → Builder 재시도 / Committer FAIL → 체크포인트 재개 / Runner 비정상 종료 → PROGRESS.md 기반 복구.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">버전 이력</div>
+    <table class="tbl">
+      <tr><th>버전</th><th>날짜</th><th>주요 변경</th></tr>
+      <tr><td>1.0.0</td><td>2026-03-11</td><td>초판 (코드베이스 분석 기반)</td></tr>
+      <tr><td>1.1.0</td><td>2026-03-14</td><td>runner.ts 역분석 보강 8건 (Git Push 루프, 비정상 종료 복구, 환경변수 격리, 동시성 모델 등)</td></tr>
+      <tr><td>1.2.0</td><td>2026-03-14</td><td>에이전트 프롬프트 9건 역분석 → §3 WORK-PIPELINE 대폭 확장 (슬라이딩 윈도우, Gate 메커니즘, 3중 재시도, 외부 콜백)</td></tr>
+      <tr><td>1.3.0</td><td>2026-03-14</td><td>execution-mode 속성 설계. Router 3경로 산출물 구조 통일, PLAN.md Execution-Mode 필드 추가</td></tr>
+      <tr><td><strong>1.4.0</strong></td><td>2026-03-19</td><td>현행화: 파일 경로 <code>works/</code>로 변경, TASK 파일명 프리픽스 제거, 구분자 언더스코어, Router Opus 승격, MCP 도구 추가</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">개념 요약</div>
+    <div class="info-box info">
+      <strong>핵심 개념:</strong> WORK는 하나의 요구사항(REQ)을 처리하는 작업 단위이고, TASK는 WORK를 구성하는 개별 구현 단위다.
+      모든 실행 경로에서 <code>works/WORK-NN/</code> 디렉토리 + <code>PLAN.md</code> + <code>TASK-XX_result.md</code> + COMMITTER DONE 콜백이 보장된다.
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB: 에이전트 ===== -->
+<div class="tab-panel" id="tab-agents">
+  <div class="section-title">🤖 에이전트 목록 <span class="ver-tag">v1.2 보강</span></div>
+  <div class="section-desc">
+    6개 에이전트가 역할·모델·도구 권한을 분담하여 파이프라인을 구성한다.
+    모델 선택은 역할의 추론 요구도와 호출 빈도를 기준으로 최적화되어 있다.
+  </div>
+
+  <div class="mode-grid" style="grid-template-columns:1fr 1fr 1fr; margin-bottom:2rem;">
+    <div style="background:rgba(167,139,250,0.08);border:2px solid var(--opus);border-radius:12px;padding:1rem;text-align:center;">
+      <div class="badge badge-opus" style="font-size:0.85rem;padding:0.3rem 0.9rem;">Opus</div>
+      <div style="margin-top:0.5rem;font-size:0.82rem;color:var(--text-muted)">최고 추론 능력<br>복잡도 판정·TASK 분해</div>
+    </div>
+    <div style="background:rgba(56,189,248,0.08);border:2px solid var(--sonnet);border-radius:12px;padding:1rem;text-align:center;">
+      <div class="badge badge-sonnet" style="font-size:0.85rem;padding:0.3rem 0.9rem;">Sonnet</div>
+      <div style="margin-top:0.5rem;font-size:0.82rem;color:var(--text-muted)">정확성·속도 균형<br>코드 구현 전담</div>
+    </div>
+    <div style="background:rgba(52,211,153,0.08);border:2px solid var(--haiku);border-radius:12px;padding:1rem;text-align:center;">
+      <div class="badge badge-haiku" style="font-size:0.85rem;padding:0.3rem 0.9rem;">Haiku</div>
+      <div style="margin-top:0.5rem;font-size:0.82rem;color:var(--text-muted)">최저 비용<br>규칙 기반 패턴 매칭</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="agent-card" style="border-top:3px solid var(--opus);">
+      <div class="agent-header">
+        <div>
+          <div class="agent-name">Router</div>
+          <div class="agent-role">요청 분석 · execution-mode 판정 · WORK 라우팅</div>
+        </div>
+        <span class="badge badge-opus">Opus</span>
+      </div>
+      <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.6rem;">
+        [] 태그 감지, 파일시스템 스캔으로 WORK-NN 결정, direct 모드에서 코드 수정·result.md·git commit까지 직접 수행
+      </div>
+      <div class="agent-tools">
+        <strong>도구:</strong> Read, Write, Edit, Bash, Glob, Grep, <span style="color:var(--accent4)">Task</span>, mcp__serena__*, mcp__sequential-thinking__*
+      </div>
+      <div class="agent-tools" style="margin-top:0.4rem;">
+        <strong>쓰기:</strong> WORK-LIST.md
+      </div>
+    </div>
+
+    <div class="agent-card" style="border-top:3px solid var(--opus);">
+      <div class="agent-header">
+        <div>
+          <div class="agent-name">Planner</div>
+          <div class="agent-role">WORK 분해 · TASK 파일 생성 (full 모드 전용)</div>
+        </div>
+        <span class="badge badge-opus">Opus</span>
+      </div>
+      <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.6rem;">
+        CLAUDE.md·README·package.json 탐색 후 PLAN.md + TASK-XX.md + progress 템플릿 생성. 코드 구현 없음(Write/Edit 제외).
+      </div>
+      <div class="agent-tools">
+        <strong>도구:</strong> Read, Glob, Grep, Bash, mcp__serena__*, mcp__sequential-thinking__*
+      </div>
+      <div class="agent-tools" style="margin-top:0.4rem;">
+        <strong>쓰기:</strong> works/WORK-NN/ 전체
+      </div>
+    </div>
+
+    <div class="agent-card" style="border-top:3px solid var(--haiku);">
+      <div class="agent-header">
+        <div>
+          <div class="agent-name">Scheduler</div>
+          <div class="agent-role">DAG 관리 · 콜백 보고 · 오케스트레이션 (full 모드 전용)</div>
+        </div>
+        <span class="badge badge-haiku">Haiku</span>
+      </div>
+      <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.6rem;">
+        READY TASK를 순서대로 Builder → Verifier → Committer에 dispatch. Verifier FAIL 시 Builder 재시도(최대 3회).
+      </div>
+      <div class="agent-tools">
+        <strong>도구:</strong> Read, Write, Edit, Bash, Glob, Grep, <span style="color:var(--accent4)">Task</span>
+      </div>
+      <div class="agent-tools" style="margin-top:0.4rem;">
+        <strong>쓰기:</strong> PROGRESS.md
+      </div>
+    </div>
+
+    <div class="agent-card" style="border-top:3px solid var(--sonnet);">
+      <div class="agent-header">
+        <div>
+          <div class="agent-name">Builder</div>
+          <div class="agent-role">코드 구현 · 빌드/린트 자가검증</div>
+        </div>
+        <span class="badge badge-sonnet">Sonnet</span>
+      </div>
+      <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.6rem;">
+        Serena MCP 우선 탐색 → 심볼 단위 정밀 편집 → 빌드·린트 self-check → progress.md STARTED→IN_PROGRESS→COMPLETED
+      </div>
+      <div class="agent-tools">
+        <strong>도구:</strong> Read, Write, Edit, Bash, Glob, Grep, mcp__serena__*
+      </div>
+      <div class="agent-tools" style="margin-top:0.4rem;">
+        <strong>쓰기:</strong> 소스코드 전체 + TASK-XX_progress.md
+      </div>
+    </div>
+
+    <div class="agent-card" style="border-top:3px solid var(--haiku);">
+      <div class="agent-header">
+        <div>
+          <div class="agent-name">Verifier</div>
+          <div class="agent-role">7단계 검증 — 읽기 전용</div>
+        </div>
+        <span class="badge badge-haiku">Haiku</span>
+      </div>
+      <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.6rem;">
+        Step 0: progress.md Gate 검사 → 빌드/린트/테스트/인수조건 검증. 코드 수정 도구 없음 — 검증 독립성 보장.
+      </div>
+      <div class="agent-tools">
+        <strong>도구:</strong> Read, Bash, Glob, Grep
+      </div>
+      <div class="agent-tools" style="margin-top:0.4rem;">
+        <strong>쓰기: 없음</strong> (읽기 전용)
+      </div>
+    </div>
+
+    <div class="agent-card" style="border-top:3px solid var(--haiku);">
+      <div class="agent-header">
+        <div>
+          <div class="agent-name">Committer</div>
+          <div class="agent-role">result.md 생성 · git commit · 콜백 전송</div>
+        </div>
+        <span class="badge badge-haiku">Haiku</span>
+      </div>
+      <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.6rem;">
+        Step 0: progress.md Gate 검사 → TASK-XX_result.md 생성 → git commit → 커밋 해시 백필 → TaskCallback 전송
+      </div>
+      <div class="agent-tools">
+        <strong>도구:</strong> Read, Write, Edit, Bash, Glob, Grep
+      </div>
+      <div class="agent-tools" style="margin-top:0.4rem;">
+        <strong>쓰기:</strong> TASK-XX_result.md, PROGRESS.md, git
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection" style="margin-top:2rem;">
+    <div class="subsection-title">비용 구조 (TASK 1개 기준 추정)</div>
+    <div class="card">
+      <div class="cost-row"><div class="cost-label"><span class="badge badge-opus">Opus</span> Router</div><div class="cost-bar-bg"><div class="cost-bar" style="width:20%;background:var(--opus);"></div></div><div class="cost-pct">~20%</div></div>
+      <div class="cost-row"><div class="cost-label"><span class="badge badge-opus">Opus</span> Planner</div><div class="cost-bar-bg"><div class="cost-bar" style="width:25%;background:var(--opus);"></div></div><div class="cost-pct">~25%</div></div>
+      <div class="cost-row"><div class="cost-label"><span class="badge badge-sonnet">Sonnet</span> Builder</div><div class="cost-bar-bg"><div class="cost-bar" style="width:35%;background:var(--sonnet);"></div></div><div class="cost-pct">~35%</div></div>
+      <div class="cost-row"><div class="cost-label"><span class="badge badge-haiku">Haiku</span> Verifier</div><div class="cost-bar-bg"><div class="cost-bar" style="width:8%;background:var(--haiku);"></div></div><div class="cost-pct">~8%</div></div>
+      <div class="cost-row"><div class="cost-label"><span class="badge badge-haiku">Haiku</span> Committer</div><div class="cost-bar-bg"><div class="cost-bar" style="width:4%;background:var(--haiku);"></div></div><div class="cost-pct">~4%</div></div>
+      <div class="cost-row"><div class="cost-label"><span class="badge badge-haiku">Haiku</span> Scheduler</div><div class="cost-bar-bg"><div class="cost-bar" style="width:8%;background:var(--haiku);"></div></div><div class="cost-pct">~8%</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB: 실행 모드 ===== -->
+<div class="tab-panel" id="tab-execmodes">
+  <div class="section-title">⚡ 실행 모드 (execution-mode) <span class="ver-tag">v1.3 재설계</span></div>
+  <div class="section-desc">
+    3종 실행 모드로 복잡도에 따라 파이프라인 깊이를 조절한다.
+    모든 경로에서 <code>works/WORK-NN/</code> 구조 + PLAN.md + result.md + COMMITTER DONE 콜백이 보장된다.
+  </div>
+
+  <div class="mode-grid">
+    <div class="mode-card direct">
+      <div class="mode-title">direct</div>
+      <div class="mode-desc">빌드/테스트 불필요 · 텍스트 수정 · 설정 변경</div>
+      <div class="mode-flow">Router 단독
+서브에이전트 없음
+코드 수정 + result.md
++ git commit 직접 수행</div>
+      <div style="margin-top:0.8rem;font-size:0.78rem;color:var(--text-muted)">
+        에이전트 호출: <strong style="color:var(--direct-color)">3개</strong>
+      </div>
+    </div>
+    <div class="mode-card pipeline">
+      <div class="mode-title">pipeline</div>
+      <div class="mode-desc">빌드/테스트 필요 · 단일 도메인 · sequential DAG</div>
+      <div class="mode-flow">Router → Builder
+       → Verifier
+       → Committer
+(Planner/Scheduler 생략)</div>
+      <div style="margin-top:0.8rem;font-size:0.78rem;color:var(--text-muted)">
+        에이전트 호출: <strong style="color:var(--pipeline-color)">4개</strong>
+      </div>
+    </div>
+    <div class="mode-card full">
+      <div class="mode-title">full</div>
+      <div class="mode-desc">멀티도메인 / 복잡 DAG / 신규 모듈 / 5+ TASK</div>
+      <div class="mode-flow">Router → Planner
+       → Scheduler
+       → [B→V→C] × N
+(전체 파이프라인)</div>
+      <div style="margin-top:0.8rem;font-size:0.78rem;color:var(--text-muted)">
+        에이전트 호출: <strong style="color:var(--full-color)">6+개</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">판정 기준 외부화 (.agent/router_rule_config.json)</div>
+    <div class="card">
+      <div style="font-size:0.85rem;margin-bottom:0.8rem;color:var(--text-muted)">Router는 프로젝트 루트의 설정 파일에서 판정 기준을 읽는다. 파일이 없으면 내장 기본값을 사용한다.</div>
+      <div style="display:flex;flex-direction:column;gap:0.6rem;">
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <span class="badge badge-direct" style="min-width:80px;text-align:center;">direct</span>
+          <span style="font-size:0.83rem;color:var(--text-muted)"><code>build_test_required == false</code> → 빌드 불필요 판정</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <span class="badge badge-pipeline" style="min-width:80px;text-align:center;">pipeline</span>
+          <span style="font-size:0.83rem;color:var(--text-muted)"><code>single_domain + sequential DAG + max_tasks 이하</code></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <span class="badge badge-full" style="min-width:80px;text-align:center;">full</span>
+          <span style="font-size:0.83rem;color:var(--text-muted)"><code>full_conditions 중 하나라도 충족</code> (멀티도메인 / 5+ TASK 등)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">토큰 비용 비교</div>
+    <table class="tbl">
+      <tr><th>경로</th><th>v1.2 (현행)</th><th>v1.3 이후</th><th>차이</th><th>비고</th></tr>
+      <tr><td><span class="badge badge-direct">direct</span></td><td>~500 tok</td><td>~600 tok</td><td style="color:var(--warn)">+100</td><td>PLAN.md + TASK 파일 생성 비용</td></tr>
+      <tr><td><span class="badge badge-pipeline">pipeline</span></td><td>~3,000 tok</td><td>~3,200 tok</td><td style="color:var(--warn)">+200</td><td>PLAN.md + stage 콜백 대행 비용</td></tr>
+      <tr><td><span class="badge badge-full">full</span></td><td>~15,000+ tok</td><td>~15,000+ tok</td><td style="color:var(--success)">0</td><td>변경 없음</td></tr>
+    </table>
+    <div class="info-box info" style="margin-top:0.5rem;">
+      추가 비용은 PLAN.md 생성의 ~100-200 토큰. Planner(Opus) 호출 비용(~3,000-5,000 토큰)의 1/30 수준.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">에이전트별 mode 반응 규칙</div>
+    <table class="tbl">
+      <tr><th>에이전트</th><th>direct</th><th>pipeline</th><th>full</th></tr>
+      <tr>
+        <td>Router</td>
+        <td>WORK dir + PLAN.md + TASK 생성 후 <strong>직접</strong> 코드수정·commit·콜백</td>
+        <td>WORK dir + PLAN.md 생성 후 B→V→C dispatch</td>
+        <td>Planner에 dispatch</td>
+      </tr>
+      <tr>
+        <td>Planner</td>
+        <td style="color:var(--text-muted)">호출 안 됨</td>
+        <td style="color:var(--text-muted)">호출 안 됨</td>
+        <td>PLAN.md + TASK-XX.md 생성</td>
+      </tr>
+      <tr>
+        <td>Scheduler</td>
+        <td style="color:var(--text-muted)">호출 안 됨</td>
+        <td style="color:var(--text-muted)">호출 안 됨</td>
+        <td>DAG 관리 + [B→V→C]×N</td>
+      </tr>
+      <tr>
+        <td>Builder</td>
+        <td style="color:var(--text-muted)">호출 안 됨</td>
+        <td>정상 실행. progress.md 전체 생명주기</td>
+        <td>기존과 동일</td>
+      </tr>
+      <tr>
+        <td>Verifier</td>
+        <td style="color:var(--text-muted)">호출 안 됨 (self-check으로 완료)</td>
+        <td>7단계 검증 전체</td>
+        <td>기존과 동일</td>
+      </tr>
+      <tr>
+        <td>Committer</td>
+        <td style="color:var(--text-muted)">호출 안 됨 (Router가 직접 수행)</td>
+        <td>result.md 전체 포맷. COMMITTER DONE 콜백</td>
+        <td>기존과 동일</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">불변 보장 — 모든 mode에서 반드시 수행</div>
+    <div class="info-box success">
+      <table class="tbl" style="margin:0;">
+        <tr><th>불변 항목</th><th>direct</th><th>pipeline / full</th></tr>
+        <tr><td>works/WORK-NN/ 디렉토리</td><td>Router</td><td>Router / Planner</td></tr>
+        <tr><td>PLAN.md 파일</td><td>Router</td><td>Router / Planner</td></tr>
+        <tr><td>TASK-XX.md 파일명 패턴</td><td>Router</td><td>Router / Planner</td></tr>
+        <tr><td>TASK-XX_result.md 생성</td><td><strong>Router</strong></td><td><strong>Committer</strong></td></tr>
+        <tr><td>COMMITTER DONE 콜백</td><td><strong>Router</strong></td><td><strong>Committer</strong></td></tr>
+        <tr><td>WORK-LIST.md IN_PROGRESS 추가</td><td>Router</td><td>Router</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB: 파이프라인 ===== -->
+<div class="tab-panel" id="tab-pipeline">
+  <div class="section-title">🔄 WORK 파이프라인 상세 흐름</div>
+  <div class="section-desc">
+    사용자 요청 → Router → (Planner) → (Scheduler) → Builder → Verifier → Committer 순서로 실행된다.
+    각 단계별 상세 흐름을 확인할 수 있다.
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">전체 흐름 요약</div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--opus);"></div>
+        <div class="tl-title">1. 사용자 요청 수신</div>
+        <div class="tl-desc">"[기능추가] 새 기능 요청" — [] 태그 또는 자연어 요청</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--opus);"></div>
+        <div class="tl-title">2. Router: execution-mode 판정</div>
+        <div class="tl-desc">[] 태그 감지 → 파일시스템 스캔으로 WORK-NN 결정 → WORK-LIST.md IN_PROGRESS 추가 → direct/pipeline/full 판정 → .agent/router_rule_config.json 참조</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--opus);"></div>
+        <div class="tl-title">3. Planner (full 모드만)</div>
+        <div class="tl-desc">CLAUDE.md·README·package.json 탐색 → PLAN.md 작성 (Execution-Mode: full) → TASK-XX.md 생성 → TASK-XX_progress.md 템플릿 생성 → 사용자 승인 요청</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--haiku);"></div>
+        <div class="tl-title">4a. Builder dispatch</div>
+        <div class="tl-desc">Serena MCP 우선 탐색 → 코드 구현 → 빌드/린트 자가검증 → progress.md STARTED→IN_PROGRESS→COMPLETED → &lt;task-result&gt; XML 반환</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--haiku);"></div>
+        <div class="tl-title">4b. Verifier dispatch</div>
+        <div class="tl-desc">Step 0: progress.md Gate 검사 → 7단계 검증 (빌드/린트/테스트/인수조건) → FAIL 시 Builder 재시도 (최대 3회)</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--haiku);"></div>
+        <div class="tl-title">4c. Committer dispatch</div>
+        <div class="tl-desc">Step 0: progress.md Gate 검사 → TASK-XX_result.md 생성 → PROGRESS.md 업데이트 → git add -A && git commit → 커밋 해시 백필 → TaskCallback 전송 → 다음 READY TASK 보고</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--success);"></div>
+        <div class="tl-title">5. 완료</div>
+        <div class="tl-desc">모든 TASK 완료 → "WORK-NN 완료!" → 사용자가 "push 해줘" 요청 시 git push (Runner pollGitPush() 자동 처리)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">XML 통신 스키마 <span class="ver-tag">v1.3 보강</span></div>
+    <div class="grid-2">
+      <div>
+        <div style="font-weight:600;margin-bottom:0.6rem;font-size:0.85rem;">dispatch (Dispatcher → Receiver)</div>
+        <div class="code-block"><span class="kw">&lt;dispatch</span> <span class="hl">to</span>=<span class="str">"{agent}"</span>
+         <span class="hl">work</span>=<span class="str">"{WORK_ID}"</span>
+         <span class="hl">task</span>=<span class="str">"{TASK_ID}"</span>
+         <span class="hl">execution-mode</span>=<span class="str">"{direct|pipeline|full}"</span><span class="kw">&gt;</span>
+  <span class="kw">&lt;context&gt;</span>
+    <span class="kw">&lt;project&gt;</span>{프로젝트명}<span class="kw">&lt;/project&gt;</span>
+    <span class="kw">&lt;language&gt;</span>{언어 코드}<span class="kw">&lt;/language&gt;</span>
+    <span class="kw">&lt;plan-file&gt;</span>works/{WORK_ID}/PLAN.md<span class="kw">&lt;/plan-file&gt;</span>
+  <span class="kw">&lt;/context&gt;</span>
+  <span class="kw">&lt;task-spec&gt;</span>
+    <span class="kw">&lt;file&gt;</span>{TASK 파일 경로}<span class="kw">&lt;/file&gt;</span>
+    <span class="kw">&lt;title&gt;</span>{TASK 제목}<span class="kw">&lt;/title&gt;</span>
+    <span class="kw">&lt;action&gt;</span>implement|verify|commit<span class="kw">&lt;/action&gt;</span>
+  <span class="kw">&lt;/task-spec&gt;</span>
+  <span class="kw">&lt;previous-results&gt;</span>...handoff...<span class="kw">&lt;/previous-results&gt;</span>
+<span class="kw">&lt;/dispatch&gt;</span></div>
+      </div>
+      <div>
+        <div style="font-weight:600;margin-bottom:0.6rem;font-size:0.85rem;">task-result (Receiver → Dispatcher)</div>
+        <div class="code-block"><span class="kw">&lt;task-result</span>
+  <span class="hl">work</span>=<span class="str">"{WORK_ID}"</span>
+  <span class="hl">task</span>=<span class="str">"{TASK_ID}"</span>
+  <span class="hl">agent</span>=<span class="str">"{agent}"</span>
+  <span class="hl">status</span>=<span class="str">"{PASS|FAIL}"</span><span class="kw">&gt;</span>
+  <span class="kw">&lt;summary&gt;</span>{1-2줄 요약}<span class="kw">&lt;/summary&gt;</span>
+  <span class="kw">&lt;files-changed&gt;</span>
+    <span class="kw">&lt;file</span> <span class="hl">action</span>=<span class="str">"created"</span>
+          <span class="hl">path</span>=<span class="str">"{경로}"</span><span class="kw">&gt;</span>설명<span class="kw">&lt;/file&gt;</span>
+  <span class="kw">&lt;/files-changed&gt;</span>
+  <span class="kw">&lt;context-handoff</span>
+    <span class="hl">detail-level</span>=<span class="str">"FULL"</span><span class="kw">&gt;</span>
+    <span class="kw">&lt;what&gt;</span>...<span class="kw">&lt;/what&gt;</span>
+    <span class="kw">&lt;why&gt;</span>...<span class="kw">&lt;/why&gt;</span>
+    <span class="kw">&lt;caution&gt;</span>...<span class="kw">&lt;/caution&gt;</span>
+  <span class="kw">&lt;/context-handoff&gt;</span>
+<span class="kw">&lt;/task-result&gt;</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Dispatcher → Receiver 매핑</div>
+    <table class="tbl">
+      <tr><th>Dispatcher</th><th>Receiver</th><th>mode</th><th>설명</th></tr>
+      <tr><td>Router</td><td>(자기 자신)</td><td><span class="badge badge-direct">direct</span></td><td>서브에이전트 없음. Router가 직접 코드수정+result.md+commit+콜백</td></tr>
+      <tr><td>Router</td><td>Planner</td><td><span class="badge badge-full">full</span></td><td>복잡 WORK 계획 수립</td></tr>
+      <tr><td>Router</td><td>Builder</td><td><span class="badge badge-pipeline">pipeline</span></td><td>TASK 1개 구현 (PLAN.md 생성 후)</td></tr>
+      <tr><td>Router</td><td>Verifier</td><td><span class="badge badge-pipeline">pipeline</span></td><td>TASK 1개 검증 (Builder 완료 후)</td></tr>
+      <tr><td>Router</td><td>Committer</td><td><span class="badge badge-pipeline">pipeline</span></td><td>TASK 1개 커밋</td></tr>
+      <tr><td>Scheduler</td><td>Builder</td><td><span class="badge badge-full">full</span></td><td>TASK N개 순차 구현</td></tr>
+      <tr><td>Scheduler</td><td>Verifier</td><td><span class="badge badge-full">full</span></td><td>TASK N개 순차 검증</td></tr>
+      <tr><td>Scheduler</td><td>Committer</td><td><span class="badge badge-full">full</span></td><td>TASK N개 순차 커밋</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">cache-hint 토큰 절감</div>
+    <div class="info-box info">
+      <code>shared-prompt-sections.md</code>에 6개 공유 섹션이 정의. <code>cache_control: &#123; type: "ephemeral" &#125;</code> 마커로 캐시 히트 시 해당 섹션 토큰 비용 90% 절감.
+    </div>
+    <table class="tbl">
+      <tr><th>섹션</th><th>적용 에이전트</th><th>내용</th></tr>
+      <tr><td>output-language-rule</td><td>6개 전체</td><td>언어 해석 우선순위</td></tr>
+      <tr><td>build-commands</td><td>builder, verifier</td><td>빌드/린트/테스트 표준 명령</td></tr>
+      <tr><td>file-path-patterns</td><td>6개 전체</td><td>WORK/TASK 파일 경로 규칙</td></tr>
+      <tr><td>fs-discovery</td><td>router, planner, scheduler</td><td>파일시스템 탐색 bash 스크립트</td></tr>
+      <tr><td>task-result-xml</td><td>builder, verifier, committer</td><td>task-result XML 포맷</td></tr>
+      <tr><td>task-callbacks</td><td>builder, committer</td><td>외부 콜백 설정/실행 패턴</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ===== TAB: 컨텍스트 핸드오프 ===== -->
+<div class="tab-panel" id="tab-context">
+  <div class="section-title">🪟 슬라이딩 윈도우 컨텍스트 핸드오프 <span class="ver-tag">v1.2 신규</span></div>
+  <div class="section-desc">
+    에이전트 간 정보 전달 시 거리 기반 압축으로 TASK 수 증가에도 토큰 비용을 선형으로 유지한다.
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Detail Level 3단계</div>
+    <div class="grid-3">
+      <div class="card" style="border-top:3px solid var(--success);">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;">
+          <span class="window-pill full">FULL</span>
+          <span style="font-size:0.78rem;color:var(--text-muted)">직전 1단계</span>
+        </div>
+        <div style="font-size:0.82rem;margin-bottom:0.4rem;">4필드 모두 전달</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);">what + why + caution + incomplete</div>
+        <div style="font-size:0.78rem;color:var(--success);margin-top:0.4rem;">~200-400 토큰</div>
+      </div>
+      <div class="card" style="border-top:3px solid var(--warn);">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;">
+          <span class="window-pill summary">SUMMARY</span>
+          <span style="font-size:0.78rem;color:var(--text-muted)">2단계 전</span>
+        </div>
+        <div style="font-size:0.82rem;margin-bottom:0.4rem;">what만 1-3줄</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);">why/caution/incomplete 생략</div>
+        <div style="font-size:0.78rem;color:var(--warn);margin-top:0.4rem;">~30-60 토큰</div>
+      </div>
+      <div class="card" style="border-top:3px solid var(--fail);">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;">
+          <span class="window-pill drop">DROP</span>
+          <span style="font-size:0.78rem;color:var(--text-muted)">3단계 이상</span>
+        </div>
+        <div style="font-size:0.82rem;margin-bottom:0.4rem;">전달하지 않음</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);">컨텍스트 완전 제거</div>
+        <div style="font-size:0.78rem;color:var(--fail);margin-top:0.4rem;">0 토큰</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">파이프라인 내부 적용 (단일 TASK)</div>
+    <div class="card">
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <div class="flow-box sonnet" style="min-width:90px;">Builder</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box haiku" style="min-width:90px;">Verifier</div>
+          <div style="margin-left:0.5rem;"><span class="window-pill full">FULL</span></div>
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-left:0.5rem;">직전 (1단계) — 4필드 모두</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <div class="flow-box sonnet" style="min-width:90px;">Builder</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box haiku" style="min-width:90px;">Committer</div>
+          <div style="margin-left:0.5rem;"><span class="window-pill summary">SUMMARY</span></div>
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-left:0.5rem;">2단계 전 — what만</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <div class="flow-box haiku" style="min-width:90px;">Verifier</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box haiku" style="min-width:90px;">Committer</div>
+          <div style="margin-left:0.5rem;"><span class="window-pill full">FULL</span></div>
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-left:0.5rem;">직전 (1단계) — 4필드 모두</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">TASK 간 의존성 적용</div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.2rem;">
+        <div class="flow-box neutral" style="min-width:80px;">TASK-00</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box neutral" style="min-width:80px;">TASK-01</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box neutral" style="min-width:80px;">TASK-02</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box sonnet" style="min-width:80px;">TASK-03</div>
+      </div>
+      <div style="font-size:0.85rem;font-weight:600;margin-bottom:0.6rem;">TASK-03 Builder 입력:</div>
+      <div style="display:flex;flex-direction:column;gap:0.4rem;">
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <div style="min-width:80px;font-size:0.8rem;color:var(--text-muted);">TASK-02</div>
+          <span class="window-pill full">FULL</span>
+          <span style="font-size:0.78rem;color:var(--text-muted);">직전 의존</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <div style="min-width:80px;font-size:0.8rem;color:var(--text-muted);">TASK-01</div>
+          <span class="window-pill summary">SUMMARY</span>
+          <span style="font-size:0.78rem;color:var(--text-muted);">2단계 전</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <div style="min-width:80px;font-size:0.8rem;color:var(--text-muted);">TASK-00</div>
+          <span class="window-pill drop">DROP</span>
+          <span style="font-size:0.78rem;color:var(--text-muted);">3단계 이상 — 전달 안 함</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">context-handoff 4필드 구조</div>
+    <table class="tbl">
+      <tr><th>필드</th><th>내용</th><th>FULL 길이</th><th>SUMMARY 길이</th></tr>
+      <tr><td>what</td><td>구체적 변경/검증 사항 요약</td><td>2-5줄</td><td>1-2줄</td></tr>
+      <tr><td>why</td><td>의사결정 근거, 기술적 이유</td><td>2-4줄</td><td>생략</td></tr>
+      <tr><td>caution</td><td>다음 에이전트 주의사항, 조건부 완료</td><td>1-3줄</td><td>생략</td></tr>
+      <tr><td>incomplete</td><td>미완료/보류 항목</td><td>1-2줄</td><td>생략</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">progress.md Gate 메커니즘 <span class="ver-tag">v1.2 신규</span></div>
+    <div class="grid-2">
+      <div>
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:0.8rem;">progress.md 생명주기</div>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:var(--opus);"></div>
+            <div class="tl-title" style="font-size:0.82rem;">Planner 생성</div>
+            <div class="tl-desc">Status: PENDING (템플릿)</div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:var(--sonnet);"></div>
+            <div class="tl-title" style="font-size:0.82rem;">Builder — STARTED</div>
+            <div class="tl-desc">타임스탬프 기록</div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:var(--sonnet);"></div>
+            <div class="tl-title" style="font-size:0.82rem;">Builder — IN_PROGRESS</div>
+            <div class="tl-desc">Files changed 목록 갱신</div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:var(--success);"></div>
+            <div class="tl-title" style="font-size:0.82rem;">Builder — COMPLETED</div>
+            <div class="tl-desc">최종 타임스탬프</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:0.8rem;">Gate 검사 조건 (Verifier Step 0 + Committer Step 0)</div>
+        <div style="display:flex;flex-direction:column;gap:0.6rem;">
+          <div class="info-box danger" style="margin:0;padding:0.8rem 1rem;">
+            <strong>progress.md 미존재</strong><br>
+            <span style="font-size:0.78rem;">CRITICAL FAIL — Builder 기록 누락</span>
+          </div>
+          <div class="info-box danger" style="margin:0;padding:0.8rem 1rem;">
+            <strong>Status ≠ COMPLETED</strong><br>
+            <span style="font-size:0.78rem;">CRITICAL FAIL — Builder 작업 미완료</span>
+          </div>
+          <div class="info-box danger" style="margin:0;padding:0.8rem 1rem;">
+            <strong>Files changed 비어있음</strong><br>
+            <span style="font-size:0.78rem;">CRITICAL FAIL — 변경 없음</span>
+          </div>
+        </div>
+        <div class="info-box warn" style="margin-top:0.8rem;">
+          Gate 실패 시 이후 검증 단계 실행 없이 즉시 FAIL 반환
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB: 파일 구조 ===== -->
+<div class="tab-panel" id="tab-files">
+  <div class="section-title">📁 파일 구조 &amp; 명명 규칙 <span class="ver-tag">v1.4 현행화</span></div>
+  <div class="section-desc">
+    v1.4부터 모든 산출물은 <code>works/WORK-NN/</code> 하위에 생성된다. 파일명 프리픽스 제거, 구분자 언더스코어 통일.
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">전체 디렉토리 구조</div>
+    <div class="grid-2">
+      <div>
+        <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.6rem;">uc-teamspace/</div>
+        <div class="file-tree"><span class="dir">uc-teamspace/</span>
+├── <span class="dir">packages/</span>
+│   ├── <span class="dir">backend/</span>
+│   │   ├── <span class="dir">src/</span>
+│   │   │   ├── <span class="dir">cli-execution/</span>    <span class="cm">← Execution 관리</span>
+│   │   │   ├── <span class="dir">requirement/</span>      <span class="cm">← 요구사항 관리</span>
+│   │   │   ├── <span class="dir">work-doc/</span>         <span class="cm">← WorkDoc/WorkTask</span>
+│   │   │   └── <span class="dir">runner/</span>           <span class="cm">← Runner API</span>
+│   │   └── <span class="file">prisma/schema.prisma</span>
+│   └── <span class="dir">frontend/</span>               <span class="cm">← React SPA</span>
+└── <span class="dir">scripts/</span>
+    └── <span class="file">runner.ts</span>               <span class="cm">← 핵심 실행 스크립트</span></div>
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.6rem;">uc-taskmanager/ (별도 레포)</div>
+        <div class="file-tree"><span class="dir">uc-taskmanager/</span>
+├── <span class="dir">agents/</span>                 <span class="cm">← 에이전트 정의 12개</span>
+│   ├── <span class="file">router.md</span>
+│   ├── <span class="file">planner.md</span>
+│   ├── <span class="file">scheduler.md</span>
+│   ├── <span class="file">builder.md</span>
+│   ├── <span class="file">verifier.md</span>
+│   ├── <span class="file">committer.md</span>
+│   ├── <span class="file">context-policy.md</span>
+│   ├── <span class="file">xml-schema.md</span>
+│   └── <span class="file">work-activity-log.md</span>
+├── <span class="dir">.agent/</span>
+│   └── <span class="file">router_rule_config.json</span>
+└── <span class="dir">works/</span>                   <span class="cm">← 유일한 산출물 경로</span>
+    ├── <span class="file">WORK-LIST.md</span>
+    └── <span class="dir">WORK-NN/</span>
+        ├── <span class="file">PLAN.md</span>
+        ├── <span class="file">PROGRESS.md</span>
+        ├── <span class="file">TASK-XX.md</span>
+        ├── <span class="file">TASK-XX_progress.md</span>
+        └── <span class="file">TASK-XX_result.md</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">PLAN.md 필수 메타데이터</div>
+    <div class="code-block"><span class="cm"># WORK-85: {WORK 제목}</span>
+
+<span class="kw">&gt; Created:</span> {date}
+<span class="kw">&gt; 요구사항:</span> {REQ-XXX | N/A}
+<span class="kw">&gt; Execution-Mode:</span> <span class="str">{direct | pipeline | full}</span>   <span class="cm">← v1.3 신규 필수 필드</span>
+<span class="kw">&gt; Project:</span> {프로젝트명}
+<span class="kw">&gt; Tech Stack:</span> {스택}
+<span class="kw">&gt; Language:</span> {언어코드}
+<span class="kw">&gt; Status:</span> PLANNED</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">파일명 규칙 (CRITICAL)</div>
+    <table class="tbl">
+      <tr><th>파일 종류</th><th>올바른 형식</th><th>잘못된 형식</th></tr>
+      <tr>
+        <td>TASK 계획</td>
+        <td><code style="color:var(--success)">TASK-01.md</code> (프리픽스 없음)</td>
+        <td><code style="color:var(--fail)">WORK-75-TASK-01.md</code>, <code style="color:var(--fail)">TASK-01-plan.md</code></td>
+      </tr>
+      <tr>
+        <td>TASK 결과</td>
+        <td><code style="color:var(--success)">TASK-01_result.md</code> (언더스코어)</td>
+        <td><code style="color:var(--fail)">TASK-01-result.md</code>, <code style="color:var(--fail)">RESULT.md</code></td>
+      </tr>
+      <tr>
+        <td>progress</td>
+        <td><code style="color:var(--success)">TASK-01_progress.md</code> (언더스코어)</td>
+        <td><code style="color:var(--fail)">TASK-01-progress.md</code>, <code style="color:var(--fail)">progress.md</code></td>
+      </tr>
+      <tr>
+        <td>PLAN 제목</td>
+        <td><code style="color:var(--success)"># WORK-80: 제목</code></td>
+        <td><code style="color:var(--fail)"># WORK-80 PLAN: 제목</code> (PLAN 키워드 금지)</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">v1.3~v1.4 폐지 항목</div>
+    <table class="tbl">
+      <tr><th>폐지 항목</th><th>대체</th><th>시점</th></tr>
+      <tr><td><code>tasks/simple-tasks/</code> 디렉토리</td><td><code>works/WORK-NN/</code></td><td>v1.3</td></tr>
+      <tr><td>S-TASK-NNNNN ID 체계</td><td>TASK-00 (단일 TASK WORK)</td><td>v1.3</td></tr>
+      <tr><td><code>tasks/multi-tasks/</code> 경로</td><td><code>works/</code></td><td>v1.4</td></tr>
+      <tr><td>WORK-NN-TASK-XX.md 프리픽스</td><td>TASK-XX.md</td><td>v1.4</td></tr>
+      <tr><td>TASK-XX-progress.md 하이픈</td><td>TASK-XX_progress.md 언더스코어</td><td>v1.4</td></tr>
+      <tr><td>TASK-XX-result.md 하이픈</td><td>TASK-XX_result.md 언더스코어</td><td>v1.4</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ===== TAB: Runner ===== -->
+<div class="tab-panel" id="tab-runner">
+  <div class="section-title">⚙️ Runner (scripts/runner.ts) <span class="ver-tag">v1.1 대폭 보강</span></div>
+  <div class="section-desc">
+    Runner는 상주 프로세스(daemon)로 동작하는 Bun 스크립트다.
+    백엔드 API를 5초 간격으로 폴링하여 대기 중인 실행을 수신하고, Claude Code CLI를 subprocess로 실행한 뒤 출력을 분석하여 백엔드에 실시간 피드백을 제공한다.
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">시작 흐름</div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--accent);"></div>
+        <div class="tl-title">Runner 시작 (bun scripts/runner.ts)</div>
+        <div class="tl-desc">.env 자동 로드 → RUNNER_API_KEY 검증 → LOG_LEVEL 설정 → SIGTERM/SIGINT 핸들러 등록</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--warn);"></div>
+        <div class="tl-title">recoverRunningExecutions() <span class="ver-tag">v1.1</span></div>
+        <div class="tl-desc">GET /api/v1/runner/running → 비정상 종료된 RUNNING execution 자동 복구</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--success);"></div>
+        <div class="tl-title">병렬 루프 2개 시작</div>
+        <div class="tl-desc">poll() 루프 (5초) + pollGitPush() 루프 (5초)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">동시성 모델 (6개 비동기 루프) <span class="ver-tag">v1.1 신규</span></div>
+    <div class="grid-2">
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:0.8rem;color:var(--accent);">main() 레벨 (2개)</div>
+        <table class="tbl" style="margin:0;">
+          <tr><th>루프</th><th>주기</th><th>역할</th></tr>
+          <tr><td>poll()</td><td>5초</td><td>실행 큐 → runClaude → 완료 보고</td></tr>
+          <tr><td>pollGitPush()</td><td>5초</td><td>Git Push Job → git push → 결과 보고</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:0.8rem;color:var(--accent);">runClaude() 레벨 (4개 — 실행 중에만 활성)</div>
+        <table class="tbl" style="margin:0;">
+          <tr><th>루프</th><th>주기</th><th>역할</th></tr>
+          <tr><td>stdout 파싱</td><td>이벤트 구동</td><td>NDJSON → stage 감지 + 토큰 추출</td></tr>
+          <tr><td>stderr 파싱</td><td>이벤트 구동</td><td>에러 로그 수집 → 백엔드 전송</td></tr>
+          <tr><td>stage 폴링</td><td>4초</td><td>GET /runner/:id/stage → currentStage 동기화</td></tr>
+          <tr><td>타임아웃</td><td>1회</td><td>setTimeout(N분) → proc.kill()</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">파이프라인 단계 감지 (이중 감지 전략) <span class="ver-tag">v1.1 보강</span></div>
+    <div class="card">
+      <div style="font-size:0.85rem;font-weight:600;margin-bottom:0.8rem;">감지 방법 (우선순위)</div>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--accent);"></div>
+          <div class="tl-title" style="font-size:0.82rem;">1순위: tool_use (Bash) command 필드 파싱</div>
+          <div class="tl-desc">curl JSON body에서 stage 추출: <code>-d '&#123;"stage": "BUILDER", "event": "START"&#125;'</code></div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--accent2);"></div>
+          <div class="tl-title" style="font-size:0.82rem;">2순위: tool_use (WebFetch/HTTP) url /callback 포함 시</div>
+          <div class="tl-desc">body/data/json 필드 파싱</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--accent3);"></div>
+          <div class="tl-title" style="font-size:0.82rem;">3순위: assistant 텍스트 패턴</div>
+          <div class="tl-desc">[PIPELINE] BUILDER START 패턴</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--warn);"></div>
+          <div class="tl-title" style="font-size:0.82rem;">4순위: 보조 감지 — 백엔드 Stage 폴링 (4초 간격)</div>
+          <div class="tl-desc">sub-agent 콜백이 outer stream에 없는 경우 대응. GET /runner/:executionId/stage</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">환경변수 격리 <span class="ver-tag">v1.1 신규</span></div>
+    <table class="tbl">
+      <tr><th>제거 변수</th><th>제거 이유</th></tr>
+      <tr><td>ANTHROPIC_API_KEY</td><td>API 크레딧 대신 claude.ai 구독 계정으로 인증하도록 강제</td></tr>
+      <tr><td>CLAUDECODE</td><td>Claude Code 세션 내부에서 중첩 실행 차단 방지 (무한 재귀 방지)</td></tr>
+    </table>
+    <div class="info-box info" style="margin-top:0.5rem;">
+      Windows에서는 추가로 <code>LANG, LC_ALL, PYTHONIOENCODING, PYTHONUTF8</code>를 UTF-8로 강제 설정
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB: 백엔드 ===== -->
+<div class="tab-panel" id="tab-backend">
+  <div class="section-title">🗄 백엔드 — Execution 생명주기</div>
+  <div class="section-desc">
+    uc-teamspace 백엔드(NestJS + Prisma)의 Execution 상태 머신, DB 스키마, API 엔드포인트를 정리한다.
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">CliExecution 상태 머신</div>
+    <div class="card">
+      <div class="state-machine">
+        <div class="state-node pending">PENDING</div>
+        <div class="state-arrow">→</div>
+        <div class="state-node running">RUNNING</div>
+        <div class="state-arrow">→</div>
+        <div class="state-node done">DONE</div>
+      </div>
+      <div class="state-machine" style="margin-top:0;">
+        <div style="width:80px;text-align:center;font-size:0.75rem;color:var(--text-muted);">↓ abort</div>
+        <div style="width:20px;"></div>
+        <div style="width:80px;text-align:center;font-size:0.75rem;color:var(--text-muted);">↓ abort / 오류</div>
+      </div>
+      <div class="state-machine">
+        <div class="state-node aborted">ABORTED</div>
+        <div style="width:20px;"></div>
+        <div class="state-node failed">FAILED</div>
+      </div>
+      <div style="font-size:0.78rem;color:var(--text-muted);text-align:center;margin-top:0.5rem;">
+        자동 타임아웃: @Cron(EVERY_5_MINUTES) — 30분 초과 시 ABORTED
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">DB 스키마 핵심 모델</div>
+    <div class="grid-2">
+      <div>
+        <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.6rem;">CliExecution</div>
+        <div class="code-block"><span class="kw">id</span>                  String   @id
+<span class="kw">requirementId</span>       String   → Requirement
+<span class="kw">status</span>              ExecutionStatus
+<span class="cm">  (PENDING|RUNNING|DONE|FAILED|ABORTED)</span>
+<span class="kw">projectRoot</span>         String
+<span class="kw">maxTurns</span>            Int      @default(50)
+<span class="kw">timeoutMinutes</span>      Int      @default(30)
+<span class="kw">prompt</span>              String   @db.Text
+<span class="kw">currentStage</span>        PipelineStage?
+<span class="kw">callbackToken</span>       String?
+<span class="kw">totalInputTokens</span>    Int      @default(0)
+<span class="kw">totalOutputTokens</span>   Int      @default(0)
+<span class="kw">totalCacheCreationTokens</span> Int @default(0)
+<span class="kw">totalCacheReadTokens</span>  Int   @default(0)</div>
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.6rem;">ExecutionStageLog / ExecutionTokenUsage</div>
+        <div class="code-block"><span class="cm">-- ExecutionStageLog</span>
+<span class="kw">id</span>          String  @id
+<span class="kw">executionId</span> String  → CliExecution
+<span class="kw">stage</span>       PipelineStage
+<span class="kw">event</span>       String  (START|DONE|FAILED)
+<span class="kw">occurredAt</span>  DateTime @default(now())
+<span class="kw">durationMs</span>  Int?
+
+<span class="cm">-- ExecutionTokenUsage</span>
+<span class="kw">id</span>                  String  @id
+<span class="kw">executionId</span>         String  → CliExecution
+<span class="kw">stage</span>               PipelineStage? <span class="cm">(null=전체)</span>
+<span class="kw">inputTokens</span>         Int  @default(0)
+<span class="kw">outputTokens</span>        Int  @default(0)
+<span class="kw">cacheCreationTokens</span> Int  @default(0)
+<span class="kw">cacheReadTokens</span>     Int  @default(0)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">외부 콜백 <span class="ver-tag">v1.2 신규</span></div>
+    <div class="callback-box" style="border-color:var(--sonnet);">
+      <div class="cb-header">
+        <div class="cb-name" style="color:var(--sonnet);">ProgressCallback</div>
+        <div class="cb-agent">Builder 호출 — 파일 변경 후 매 체크포인트</div>
+      </div>
+      <div class="cb-payload">workId, taskId, status, checklist, currentReasoning</div>
+    </div>
+    <div class="callback-box" style="border-color:var(--haiku);">
+      <div class="cb-header">
+        <div class="cb-name" style="color:var(--haiku);">TaskCallback</div>
+        <div class="cb-agent">Committer 호출 — git commit 완료 후</div>
+      </div>
+      <div class="cb-payload">workId, taskId, status, what/why/caution/incomplete, filesChanged, commitHash</div>
+    </div>
+    <div class="code-block" style="margin-top:0.8rem;"><span class="cm">## Task Callbacks (CLAUDE.md 설정)</span>
+<span class="kw">TaskCallback:</span> <span class="str">http://your-system.com/api/v1/task-result</span>
+<span class="kw">ProgressCallback:</span> <span class="str">http://your-system.com/api/v1/task-progress</span>
+<span class="kw">CallbackToken:</span> <span class="str">&lt;bearer-token&gt;</span></div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">API 엔드포인트 목록</div>
+    <div class="grid-2">
+      <div>
+        <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.5rem;">CLI Execution (/api/v1/cli-executions)</div>
+        <table class="tbl">
+          <tr><th>Method</th><th>Path</th><th>용도</th></tr>
+          <tr><td>POST</td><td>/start</td><td>실행 시작</td></tr>
+          <tr><td>POST</td><td>/:id/abort</td><td>실행 중단</td></tr>
+          <tr><td>GET</td><td>/</td><td>목록 조회</td></tr>
+          <tr><td>GET</td><td>/:id/stream</td><td>SSE 실시간 로그</td></tr>
+          <tr><td>POST</td><td>/:id/callback</td><td>파이프라인 콜백</td></tr>
+          <tr><td>GET</td><td>/:id/stage-stats</td><td>단계별 토큰 통계</td></tr>
+        </table>
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.5rem;">Runner + WorkDoc</div>
+        <table class="tbl">
+          <tr><th>Method</th><th>Path</th><th>용도</th></tr>
+          <tr><td>POST</td><td>/runner/:id/log</td><td>로그 저장</td></tr>
+          <tr><td>POST</td><td>/runner/:id/complete</td><td>완료 보고</td></tr>
+          <tr><td>POST</td><td>/runner/:id/stage-tokens</td><td>토큰 저장</td></tr>
+          <tr><td>GET</td><td>/runner/git-push-next</td><td>Git Push Job 조회</td></tr>
+          <tr><td>POST</td><td>/work-docs/</td><td>WorkDoc 생성</td></tr>
+          <tr><td>PUT</td><td>/work-docs/:docId/tasks/:taskId</td><td>WorkTask 결과 갱신</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB: 신뢰성 ===== -->
+<div class="tab-panel" id="tab-reliability">
+  <div class="section-title">🛡 신뢰성 — 3중 재시도 메커니즘 <span class="ver-tag">v1.2 신규</span></div>
+  <div class="section-desc">
+    3개의 서로 다른 재시도 경로가 중첩 방어망을 구성한다.
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">3중 방어 구조</div>
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:0.5rem;">
+        <div class="flow-box neutral" style="min-width:220px;text-align:center;">사용자 요청</div>
+        <div style="color:var(--text-muted);">↓</div>
+        <div class="flow-box pipeline-box" style="min-width:220px;text-align:center;">Level 3: Runner 프로세스 복구</div>
+        <div style="color:var(--text-muted);">↓</div>
+        <div class="flow-box full-box" style="min-width:220px;text-align:center;">Level 1/2: TASK 단위 재시도</div>
+        <div style="display:flex;gap:2rem;margin-top:0.3rem;">
+          <div style="font-size:0.75rem;color:var(--text-muted);text-align:center;">Verifier FAIL<br>→ Builder 코드 수정</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);text-align:center;">Committer FAIL<br>→ 체크포인트 이어쓰기</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="retry-level l1">
+    <div class="retry-level-num">Level 1</div>
+    <div class="retry-title" style="margin-top:0.5rem;">Verifier FAIL → Builder 재시도</div>
+    <table class="tbl" style="margin-top:0.6rem;">
+      <tr><th>항목</th><th>내용</th></tr>
+      <tr><td>트리거</td><td>Verifier가 빌드/린트/테스트/인수조건에서 FAIL 반환</td></tr>
+      <tr><td>동작</td><td>Scheduler가 failure-details를 포함하여 Builder 재디스패치</td></tr>
+      <tr><td>Builder 행동</td><td>고장난 부분만 수정 → self-check 재실행</td></tr>
+      <tr><td>최대 횟수</td><td>3회 (초기 + 재시도 2회)</td></tr>
+      <tr><td>3회 실패 시</td><td>파이프라인 중단, 사용자에게 보고</td></tr>
+    </table>
+  </div>
+
+  <div class="retry-level l2">
+    <div class="retry-level-num">Level 2</div>
+    <div class="retry-title" style="margin-top:0.5rem;">Committer FAIL → Builder 재디스패치 (progress.md 기반)</div>
+    <table class="tbl" style="margin-top:0.6rem;">
+      <tr><th>항목</th><th>내용</th></tr>
+      <tr><td>트리거</td><td>Committer Gate 검사 실패 (progress.md 미존재/미완료/빈 목록)</td></tr>
+      <tr><td>동작</td><td>Scheduler가 기존 progress.md를 포함하여 Builder 재디스패치</td></tr>
+      <tr><td>Builder 행동</td><td>progress.md에서 마지막 체크포인트 읽고 이어서 작업</td></tr>
+      <tr><td>최대 횟수</td><td>총 3회 시도 (2회 추가)</td></tr>
+      <tr><td>3회 실패 시</td><td>TASK를 FAILED로 마킹, 파이프라인 중단</td></tr>
+    </table>
+  </div>
+
+  <div class="retry-level l3">
+    <div class="retry-level-num">Level 3</div>
+    <div class="retry-title" style="margin-top:0.5rem;">Runner 프로세스 복구 (v1.1에서 기술)</div>
+    <table class="tbl" style="margin-top:0.6rem;">
+      <tr><th>항목</th><th>내용</th></tr>
+      <tr><td>트리거</td><td>Runner 프로세스 비정상 종료 (OOM, 서버 재부팅 등)</td></tr>
+      <tr><td>동작</td><td>Runner 재시작 시 <code>recoverRunningExecutions()</code> 자동 호출</td></tr>
+      <tr><td>Runner 행동</td><td>resume-claim → PROGRESS.md 기반 재개 프롬프트 → runClaude()</td></tr>
+      <tr><td>보완</td><td>백엔드 @Cron 타임아웃 스캐너 (30분 후 ABORTED)</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection" style="margin-top:2rem;">
+    <div class="subsection-title">알려진 제약사항</div>
+    <div style="display:flex;flex-direction:column;gap:0.8rem;">
+      <div class="collapsible-header" onclick="toggleCollapsible(this)">
+        <h3>13.1 WORK ID 결정 (FILESYSTEM-FIRST)</h3>
+        <span class="collapsible-toggle">›</span>
+      </div>
+      <div class="collapsible-body">
+        파일시스템 스캔으로 현재 최대 WORK-NN을 읽고, WORK-LIST.md와 교차 검증하여 다음 ID를 결정한다. 두 소스가 불일치하면 더 큰 값을 사용한다.
+      </div>
+
+      <div class="collapsible-header" onclick="toggleCollapsible(this)">
+        <h3>13.3 멱등성 체크 버그 (수정 완료)</h3>
+        <span class="collapsible-toggle">›</span>
+      </div>
+      <div class="collapsible-body">
+        WorkTask 등록 시 <code>findFirst</code> 로직의 버그로 중복 등록되던 문제. v1.1에서 <code>taskFile</code> 기준 unique 체크로 수정 완료.
+      </div>
+
+      <div class="collapsible-header" onclick="toggleCollapsible(this)">
+        <h3>13.11 execution-mode 후방 호환 (v1.3)</h3>
+        <span class="collapsible-toggle">›</span>
+      </div>
+      <div class="collapsible-body">
+        dispatch에 <code>execution-mode</code> 속성이 없으면 <code>full</code>로 간주한다. PLAN.md에 <code>Execution-Mode</code> 필드가 없으면 <code>full</code>로 간주한다.
+      </div>
+
+      <div class="collapsible-header" onclick="toggleCollapsible(this)">
+        <h3>13.12 direct 모드의 검증 생략 위험 (v1.3)</h3>
+        <span class="collapsible-toggle">›</span>
+      </div>
+      <div class="collapsible-body">
+        direct 모드는 Verifier를 호출하지 않으므로 7단계 검증이 생략된다. Builder self-check(빌드+린트)만으로 완료 간주. 빌드가 없는 텍스트/설정 변경에만 사용해야 한다.
+      </div>
+
+      <div class="collapsible-header" onclick="toggleCollapsible(this)">
+        <h3>13.13 파일명 패턴 후방 호환 (v1.4)</h3>
+        <span class="collapsible-toggle">›</span>
+      </div>
+      <div class="collapsible-body">
+        Runner의 <code>parseTaskFilename()</code>은 구 형식(<code>WORK-NN-TASK-XX-result.md</code>)과 신 형식(<code>TASK-XX_result.md</code>) 모두 인식한다.
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  if (html.getAttribute('data-theme') === 'light') {
+    html.removeAttribute('data-theme');
+  } else {
+    html.setAttribute('data-theme', 'light');
+  }
+}
+
+function toggleCollapsible(header) {
+  const toggle = header.querySelector('.collapsible-toggle');
+  const body = header.nextElementSibling;
+  const isOpen = body.classList.contains('open');
+  if (isOpen) {
+    body.classList.remove('open');
+    toggle.classList.remove('open');
+  } else {
+    body.classList.add('open');
+    toggle.classList.add('open');
+  }
+}
+</script>
+</body>
+</html>
