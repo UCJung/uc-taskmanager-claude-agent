@@ -34,15 +34,15 @@ Sub-agents need this path to read their reference files. Without it, they cannot
 ## Pipeline Flow
 
 1. **Call specifier agent** — analyzes the requirement, creates `works/WORK-NN/Requirement.md`, determines execution-mode (direct/pipeline/full)
-2. **Wait for user approval** of the requirement specification
+2. **⛔ STOP — Present the specifier's output summary to the user and WAIT for explicit approval.** Do NOT call the next agent until the user approves. Show what was created (Requirement.md, PLAN.md if direct mode, TASK files) and ask "Proceed?"
 3. **Follow the execution-mode** returned by specifier:
-   - `direct`: specifier handles everything, then call committer
+   - `direct`: call builder → committer
    - `pipeline`: call builder → verifier → committer in sequence
-   - `full`: call planner → scheduler → [builder → verifier → committer] × N
+   - `full`: call planner → **⛔ STOP for 2nd approval** → scheduler → [builder → verifier → committer] × N
 
 ## Auto Mode
 
-If the user's message ends with "auto" or "자동으로", skip approval steps and execute the entire pipeline automatically.
+If the user's message ends with "auto" or "자동으로", skip ALL approval steps and execute the entire pipeline automatically. This is the ONLY case where approval gates can be skipped.
 
 ## Arguments
 

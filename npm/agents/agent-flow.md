@@ -28,7 +28,7 @@
 
 ```
 1. Invoke specifier → creates Requirement.md + PLAN.md + TASK-00 + returns builder dispatch XML
-2. [1 approval] User review (integrated requirement + design)
+2. ⛔ STOP — Present summary to user and WAIT for approval (do NOT invoke builder)
 3. Invoke builder (dispatch XML as prompt) — includes self-check
 4. Invoke committer (builder result as prompt)
 ```
@@ -41,9 +41,9 @@
 
 ```
 1. Invoke specifier → creates Requirement.md + returns planner dispatch XML
-2. [Planning approval] User review (Requirement.md)
+2. ⛔ STOP — Present Requirement.md summary and WAIT for planning approval
 3. Invoke planner (dispatch XML as prompt) → creates PLAN.md + TASK-NN + determines execution-mode
-4. [Development approval] User review (PLAN.md + TASK list)
+4. ⛔ STOP — Present PLAN.md + TASK list and WAIT for development approval
 5. Invoke builder (per-TASK dispatch XML as prompt)
 6. Invoke verifier (builder result as prompt)
 7. Invoke committer (verifier result as prompt)
@@ -55,9 +55,9 @@
 
 ```
 1. Invoke specifier → creates Requirement.md + returns planner dispatch XML
-2. [Planning approval] User review (Requirement.md)
+2. ⛔ STOP — Present Requirement.md summary and WAIT for planning approval
 3. Invoke planner → PLAN.md + TASK decomposition + execution-mode: full
-4. [Development approval] User review (PLAN.md + TASK list)
+4. ⛔ STOP — Present PLAN.md + TASK list and WAIT for development approval
 5. Invoke scheduler → DAG analysis + READY TASK + returns builder dispatch XML
 6. Invoke builder (dispatch XML as prompt) → implementation
 7. Invoke verifier (builder result as prompt) → verification
@@ -104,13 +104,22 @@ Resume pipeline for a WORK that already has PLAN.md + TASKs:
 
 ---
 
-## Approval Gates
+## Approval Gates (CRITICAL)
 
-| Mode | Approvals | Timing |
-|------|:---------:|--------|
-| direct | 1 | After Specifier completes (integrated requirement + design) |
-| pipeline/full | 2 | Planning approval (Requirement.md) → Development approval (PLAN.md) |
-| auto-approve | 0 | When "proceed automatically" is explicitly stated |
+> **MUST STOP and wait for explicit user approval before invoking the next agent.**
+> Do NOT proceed until the user says "approve", "승인", "proceed", "go ahead", or equivalent.
+> The only exception is auto mode — when the user's original message contains "auto" or "자동으로".
+
+| Mode | Approvals | Timing | What to show user |
+|------|:---------:|--------|-------------------|
+| direct | 1 | After Specifier completes | Requirement.md + PLAN.md + TASK-00.md summary |
+| pipeline/full | 2 | After Specifier → After Planner | 1st: Requirement.md summary, 2nd: PLAN.md + TASK list |
+| auto-approve | 0 | — | Skip all approval gates |
+
+**How to request approval:**
+1. Present a summary of what the specifier/planner created (files, scope, execution-mode)
+2. Ask: "Proceed?" or equivalent
+3. **WAIT for user response** — do NOT invoke builder/planner until approved
 
 ---
 

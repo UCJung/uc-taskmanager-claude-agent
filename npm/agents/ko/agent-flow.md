@@ -28,7 +28,7 @@
 
 ```
 1. specifier 호출 → Requirement.md + PLAN.md + TASK-00 생성 + builder dispatch XML 반환
-2. [승인 1회] 사용자 검토 (요구사항 + 설계 통합)
+2. ⛔ STOP — 산출물 요약을 사용자에게 제시하고 승인을 기다린다 (builder 호출 금지)
 3. builder 호출 (dispatch XML을 prompt로) — self-check 포함
 4. committer 호출 (builder 결과를 prompt로)
 ```
@@ -41,9 +41,9 @@
 
 ```
 1. specifier 호출 → Requirement.md 생성 + planner dispatch XML 반환
-2. [기획 승인] 사용자 검토 (Requirement.md)
+2. ⛔ STOP — Requirement.md 요약을 제시하고 기획 승인을 기다린다
 3. planner 호출 (dispatch XML을 prompt로) → PLAN.md + TASK-NN 생성 + execution-mode 결정
-4. [개발 승인] 사용자 검토 (PLAN.md + TASK 목록)
+4. ⛔ STOP — PLAN.md + TASK 목록을 제시하고 개발 승인을 기다린다
 5. builder 호출 (TASK별 dispatch XML을 prompt로)
 6. verifier 호출 (builder 결과를 prompt로)
 7. committer 호출 (verifier 결과를 prompt로)
@@ -55,9 +55,9 @@
 
 ```
 1. specifier 호출 → Requirement.md 생성 + planner dispatch XML 반환
-2. [기획 승인] 사용자 검토 (Requirement.md)
+2. ⛔ STOP — Requirement.md 요약을 제시하고 기획 승인을 기다린다
 3. planner 호출 → PLAN.md + TASK 분해 + execution-mode: full 결정
-4. [개발 승인] 사용자 검토 (PLAN.md + TASK 목록)
+4. ⛔ STOP — PLAN.md + TASK 목록을 제시하고 개발 승인을 기다린다
 5. scheduler 호출 → DAG 분석 + READY TASK + builder dispatch XML 반환
 6. builder 호출 (dispatch XML을 prompt로) → 구현
 7. verifier 호출 (builder 결과를 prompt로) → 검증
@@ -104,13 +104,22 @@
 
 ---
 
-## 승인 게이트
+## 승인 게이트 (CRITICAL)
 
-| 모드 | 승인 횟수 | 시점 |
-|------|:---------:|------|
-| direct | 1회 | Specifier 완료 후 (요구사항 + 설계 통합) |
-| pipeline/full | 2회 | 기획 승인 (Requirement.md) → 개발 승인 (PLAN.md) |
-| 자동 승인 | 0회 | "자동으로 진행" 명시 시 |
+> **반드시 STOP하고 사용자의 명시적 승인을 기다린 후 다음 에이전트를 호출하라.**
+> 사용자가 "승인", "approve", "진행", "go ahead" 등으로 응답할 때까지 다음 단계로 넘어가지 마라.
+> 유일한 예외는 auto 모드 — 사용자의 원래 메시지에 "auto" 또는 "자동으로"가 포함된 경우.
+
+| 모드 | 승인 횟수 | 시점 | 사용자에게 보여줄 내용 |
+|------|:---------:|------|----------------------|
+| direct | 1회 | Specifier 완료 후 | Requirement.md + PLAN.md + TASK-00.md 요약 |
+| pipeline/full | 2회 | Specifier 후 → Planner 후 | 1차: Requirement.md 요약, 2차: PLAN.md + TASK 목록 |
+| 자동 승인 | 0회 | — | 모든 승인 게이트 생략 |
+
+**승인 요청 방법:**
+1. specifier/planner가 생성한 산출물 요약을 제시 (파일, 범위, execution-mode)
+2. "진행할까요?" 또는 동등한 질문
+3. **사용자 응답을 기다린다** — 승인 전까지 builder/planner를 호출하지 마라
 
 ---
 
