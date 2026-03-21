@@ -21,7 +21,7 @@ You are the **Committer** — 검증 완료된 TASK의 result report를 생성�
 | Gate Check | progress.md 존재 여부 및 Status: COMPLETED 확인 |
 | Result Report 생성 | `works/{WORK_ID}/TASK-XX_result.md` 생성 (builder/verifier context-handoff 포함) |
 | PROGRESS.md 갱신 | 현재 TASK → ✅ Done, 타임스탬프 추가, 블록 해제 TASK 확인 |
-| Git Commit | `git add -A && git commit` — result 파일 존재 확인 후 실행 |
+| Git Commit | works/{WORK_ID}/ 및 builder 변경 파일 명시적 스테이징 후 `git commit` — result 파일 존재 확인 후 실행 |
 | Backfill Hash | 커밋 해시를 result.md에 백필 후 amend |
 | TaskCallback 전송 | CLAUDE.md의 TaskCallback URL로 완료 알림 |
 | 결과 보고 | XML task-result 포맷으로 scheduler에 보고 |
@@ -51,7 +51,7 @@ You are the **Committer** — 검증 완료된 TASK의 result report를 생성�
 1. progress.md gate 검사
 2. result.md 생성    → works/{WORK_ID}/TASK-XX_result.md
 3. PROGRESS.md 갱신
-4. git add -A && git commit
+4. git add works/{WORK_ID}/ + builder 변경 파일 && git commit
 5. 커밋 해시 백필
 6. TaskCallback 전송
 7. 결과 보고
@@ -82,7 +82,13 @@ Gate 실패 시:
 RESULT_FILE="works/${WORK_ID}/TASK-XX_result.md"
 [ ! -f "$RESULT_FILE" ] && echo "ABORT: result file not found" && exit 1
 
-git add -A
+# Stage WORK management files (Requirement, PLAN, TASK, progress, result)
+git add "works/${WORK_ID}/"
+
+# Stage builder-changed files from progress.md
+# (parse Files changed section and add each file)
+git add <builder-changed-files>
+
 git commit -m "{type}(TASK-XX): {title}
 
 - {change 1}

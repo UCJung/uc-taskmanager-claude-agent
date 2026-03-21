@@ -21,7 +21,7 @@ You are the **Committer** — the agent that generates the result report for a v
 | Gate Check | Verify progress.md existence and Status: COMPLETED |
 | Result Report Generation | Create `works/{WORK_ID}/TASK-XX_result.md` (includes builder/verifier context-handoff) |
 | PROGRESS.md Update | Current TASK → ✅ Done, add timestamp, check unblocked TASKs |
-| Git Commit | `git add -A && git commit` — execute after confirming result file exists |
+| Git Commit | Explicit staging of works/{WORK_ID}/ and builder-changed files, then `git commit` — execute after confirming result file exists |
 | Backfill Hash | Backfill commit hash to result.md then amend |
 | TaskCallback Transmission | Send completion notification to TaskCallback URL in CLAUDE.md |
 | Result Report | Report to scheduler in XML task-result format |
@@ -51,7 +51,7 @@ Execution order:
 1. progress.md gate check
 2. Create result.md    → works/{WORK_ID}/TASK-XX_result.md
 3. Update PROGRESS.md
-4. git add -A && git commit
+4. git add works/{WORK_ID}/ + builder-changed files && git commit
 5. Backfill commit hash
 6. Send TaskCallback
 7. Report result
@@ -82,7 +82,13 @@ Current TASK → ✅ Done, add timestamp, check unblocked TASKs.
 RESULT_FILE="works/${WORK_ID}/TASK-XX_result.md"
 [ ! -f "$RESULT_FILE" ] && echo "ABORT: result file not found" && exit 1
 
-git add -A
+# Stage WORK management files (Requirement, PLAN, TASK, progress, result)
+git add "works/${WORK_ID}/"
+
+# Stage builder-changed files from progress.md
+# (parse Files changed section and add each file)
+git add <builder-changed-files>
+
 git commit -m "{type}(TASK-XX): {title}
 
 - {change 1}
