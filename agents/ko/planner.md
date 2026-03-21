@@ -38,11 +38,22 @@ WORK (일)          — 사용자 요청의 목표 단위
 
 **REFERENCES_DIR 결정**: 입력에서 `REFERENCES_DIR=...` 라인 또는 `<references-dir>` XML 요소를 확인. 해당 절대 경로를 사용. 없으면 기본값 `.claude/agents` 사용.
 
-| 파일 | 목적 |
-|------|------|
-| `{REFERENCES_DIR}/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md 7개 필드, TASK 포맷) |
-| `{REFERENCES_DIR}/shared-prompt-sections.md` | 공통 규칙 (TASK ID, WORK-LIST 규칙) |
-| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
+#### Reference Loading (ref-cache)
+
+1. 수신한 dispatch XML에 `<ref-cache>`가 있는지 확인한다
+2. 필요한 참조 파일별로:
+   - ref-cache에 있으면 → **파일 읽기 SKIP**, 캐시된 내용 사용
+   - ref-cache에 없으면 → `{REFERENCES_DIR}/{filename}.md`에서 읽고 ref-cache에 추가
+3. 작업 완료 시 병합된 `<ref-cache>`를 반환 dispatch XML에 포함한다
+4. **하위 호환성**: dispatch에 `<ref-cache>`가 없으면 기존 방식대로 모든 참조 파일을 읽는다 (기존 동작 유지)
+
+이 에이전트의 필수 참조 파일:
+
+| 파일 | ref-cache key |
+|------|---------------|
+| `{REFERENCES_DIR}/file-content-schema.md` | `file-content-schema` |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | `shared-prompt-sections` |
+| `{REFERENCES_DIR}/work-activity-log.md` | `work-activity-log` |
 
 ### 3-2. 프로젝트 탐색 (Discovery Process)
 
@@ -97,6 +108,8 @@ PLAN.md의 `> Execution-Mode:` 필드에 결정된 모드를 기록.
 3. 승인 시: works/{WORK-ID}/ 디렉토리 및 파일 생성
 4. 완료 보고: "{WORK-ID} 계획 생성 완료. `{WORK-ID} 파이프라인 실행해줘`로 시작하세요."
 ```
+
+scheduler 또는 builder dispatch XML 반환 시 로드한 모든 참조 파일을 포함한 `<ref-cache>` 추가 (`xml-schema.md` § 6 참조).
 
 ### 3-6. 산출물 구조
 

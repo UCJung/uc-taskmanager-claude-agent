@@ -8,10 +8,11 @@
 |------|-------|--------|--------|----------|
 | TASK-00 | xml-schema.md + agent-flow.md에 ref-cache 스키마/규칙 정의 | ✅ Done | — | — |
 | TASK-01 | en 에이전트 6개에 ref-cache Reference Loading 규칙 추가 | ✅ Done | — | — |
-| TASK-02 | ko 에이전트 6개에 ref-cache Reference Loading 규칙 추가 | 🔄 In Progress | — | — |
+| TASK-02 | ko 에이전트 6개에 ref-cache Reference Loading 규칙 추가 | ✅ Done | — | — |
 
 ## Log
 - [22:23] WORK-41 created — Planner delegation
 - [22:37] PLAN.md, TASK-00.md, TASK-01.md, TASK-02.md created
 - [22:40] TASK-00 verified ✅
 - [22:46] TASK-01 verified ✅, result report generated
+- [22:52] TASK-02 verified ✅, result report generated — WORK-41 완료
