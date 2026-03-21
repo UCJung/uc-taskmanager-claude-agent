@@ -17,6 +17,1174 @@ then automatically executes TASKs sequentially or in parallel based on dependenc
 
 Available as a **Claude Marketplace Plugin** (preparing for submission) and as an **npm CLI** (`uctm`). Install once, use `[]`-tagged requests to trigger automated multi-agent pipelines.
 
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>uc-taskmanager Pipeline Architecture</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --bg-card: #1e293b;
+  --bg-card-hover: #334155;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent2: #818cf8;
+  --accent3: #34d399;
+  --accent4: #fb923c;
+  --accent5: #f472b6;
+  --accent6: #a78bfa;
+  --border: #334155;
+  --shadow: rgba(0,0,0,0.3);
+  --tab-active: #38bdf8;
+  --node-router: #38bdf8;
+  --node-planner: #818cf8;
+  --node-scheduler: #a78bfa;
+  --node-builder: #34d399;
+  --node-verifier: #fb923c;
+  --node-committer: #f472b6;
+  --success: #34d399;
+  --fail: #f87171;
+  --warn: #fbbf24;
+}
+[data-theme="light"] {
+  --bg: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --shadow: rgba(0,0,0,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+.header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+[data-theme="light"] .header {
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+}
+.header h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.header h1 span { color: var(--text-muted); font-weight: 400; font-size: 0.85rem; margin-left: 0.5rem; }
+.theme-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+.theme-toggle:hover { border-color: var(--accent); }
+.nav {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  position: sticky;
+  top: 60px;
+  z-index: 99;
+}
+.nav-btn {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-muted);
+  padding: 0.8rem 1.2rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.nav-btn:hover { color: var(--text); background: var(--bg-card-hover); }
+.nav-btn.active { color: var(--tab-active); border-bottom-color: var(--tab-active); font-weight: 600; }
+.content { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+.tab-panel { display: none; animation: fadeIn 0.3s ease; }
+.tab-panel.active { display: block; }
+@keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+
+.section-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.section-desc {
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: all 0.2s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Agent Grid */
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.2rem;
+  margin-bottom: 2rem;
+}
+.agent-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.2rem 1.5rem;
+  border-left: 4px solid;
+  transition: all 0.3s;
+  cursor: default;
+}
+.agent-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px var(--shadow); }
+.agent-card .agent-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.agent-card .agent-role { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.6rem; }
+.agent-card .agent-level {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(56,189,248,0.15);
+  color: var(--accent);
+}
+
+/* Flow Diagrams */
+.flow-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+.flow-diagram {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  position: relative;
+  overflow-x: auto;
+}
+.flow-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.flow-badge {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.flow-nodes {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.flow-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 100px;
+}
+.flow-node-box {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: center;
+  border: 2px solid;
+  min-width: 90px;
+  transition: all 0.2s;
+}
+.flow-node-box:hover { transform: scale(1.05); }
+.flow-node-label { font-size: 0.7rem; color: var(--text-muted); max-width: 120px; text-align: center; }
+.flow-arrow {
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.flow-group {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  position: relative;
+}
+.flow-group-label {
+  position: absolute;
+  top: -10px;
+  left: 12px;
+  background: var(--bg-card);
+  padding: 0 6px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Criteria Table */
+.criteria-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+.criteria-table th, .criteria-table td {
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--border);
+  text-align: center;
+  font-size: 0.85rem;
+}
+.criteria-table th {
+  background: rgba(56,189,248,0.1);
+  font-weight: 600;
+  color: var(--accent);
+}
+.criteria-table td:first-child { text-align: left; font-weight: 500; }
+.criteria-table tr:hover td { background: var(--bg-card-hover); }
+
+/* File Tree */
+.file-tree {
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.85rem;
+  line-height: 2;
+  padding: 1.5rem;
+  background: var(--bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.file-tree .dir { color: var(--accent); font-weight: 600; }
+.file-tree .file { color: var(--text); }
+.file-tree .comment { color: var(--text-muted); font-style: italic; }
+.file-tree .indent { display: inline-block; }
+
+/* Pipeline Flow */
+.pipeline-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 1rem 0;
+}
+.pipeline-step {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 600px;
+}
+.pipeline-step-node {
+  width: 200px;
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 2px solid;
+  flex-shrink: 0;
+}
+.pipeline-step-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.pipeline-arrow-down {
+  display: flex;
+  justify-content: center;
+  padding: 0.3rem 0;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  width: 100%;
+  max-width: 600px;
+}
+
+/* DAG */
+.dag-container { position: relative; min-height: 300px; }
+.dag-svg { width: 100%; height: auto; }
+.dag-node {
+  rx: 8;
+  ry: 8;
+  stroke-width: 2;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.dag-node:hover { filter: brightness(1.2); }
+.dag-text { font-family: 'Segoe UI', sans-serif; font-weight: 600; font-size: 13px; }
+.dag-arrow { stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+
+/* Error Handling */
+.error-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.error-scenario {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  padding: 1.2rem;
+  background: var(--bg);
+  border-radius: 8px;
+  border-left: 4px solid;
+}
+.error-scenario .scenario-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.error-scenario .scenario-content { flex: 1; }
+.error-scenario .scenario-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.3rem; }
+.error-scenario .scenario-detail { font-size: 0.82rem; color: var(--text-muted); }
+.error-scenario .scenario-action {
+  margin-top: 0.5rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  display: inline-block;
+}
+
+/* XML Preview */
+.xml-block {
+  background: #0d1117;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.2rem;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  line-height: 1.8;
+  overflow-x: auto;
+  white-space: pre;
+  color: #e6edf3;
+  margin-top: 1rem;
+}
+.xml-block .tag { color: #7ee787; }
+.xml-block .attr { color: #79c0ff; }
+.xml-block .val { color: #a5d6ff; }
+.xml-block .comment { color: #8b949e; font-style: italic; }
+
+/* Invariant Table */
+.invariant-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.invariant-item {
+  padding: 0.6rem 0.8rem;
+  background: var(--bg);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  text-align: center;
+}
+.invariant-header { font-weight: 700; color: var(--accent); background: rgba(56,189,248,0.08); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header { padding: 1rem; flex-direction: column; gap: 0.5rem; }
+  .content { padding: 1rem; }
+  .agent-grid { grid-template-columns: 1fr; }
+  .flow-nodes { flex-direction: column; }
+  .flow-arrow { transform: rotate(90deg); width: auto; height: 30px; }
+  .nav { padding: 0 0.5rem; }
+  .nav-btn { padding: 0.6rem 0.8rem; font-size: 0.78rem; }
+  .pipeline-step { flex-direction: column; align-items: center; gap: 0.5rem; }
+  .invariant-grid { grid-template-columns: 1fr; }
+  .criteria-table { font-size: 0.75rem; }
+  .criteria-table th, .criteria-table td { padding: 0.4rem 0.5rem; }
+}
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="header">
+  <h1>uc-taskmanager <span>Pipeline Architecture</span></h1>
+  <button class="theme-toggle" onclick="toggleTheme()">Theme</button>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="showTab('overview')">Overview</button>
+  <button class="nav-btn" onclick="showTab('agents')">Agents</button>
+  <button class="nav-btn" onclick="showTab('modes')">Execution Modes</button>
+  <button class="nav-btn" onclick="showTab('files')">File Structure</button>
+  <button class="nav-btn" onclick="showTab('pipeline')">Task Pipeline</button>
+  <button class="nav-btn" onclick="showTab('dag')">DAG</button>
+  <button class="nav-btn" onclick="showTab('error')">Error Handling</button>
+  <button class="nav-btn" onclick="showTab('comm')">Communication</button>
+</div>
+
+<div class="content">
+
+  <!-- ==================== OVERVIEW ==================== -->
+  <div id="tab-overview" class="tab-panel active">
+    <div class="section-title">System Overview</div>
+    <div class="section-desc">
+      uc-taskmanager는 Claude Code CLI 위에서 동작하는 <strong>멀티 에이전트 작업 파이프라인 시스템</strong>이다.
+      사용자의 요청을 분석하여 복잡도에 따라 3가지 execution-mode 중 하나로 라우팅하고,
+      각 TASK를 에이전트 파이프라인으로 자동 처리한다.
+    </div>
+
+    <div class="card">
+      <div class="card-title">Core Architecture</div>
+      <div class="flow-nodes" style="padding: 1rem 0;">
+        <div class="flow-node">
+          <div class="flow-node-box" style="border-color: var(--text-muted); background: rgba(148,163,184,0.1);">User Request</div>
+          <div class="flow-node-label">[] tag detection</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node">
+          <div class="flow-node-box" style="border-color: var(--node-router); background: rgba(56,189,248,0.1); color: var(--node-router);">Router</div>
+          <div class="flow-node-label">Complexity Analysis</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node" style="border: 2px dashed var(--border); border-radius: 12px; padding: 1rem; min-width: 350px;">
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.5rem;">Execution Mode Selection</div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+            <div class="flow-node-box" style="border-color: var(--accent3); color: var(--accent3); background: rgba(52,211,153,0.1); font-size: 0.78rem; min-width: 80px;">direct</div>
+            <div class="flow-node-box" style="border-color: var(--accent4); color: var(--accent4); background: rgba(251,146,60,0.1); font-size: 0.78rem; min-width: 80px;">pipeline</div>
+            <div class="flow-node-box" style="border-color: var(--accent5); color: var(--accent5); background: rgba(244,114,182,0.1); font-size: 0.78rem; min-width: 80px;">full</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="agent-grid">
+      <div class="card" style="text-align: center;">
+        <div class="card-title" style="justify-content: center; color: var(--accent3);">direct</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">1 file, 10 lines or less<br>Router handles everything alone</div>
+      </div>
+      <div class="card" style="text-align: center;">
+        <div class="card-title" style="justify-content: center; color: var(--accent4);">pipeline</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">2-3 files, 1-2 steps<br>Router &rarr; B &rarr; V &rarr; C</div>
+      </div>
+      <div class="card" style="text-align: center;">
+        <div class="card-title" style="justify-content: center; color: var(--accent5);">full</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">4+ files, 3+ steps, dependencies<br>Router &rarr; Planner &rarr; Scheduler &rarr; [B&rarr;V&rarr;C]&times;N</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== AGENTS ==================== -->
+  <div id="tab-agents" class="tab-panel">
+    <div class="section-title">Agent Composition</div>
+    <div class="section-desc">
+      6개의 전문화된 에이전트가 파이프라인을 구성한다. 각 에이전트는 고유한 역할과 모델 레벨을 갖는다.
+    </div>
+    <div class="agent-grid">
+      <div class="agent-card" style="border-left-color: var(--node-router);">
+        <div class="agent-name" style="color: var(--node-router);">Router</div>
+        <div class="agent-role">사용자 요청 분석, execution-mode 결정 및 실행 오케스트레이터</div>
+        <span class="agent-level" style="background: rgba(56,189,248,0.15); color: var(--node-router);">Model: Medium</span>
+      </div>
+      <div class="agent-card" style="border-left-color: var(--node-planner);">
+        <div class="agent-name" style="color: var(--node-planner);">Planner</div>
+        <div class="agent-role">WORK 생성 + TASK 분해 + DAG 설계 (full mode only)</div>
+        <span class="agent-level" style="background: rgba(129,140,248,0.15); color: var(--node-planner);">Model: High</span>
+      </div>
+      <div class="agent-card" style="border-left-color: var(--node-scheduler);">
+        <div class="agent-name" style="color: var(--node-scheduler);">Scheduler</div>
+        <div class="agent-role">DAG 관리 + 파이프라인 실행 오케스트레이터 (full mode only)</div>
+        <span class="agent-level" style="background: rgba(167,139,250,0.15); color: var(--node-scheduler);">Model: Medium</span>
+      </div>
+      <div class="agent-card" style="border-left-color: var(--node-builder);">
+        <div class="agent-name" style="color: var(--node-builder);">Builder</div>
+        <div class="agent-role">TASK 실제 구현 - 파일 생성, 수정, 설정 변경</div>
+        <span class="agent-level" style="background: rgba(52,211,153,0.15); color: var(--node-builder);">Model: High</span>
+      </div>
+      <div class="agent-card" style="border-left-color: var(--node-verifier);">
+        <div class="agent-name" style="color: var(--node-verifier);">Verifier</div>
+        <div class="agent-role">구현 결과 검증 - Acceptance Criteria 확인</div>
+        <span class="agent-level" style="background: rgba(251,146,60,0.15); color: var(--node-verifier);">Model: Medium</span>
+      </div>
+      <div class="agent-card" style="border-left-color: var(--node-committer);">
+        <div class="agent-name" style="color: var(--node-committer);">Committer</div>
+        <div class="agent-role">result.md 작성 + git commit + callback</div>
+        <span class="agent-level" style="background: rgba(244,114,182,0.15); color: var(--node-committer);">Model: Low (Cost-efficient)</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Agent Activation by Mode</div>
+      <table class="criteria-table">
+        <thead>
+          <tr>
+            <th>Agent</th>
+            <th style="color: var(--accent3);">direct</th>
+            <th style="color: var(--accent4);">pipeline</th>
+            <th style="color: var(--accent5);">full</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Router</td><td>All-in-one</td><td>PLAN + dispatch</td><td>Planner dispatch</td></tr>
+          <tr><td>Planner</td><td>--</td><td>--</td><td>PLAN.md</td></tr>
+          <tr><td>Scheduler</td><td>--</td><td>--</td><td>DAG + [B-V-C]&times;N</td></tr>
+          <tr><td>Builder</td><td>--</td><td>implement</td><td>implement</td></tr>
+          <tr><td>Verifier</td><td>--</td><td>verify</td><td>verify</td></tr>
+          <tr><td>Committer</td><td>--</td><td>result + commit</td><td>result + commit</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ==================== EXECUTION MODES ==================== -->
+  <div id="tab-modes" class="tab-panel">
+    <div class="section-title">Execution-Mode 3 Types</div>
+    <div class="section-desc">
+      Router가 요청 복잡도를 평가하여 세 가지 모드 중 하나를 선택한다.
+      <code>.agent/router_rule_config.json</code>으로 프로젝트별 커스터마이즈 가능.
+    </div>
+
+    <div class="flow-container">
+      <!-- Direct -->
+      <div class="flow-diagram" style="border-left: 4px solid var(--accent3);">
+        <div class="flow-title">
+          <span class="flow-badge" style="background: rgba(52,211,153,0.15); color: var(--accent3);">direct</span>
+          Trivial: 1 file, 10 lines or less
+        </div>
+        <div class="flow-nodes">
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color: var(--node-router); background: rgba(56,189,248,0.1); color: var(--node-router);">Router</div>
+            <div class="flow-node-label">WORK file creation</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color: var(--node-router); background: rgba(56,189,248,0.1); color: var(--node-router);">Router</div>
+            <div class="flow-node-label">Code modification</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color: var(--node-router); background: rgba(56,189,248,0.1); color: var(--node-router);">Router</div>
+            <div class="flow-node-label">Self-check</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color: var(--node-router); background: rgba(56,189,248,0.1); color: var(--node-router);">Router</div>
+            <div class="flow-node-label">result.md + commit</div>
+          </div>
+        </div>
+        <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
+          No sub-agent invocation. Session init cost (~12,500 tokens) eliminated.
+        </div>
+      </div>
+
+      <!-- Pipeline -->
+      <div class="flow-diagram" style="border-left: 4px solid var(--accent4);">
+        <div class="flow-title">
+          <span class="flow-badge" style="background: rgba(251,146,60,0.15); color: var(--accent4);">pipeline</span>
+          Simple: 2-3 files, 1-2 steps
+        </div>
+        <div class="flow-nodes">
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color: var(--node-router); background: rgba(56,189,248,0.1); color: var(--node-router);">Router</div>
+            <div class="flow-node-label">PLAN creation</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color: var(--node-builder); background: rgba(52,211,153,0.1); color: var(--node-builder);">Builder</div>
+            <div class="flow-node-label">Implementation</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color: var(--node-verifier); background: rgba(251,146,60,0.1); color: var(--node-verifier);">Verifier</div>
+            <div class="flow-node-label">Verification</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color: var(--node-committer); background: rgba(244,114,182,0.1); color: var(--node-committer);">Committer</div>
+            <div class="flow-node-label">result.md + commit</div>
+          </div>
+        </div>
+        <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
+          Router acts as stage callback proxy (BUILDER/VERIFIER/COMMITTER START/DONE).
+        </div>
+      </div>
+
+      <!-- Full -->
+      <div class="flow-diagram" style="border-left: 4px solid var(--accent5);">
+        <div class="flow-title">
+          <span class="flow-badge" style="background: rgba(244,114,182,0.15); color: var(--accent5);">full</span>
+          Complex: 4+ files, 3+ steps, dependencies
+        </div>
+        <div class="flow-nodes">
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color: var(--node-router); background: rgba(56,189,248,0.1); color: var(--node-router);">Router</div>
+            <div class="flow-node-label">Dispatch</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color: var(--node-planner); background: rgba(129,140,248,0.1); color: var(--node-planner);">Planner</div>
+            <div class="flow-node-label">PLAN + DAG</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node">
+            <div class="flow-node-box" style="border-color: var(--node-scheduler); background: rgba(167,139,250,0.1); color: var(--node-scheduler);">Scheduler</div>
+            <div class="flow-node-label">DAG Orchestration</div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node" style="border: 2px dashed var(--border); border-radius: 12px; padding: 0.8rem; position: relative;">
+            <div style="position: absolute; top: -10px; left: 12px; background: var(--bg-card); padding: 0 6px; font-size: 0.7rem; color: var(--text-muted);">&times; N tasks</div>
+            <div style="display: flex; align-items: center; gap: 0;">
+              <div class="flow-node">
+                <div class="flow-node-box" style="border-color: var(--node-builder); background: rgba(52,211,153,0.1); color: var(--node-builder); font-size: 0.75rem; min-width: 70px;">B</div>
+              </div>
+              <div class="flow-arrow" style="width: 24px; font-size: 0.9rem;">&rarr;</div>
+              <div class="flow-node">
+                <div class="flow-node-box" style="border-color: var(--node-verifier); background: rgba(251,146,60,0.1); color: var(--node-verifier); font-size: 0.75rem; min-width: 70px;">V</div>
+              </div>
+              <div class="flow-arrow" style="width: 24px; font-size: 0.9rem;">&rarr;</div>
+              <div class="flow-node">
+                <div class="flow-node-box" style="border-color: var(--node-committer); background: rgba(244,114,182,0.1); color: var(--node-committer); font-size: 0.75rem; min-width: 70px;">C</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
+          Default: User approval required after planning before builder phase.
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 2rem;">
+      <div class="card-title">Routing Criteria Table</div>
+      <table class="criteria-table">
+        <thead>
+          <tr>
+            <th>Criteria</th>
+            <th style="color: var(--accent3);">direct</th>
+            <th style="color: var(--accent4);">pipeline</th>
+            <th style="color: var(--accent5);">full</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Modified Files</td><td>1</td><td>2-3</td><td>4+</td></tr>
+          <tr><td>Changed Lines</td><td>&le;10</td><td>&gt;10</td><td>--</td></tr>
+          <tr><td>Scope</td><td>Single edit</td><td>Single module</td><td>Multiple modules</td></tr>
+          <tr><td>DB Schema Change</td><td>None</td><td>None</td><td>Yes</td></tr>
+          <tr><td>TASK Dependencies</td><td>None</td><td>None</td><td>Sequential/Parallel</td></tr>
+          <tr><td>Expected Steps</td><td>1</td><td>1-2</td><td>3+</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ==================== FILE STRUCTURE ==================== -->
+  <div id="tab-files" class="tab-panel">
+    <div class="section-title">WORK / TASK File Structure</div>
+    <div class="section-desc">
+      모든 execution-mode에서 동일한 파일 구조를 사용한다 (invariant guarantee).
+    </div>
+
+    <div class="card">
+      <div class="card-title">Directory Layout</div>
+      <div class="file-tree">
+<span class="dir">works/</span>
+  <span class="file">WORK-LIST.md</span>  <span class="comment">-- All WORK list (IN_PROGRESS / COMPLETED)</span>
+  <span class="dir">WORK-NN/</span>
+    <span class="file">PLAN.md</span>             <span class="comment">-- WORK overview + DAG (mini or full)</span>
+    <span class="file">PROGRESS.md</span>          <span class="comment">-- Scheduler progress state (full mode only)</span>
+    <span class="file">TASK-XX.md</span>            <span class="comment">-- TASK specification (no WORK prefix)</span>
+    <span class="file">TASK-XX_progress.md</span>   <span class="comment">-- Real-time checkpoint (builder/router)</span>
+    <span class="file">TASK-XX_result.md</span>     <span class="comment">-- Completion report (committer/router)</span>
+    <span class="file">work_WORK-NN.log</span>      <span class="comment">-- Activity log</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Invariant Guarantee</div>
+      <div class="section-desc" style="margin-bottom: 0.5rem;">Mode-independent mandatory creation/dispatch items:</div>
+      <div class="invariant-grid">
+        <div class="invariant-item invariant-header">Item</div>
+        <div class="invariant-item invariant-header">direct</div>
+        <div class="invariant-item invariant-header">pipeline / full</div>
+
+        <div class="invariant-item">works/WORK-NN/ directory</div>
+        <div class="invariant-item">Router</div>
+        <div class="invariant-item">Router / Planner</div>
+
+        <div class="invariant-item">PLAN.md</div>
+        <div class="invariant-item">Router</div>
+        <div class="invariant-item">Router / Planner</div>
+
+        <div class="invariant-item">TASK-XX.md</div>
+        <div class="invariant-item">Router</div>
+        <div class="invariant-item">Router / Planner</div>
+
+        <div class="invariant-item">TASK-XX_result.md</div>
+        <div class="invariant-item" style="color: var(--node-router);">Router</div>
+        <div class="invariant-item" style="color: var(--node-committer);">Committer</div>
+
+        <div class="invariant-item">COMMITTER DONE callback</div>
+        <div class="invariant-item" style="color: var(--node-router);">Router</div>
+        <div class="invariant-item" style="color: var(--node-committer);">Committer</div>
+
+        <div class="invariant-item">WORK-LIST.md IN_PROGRESS</div>
+        <div class="invariant-item">Router</div>
+        <div class="invariant-item">Router</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">File Naming Rules</div>
+      <table class="criteria-table">
+        <thead>
+          <tr><th>Type</th><th>Format</th><th>Creator</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>WORK Plan</td><td><code>PLAN.md</code></td><td>planner / router</td></tr>
+          <tr><td>TASK Spec</td><td><code>TASK-NN.md</code></td><td>planner / router</td></tr>
+          <tr><td>TASK Progress</td><td><code>TASK-NN_progress.md</code></td><td>planner(template) / builder(update)</td></tr>
+          <tr><td>TASK Result</td><td><code>TASK-NN_result.md</code></td><td>committer / router(direct)</td></tr>
+          <tr><td>WORK Progress</td><td><code>PROGRESS.md</code></td><td>scheduler</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top: 0.8rem; padding: 0.6rem; background: rgba(248,113,113,0.1); border-radius: 6px; border-left: 3px solid var(--fail); font-size: 0.82rem;">
+        <strong>PROHIBITED:</strong> <code>WORK-NN-TASK-NN.md</code> format &mdash; <code>parseTaskFilename()</code> cannot recognize it.
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TASK PIPELINE ==================== -->
+  <div id="tab-pipeline" class="tab-panel">
+    <div class="section-title">TASK Pipeline Flow</div>
+    <div class="section-desc">
+      각 TASK는 Builder &rarr; Verifier &rarr; Committer 순서로 실행된다. (pipeline / full 공통)
+    </div>
+
+    <div class="card">
+      <div class="card-title">Sequential Pipeline</div>
+      <div class="pipeline-vertical">
+        <div class="pipeline-step">
+          <div class="pipeline-step-node" style="border-color: var(--text-muted); background: rgba(148,163,184,0.1); color: var(--text-muted);">
+            Dispatcher
+          </div>
+          <div class="pipeline-step-desc">Router (pipeline) or Scheduler (full) dispatches TASK</div>
+        </div>
+        <div class="pipeline-arrow-down">&darr;</div>
+
+        <div class="pipeline-step">
+          <div class="pipeline-step-node" style="border-color: var(--node-builder); background: rgba(52,211,153,0.1); color: var(--node-builder);">
+            [1] Builder
+          </div>
+          <div class="pipeline-step-desc">
+            Implementation execution<br>
+            progress.md real-time recording<br>
+            context-handoff generation &rarr; return
+          </div>
+        </div>
+        <div class="pipeline-arrow-down">&darr;</div>
+
+        <div class="pipeline-step">
+          <div class="pipeline-step-node" style="border-color: var(--node-verifier); background: rgba(251,146,60,0.1); color: var(--node-verifier);">
+            [2] Verifier
+          </div>
+          <div class="pipeline-step-desc">
+            Builder context-handoff based target verification<br>
+            Acceptance criteria check<br>
+            context-handoff generation &rarr; return
+          </div>
+        </div>
+        <div class="pipeline-arrow-down">&darr;</div>
+
+        <div class="pipeline-step">
+          <div class="pipeline-step-node" style="border-color: var(--node-committer); background: rgba(244,114,182,0.1); color: var(--node-committer);">
+            [3] Committer
+          </div>
+          <div class="pipeline-step-desc">
+            <strong>[Gate]</strong> progress.md exists + COMPLETED check<br>
+            Gate FAIL &rarr; dispatcher FAIL return &rarr; builder re-dispatch<br>
+            Gate PASS &rarr; result.md + git commit + COMMITTER DONE callback
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Committer Gate Logic</div>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem;">
+        <div style="flex: 1; min-width: 200px; padding: 1rem; border-radius: 8px; background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.3);">
+          <div style="font-weight: 600; color: var(--accent3); margin-bottom: 0.5rem;">PASS Conditions</div>
+          <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.8;">
+            1. progress.md file exists<br>
+            2. Status: COMPLETED<br>
+            3. Files changed is not empty
+          </div>
+        </div>
+        <div style="flex: 1; min-width: 200px; padding: 1rem; border-radius: 8px; background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.3);">
+          <div style="font-weight: 600; color: var(--fail); margin-bottom: 0.5rem;">FAIL Actions</div>
+          <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.8;">
+            1. Return FAIL to dispatcher<br>
+            2. Dispatcher re-dispatches builder<br>
+            3. Builder resumes from last checkpoint
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Progress Status Transitions</div>
+      <div class="flow-nodes" style="padding: 1rem 0;">
+        <div class="flow-node">
+          <div class="flow-node-box" style="border-color: var(--text-muted); background: rgba(148,163,184,0.1); color: var(--text-muted); font-size: 0.78rem;">PENDING</div>
+          <div class="flow-node-label">planner template</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node">
+          <div class="flow-node-box" style="border-color: var(--accent); background: rgba(56,189,248,0.1); color: var(--accent); font-size: 0.78rem;">STARTED</div>
+          <div class="flow-node-label">builder start</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node">
+          <div class="flow-node-box" style="border-color: var(--accent4); background: rgba(251,146,60,0.1); color: var(--accent4); font-size: 0.78rem;">IN_PROGRESS</div>
+          <div class="flow-node-label">file changes</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node">
+          <div class="flow-node-box" style="border-color: var(--accent3); background: rgba(52,211,153,0.1); color: var(--accent3); font-size: 0.78rem;">COMPLETED</div>
+          <div class="flow-node-label">done</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DAG ==================== -->
+  <div id="tab-dag" class="tab-panel">
+    <div class="section-title">DAG Dependency Management</div>
+    <div class="section-desc">
+      full 모드에서 PLAN.md에 정의된 TASK 간 의존성을 scheduler가 DAG로 관리한다.
+      Sliding Window 규칙에 따라 선행 TASK의 context-handoff를 전달한다.
+    </div>
+
+    <div class="card">
+      <div class="card-title">Example DAG</div>
+      <div style="display: flex; justify-content: center; padding: 1rem;">
+        <svg viewBox="0 0 600 320" style="max-width: 600px; width: 100%;">
+          <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+            </marker>
+          </defs>
+          <!-- TASK-00 -->
+          <rect x="230" y="20" width="140" height="44" rx="8" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="2"/>
+          <text x="300" y="47" text-anchor="middle" fill="#34d399" font-family="Segoe UI" font-weight="600" font-size="14">TASK-00</text>
+          <text x="300" y="82" text-anchor="middle" fill="#94a3b8" font-size="11">no dependency</text>
+
+          <!-- Arrows from TASK-00 -->
+          <line x1="300" y1="64" x2="300" y2="120" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+          <line x1="260" y1="64" x2="120" y2="120" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+          <line x1="340" y1="64" x2="480" y2="120" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+          <!-- TASK-01 -->
+          <rect x="230" y="120" width="140" height="44" rx="8" fill="rgba(56,189,248,0.15)" stroke="#38bdf8" stroke-width="2"/>
+          <text x="300" y="147" text-anchor="middle" fill="#38bdf8" font-family="Segoe UI" font-weight="600" font-size="14">TASK-01</text>
+          <text x="300" y="182" text-anchor="middle" fill="#94a3b8" font-size="11">depends: TASK-00</text>
+
+          <!-- TASK-03 (parallel) -->
+          <rect x="50" y="120" width="140" height="44" rx="8" fill="rgba(251,146,60,0.15)" stroke="#fb923c" stroke-width="2"/>
+          <text x="120" y="147" text-anchor="middle" fill="#fb923c" font-family="Segoe UI" font-weight="600" font-size="14">TASK-03</text>
+          <text x="120" y="182" text-anchor="middle" fill="#94a3b8" font-size="11">depends: TASK-00</text>
+
+          <!-- TASK-04 (parallel) -->
+          <rect x="410" y="120" width="140" height="44" rx="8" fill="rgba(251,146,60,0.15)" stroke="#fb923c" stroke-width="2"/>
+          <text x="480" y="147" text-anchor="middle" fill="#fb923c" font-family="Segoe UI" font-weight="600" font-size="14">TASK-04</text>
+          <text x="480" y="182" text-anchor="middle" fill="#94a3b8" font-size="11">depends: TASK-00</text>
+
+          <!-- Arrow from TASK-01 to TASK-02 -->
+          <line x1="300" y1="164" x2="300" y2="220" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+          <!-- TASK-02 -->
+          <rect x="230" y="220" width="140" height="44" rx="8" fill="rgba(129,140,248,0.15)" stroke="#818cf8" stroke-width="2"/>
+          <text x="300" y="247" text-anchor="middle" fill="#818cf8" font-family="Segoe UI" font-weight="600" font-size="14">TASK-02</text>
+          <text x="300" y="282" text-anchor="middle" fill="#94a3b8" font-size="11">depends: TASK-01</text>
+
+          <!-- Parallel indicator -->
+          <rect x="40" y="105" width="520" height="70" rx="12" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,5"/>
+          <text x="565" y="145" text-anchor="end" fill="#94a3b8" font-size="10" font-style="italic"></text>
+          <text x="50" y="100" fill="#94a3b8" font-size="10">TASK-00 complete -> parallel execution possible</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Execution Order</div>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 250px;">
+          <div style="font-weight: 600; color: var(--accent3); margin-bottom: 0.5rem;">Sequential Execution</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 2;">
+            TASK-00 (no dependency) &rarr; execute immediately<br>
+            TASK-01 (depends: TASK-00) &rarr; after TASK-00<br>
+            TASK-02 (depends: TASK-01) &rarr; after TASK-01
+          </div>
+        </div>
+        <div style="flex: 1; min-width: 250px;">
+          <div style="font-weight: 600; color: var(--accent4); margin-bottom: 0.5rem;">Parallel Execution</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 2;">
+            TASK-03 (depends: TASK-00) &rarr; after TASK-00<br>
+            TASK-04 (depends: TASK-00) &rarr; after TASK-00<br>
+            TASK-03 and TASK-04 can run in parallel
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Sliding Window Context</div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.7;">
+        When executing dependent TASKs, the scheduler passes the preceding TASK's <code>context-handoff</code>
+        according to the sliding window rule. This optimizes token usage while maintaining necessary context
+        for dependent tasks. See <code>spec_sliding-window-context.md</code> for details.
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ERROR HANDLING ==================== -->
+  <div id="tab-error" class="tab-panel">
+    <div class="section-title">Abnormal Termination Handling</div>
+    <div class="section-desc">
+      Builder 세션 크래시, 작업 미완료 등 비정상 상황에 대한 자동 복구 메커니즘.
+    </div>
+
+    <div class="card">
+      <div class="error-flow">
+        <div class="error-scenario" style="border-left-color: var(--fail);">
+          <div class="scenario-icon" style="background: rgba(248,113,113,0.15); color: var(--fail);">X</div>
+          <div class="scenario-content">
+            <div class="scenario-title">Builder Session Crash</div>
+            <div class="scenario-detail">
+              <strong>Detection:</strong> Committer detects missing progress.md<br>
+              <strong>Response:</strong> Dispatcher re-dispatches builder
+            </div>
+            <div class="scenario-action" style="background: rgba(248,113,113,0.1); color: var(--fail);">
+              No progress.md &rarr; FAIL return &rarr; Builder re-dispatch
+            </div>
+          </div>
+        </div>
+
+        <div class="error-scenario" style="border-left-color: var(--warn);">
+          <div class="scenario-icon" style="background: rgba(251,191,36,0.15); color: var(--warn);">!</div>
+          <div class="scenario-content">
+            <div class="scenario-title">Builder Incomplete Work</div>
+            <div class="scenario-detail">
+              <strong>Detection:</strong> progress.md Status is not COMPLETED<br>
+              <strong>Response:</strong> Dispatcher re-dispatches builder with progress.md included
+            </div>
+            <div class="scenario-action" style="background: rgba(251,191,36,0.1); color: var(--warn);">
+              Status != COMPLETED &rarr; FAIL return &rarr; Builder re-dispatch (with checkpoint)
+            </div>
+          </div>
+        </div>
+
+        <div class="error-scenario" style="border-left-color: var(--accent5);">
+          <div class="scenario-icon" style="background: rgba(244,114,182,0.15); color: var(--accent5);">3</div>
+          <div class="scenario-content">
+            <div class="scenario-title">Retry Limit Exceeded (3 retries)</div>
+            <div class="scenario-detail">
+              <strong>Detection:</strong> Dispatcher retry counter exceeds 3<br>
+              <strong>Response:</strong> TASK marked as FAILED, pipeline halted
+            </div>
+            <div class="scenario-action" style="background: rgba(244,114,182,0.1); color: var(--accent5);">
+              Retry > 3 &rarr; TASK FAILED &rarr; Pipeline halt
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Builder Retry Protocol</div>
+      <div class="flow-nodes" style="padding: 1rem 0;">
+        <div class="flow-node">
+          <div class="flow-node-box" style="border-color: var(--accent); background: rgba(56,189,248,0.1); color: var(--accent); font-size: 0.78rem;">Read progress.md</div>
+          <div class="flow-node-label">Check last checkpoint</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node">
+          <div class="flow-node-box" style="border-color: var(--accent4); background: rgba(251,146,60,0.1); color: var(--accent4); font-size: 0.78rem;">Resume from checkpoint</div>
+          <div class="flow-node-label">Skip completed files</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node">
+          <div class="flow-node-box" style="border-color: var(--accent3); background: rgba(52,211,153,0.1); color: var(--accent3); font-size: 0.78rem;">Complete remaining</div>
+          <div class="flow-node-label">Status: COMPLETED</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node">
+          <div class="flow-node-box" style="border-color: var(--accent3); background: rgba(52,211,153,0.1); color: var(--accent3); font-size: 0.78rem;">Report</div>
+          <div class="flow-node-label">task-result XML</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== COMMUNICATION ==================== -->
+  <div id="tab-comm" class="tab-panel">
+    <div class="section-title">Agent Communication</div>
+    <div class="section-desc">
+      에이전트 간 데이터는 구조화된 XML로 전달된다.
+      dispatch (dispatcher &rarr; receiver)와 task-result (receiver &rarr; dispatcher) 두 가지 방향이 있다.
+    </div>
+
+    <div class="card">
+      <div class="card-title">Dispatch XML (Dispatcher &rarr; Agent)</div>
+      <div class="xml-block"><span class="tag">&lt;dispatch</span> <span class="attr">to</span>=<span class="val">"builder"</span> <span class="attr">work</span>=<span class="val">"WORK-NN"</span> <span class="attr">task</span>=<span class="val">"TASK-XX"</span>
+         <span class="attr">execution-mode</span>=<span class="val">"pipeline|full"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;context&gt;</span>
+    <span class="tag">&lt;project&gt;</span>uc-taskmanager<span class="tag">&lt;/project&gt;</span>
+    <span class="tag">&lt;language&gt;</span>ko<span class="tag">&lt;/language&gt;</span>
+    <span class="tag">&lt;plan-file&gt;</span>works/WORK-NN/PLAN.md<span class="tag">&lt;/plan-file&gt;</span>
+  <span class="tag">&lt;/context&gt;</span>
+  <span class="tag">&lt;task-spec&gt;</span>
+    <span class="tag">&lt;file&gt;</span>works/WORK-NN/TASK-XX.md<span class="tag">&lt;/file&gt;</span>
+    <span class="tag">&lt;title&gt;</span>TASK Title<span class="tag">&lt;/title&gt;</span>
+    <span class="tag">&lt;action&gt;</span>implement<span class="tag">&lt;/action&gt;</span>
+  <span class="tag">&lt;/task-spec&gt;</span>
+  <span class="tag">&lt;previous-results&gt;</span>
+    <span class="tag">&lt;result</span> <span class="attr">task</span>=<span class="val">"TASK-XX"</span> <span class="attr">status</span>=<span class="val">"PASS"</span><span class="tag">&gt;</span>summary<span class="tag">&lt;/result&gt;</span>
+  <span class="tag">&lt;/previous-results&gt;</span>
+<span class="tag">&lt;/dispatch&gt;</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Task Result XML (Agent &rarr; Dispatcher)</div>
+      <div class="xml-block"><span class="tag">&lt;task-result</span> <span class="attr">work</span>=<span class="val">"WORK-NN"</span> <span class="attr">task</span>=<span class="val">"TASK-XX"</span>
+              <span class="attr">agent</span>=<span class="val">"builder"</span> <span class="attr">status</span>=<span class="val">"PASS"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;summary&gt;</span>Implementation summary<span class="tag">&lt;/summary&gt;</span>
+  <span class="tag">&lt;files-changed&gt;</span>
+    <span class="tag">&lt;file</span> <span class="attr">action</span>=<span class="val">"created"</span> <span class="attr">path</span>=<span class="val">"path/to/file"</span><span class="tag">&gt;</span>description<span class="tag">&lt;/file&gt;</span>
+  <span class="tag">&lt;/files-changed&gt;</span>
+  <span class="tag">&lt;context-handoff</span> <span class="attr">from</span>=<span class="val">"builder"</span> <span class="attr">detail-level</span>=<span class="val">"FULL"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;what&gt;</span>Changes made<span class="tag">&lt;/what&gt;</span>
+    <span class="tag">&lt;why&gt;</span>Decision rationale<span class="tag">&lt;/why&gt;</span>
+    <span class="tag">&lt;caution&gt;</span>Caveats<span class="tag">&lt;/caution&gt;</span>
+    <span class="tag">&lt;incomplete&gt;</span>Pending items<span class="tag">&lt;/incomplete&gt;</span>
+  <span class="tag">&lt;/context-handoff&gt;</span>
+<span class="tag">&lt;/task-result&gt;</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Context-Handoff Detail Levels</div>
+      <table class="criteria-table">
+        <thead>
+          <tr><th>Level</th><th>Fields</th><th>Usage</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>FULL</strong></td>
+            <td>what, why, caution, incomplete</td>
+            <td>Builder &rarr; Verifier, dependent TASK handoff</td>
+          </tr>
+          <tr>
+            <td><strong>SUMMARY</strong></td>
+            <td>what only (1-3 lines)</td>
+            <td>Non-adjacent TASK reference</td>
+          </tr>
+          <tr>
+            <td><strong>DROP</strong></td>
+            <td>Element omitted</td>
+            <td>No context needed</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Dispatcher-Receiver Mapping</div>
+      <table class="criteria-table">
+        <thead>
+          <tr><th>Dispatcher</th><th>Receiver</th><th>Mode</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Router</td><td>(self)</td><td style="color:var(--accent3);">direct</td><td>No sub-agent</td></tr>
+          <tr><td>Router</td><td>Planner</td><td style="color:var(--accent5);">full</td><td>Complex WORK planning</td></tr>
+          <tr><td>Router</td><td>Scheduler</td><td style="color:var(--accent5);">full</td><td>Planned WORK execution</td></tr>
+          <tr><td>Router</td><td>Builder</td><td style="color:var(--accent4);">pipeline</td><td>Single TASK implementation</td></tr>
+          <tr><td>Scheduler</td><td>Builder</td><td style="color:var(--accent5);">full</td><td>N TASK implementation</td></tr>
+          <tr><td>Scheduler</td><td>Verifier</td><td style="color:var(--accent5);">full</td><td>N TASK verification</td></tr>
+          <tr><td>Scheduler</td><td>Committer</td><td style="color:var(--accent5);">full</td><td>N TASK commit</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggleTheme() {
+  const body = document.body;
+  const current = body.getAttribute('data-theme');
+  body.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+}
+</script>
+</body>
+</html>
+
 **[한국어 문서 (Korean)](README_KO.md)**
 
 ---
