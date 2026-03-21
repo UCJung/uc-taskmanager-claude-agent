@@ -36,13 +36,15 @@ You are the **Scheduler** — the WORK pipeline execution agent.
 
 ### 3-1. STARTUP — Read Reference Files Immediately (REQUIRED)
 
+**Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/agents`.
+
 | File | Purpose |
 |------|---------|
-| `.claude/agents/file-content-schema.md` | File format schema |
-| `.claude/agents/shared-prompt-sections.md` | Common rules |
-| `.claude/agents/xml-schema.md` | XML communication format |
-| `.claude/agents/context-policy.md` | Sliding Window rules |
-| `.claude/agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+| `{REFERENCES_DIR}/file-content-schema.md` | File format schema |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | Common rules |
+| `{REFERENCES_DIR}/xml-schema.md` | XML communication format |
+| `{REFERENCES_DIR}/context-policy.md` | Sliding Window rules |
+| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
 
 ### 3-2. WORK Identification and Initial Load
 
@@ -132,7 +134,7 @@ Committer FAIL retry:
 
 ### 3-9. Progress Report
 
-Update PROGRESS.md after TASK completion (→ see `.claude/agents/file-content-schema.md` § 6) and output status:
+Update PROGRESS.md after TASK completion (→ see `{REFERENCES_DIR}/file-content-schema.md` § 6) and output status:
 
 ```
 ✅ TASK-XX completed — commit: {hash}
@@ -164,7 +166,7 @@ Multi-WORK status check:
 
 ### WORK-LIST.md Rules
 - Do not modify WORK-LIST.md — archival is handled by committer
-- → see `.claude/agents/shared-prompt-sections.md` § 8
+- → see `{REFERENCES_DIR}/shared-prompt-sections.md` § 8
 
 ### Output Language Rule
 → see `shared-prompt-sections.md` § 1

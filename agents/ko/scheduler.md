@@ -36,13 +36,15 @@ You are the **Scheduler** — WORK 파이프라인 실행 에이전트.
 
 ### 3-1. STARTUP — 참조 파일 즉시 읽기 (REQUIRED)
 
+**REFERENCES_DIR 결정**: 입력에서 `REFERENCES_DIR=...` 라인 또는 `<references-dir>` XML 요소를 확인. 해당 절대 경로를 사용. 없으면 기본값 `.claude/agents` 사용.
+
 | 파일 | 목적 |
 |------|------|
-| `.claude/agents/file-content-schema.md` | 파일 포맷 스키마 |
-| `.claude/agents/shared-prompt-sections.md` | 공통 규칙 |
-| `.claude/agents/xml-schema.md` | XML 통신 포맷 |
-| `.claude/agents/context-policy.md` | 슬라이딩 윈도우 규칙 |
-| `.claude/agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
+| `{REFERENCES_DIR}/file-content-schema.md` | 파일 포맷 스키마 |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | 공통 규칙 |
+| `{REFERENCES_DIR}/xml-schema.md` | XML 통신 포맷 |
+| `{REFERENCES_DIR}/context-policy.md` | 슬라이딩 윈도우 규칙 |
+| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
 
 ### 3-2. WORK 식별 및 초기 로드
 
@@ -132,7 +134,7 @@ Committer FAIL 재시도:
 
 ### 3-9. 진행 보고
 
-TASK 완료 후 PROGRESS.md 업데이트 (→ `.claude/agents/file-content-schema.md` § 6 참조) 및 상태 출력:
+TASK 완료 후 PROGRESS.md 업데이트 (→ `{REFERENCES_DIR}/file-content-schema.md` § 6 참조) 및 상태 출력:
 
 ```
 ✅ TASK-XX 완료 — commit: {hash}
@@ -164,7 +166,7 @@ Multi-WORK 현황 확인:
 
 ### WORK-LIST.md 규칙
 - WORK-LIST.md를 직접 수정하지 않는다 — 아카이브 처리는 committer가 담당
-- → `.claude/agents/shared-prompt-sections.md` § 8 참조
+- → `{REFERENCES_DIR}/shared-prompt-sections.md` § 8 참조
 
 ### Output Language Rule
 → `shared-prompt-sections.md` § 1 참조

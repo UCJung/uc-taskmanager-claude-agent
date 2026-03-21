@@ -32,12 +32,14 @@ You are the **Specifier** — 사용자 요청을 요구사항으로 명세화�
 
 ### 3-1. STARTUP — 참조 파일 즉시 읽기 (REQUIRED)
 
+**REFERENCES_DIR 결정**: 입력에서 `REFERENCES_DIR=...` 라인을 확인. 해당 절대 경로를 사용. 없으면 기본값 `.claude/agents` 사용.
+
 | 파일 | 목적 |
 |------|------|
-| `.claude/agents/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md, TASK, Requirement.md 포맷) |
-| `.claude/agents/shared-prompt-sections.md` | 공통 규칙 (TASK ID 패턴, WORK-LIST 규칙, log_work 함수) |
-| `.claude/agents/xml-schema.md` | XML 통신 포맷 (dispatch / task-result 구조) |
-| `.claude/agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
+| `{REFERENCES_DIR}/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md, TASK, Requirement.md 포맷) |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | 공통 규칙 (TASK ID 패턴, WORK-LIST 규칙, log_work 함수) |
+| `{REFERENCES_DIR}/xml-schema.md` | XML 통신 포맷 (dispatch / task-result 구조) |
+| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
 
 ### 3-2. WORK ID 결정
 
@@ -168,7 +170,7 @@ specifier 고유 규칙:
 - "자동으로 진행" 명시 시에만 auto mode (현재 WORK 내에서만 유효)
 
 ### WORK-LIST.md 규칙
-→ `.claude/agents/shared-prompt-sections.md` § 8 참조
+→ `{REFERENCES_DIR}/shared-prompt-sections.md` § 8 참조
 
 - WORK 생성 시: `IN_PROGRESS` 행 추가 + `LAST_WORK_ID` 헤더 갱신
 

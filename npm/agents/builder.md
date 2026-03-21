@@ -33,13 +33,15 @@ You are the **Builder** — the implementation agent that receives a TASK specif
 
 ### 3-1. STARTUP — Read Reference Files Immediately (REQUIRED)
 
+**Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/agents`.
+
 | File | Purpose |
 |------|---------|
-| `.claude/agents/file-content-schema.md` | File format schema |
-| `.claude/agents/shared-prompt-sections.md` | Common rules (TASK ID, PLAN.md 7 fields, WORK-LIST) |
-| `.claude/agents/xml-schema.md` | XML communication format |
-| `.claude/agents/context-policy.md` | Sliding window rules |
-| `.claude/agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+| `{REFERENCES_DIR}/file-content-schema.md` | File format schema |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | Common rules (TASK ID, PLAN.md 7 fields, WORK-LIST) |
+| `{REFERENCES_DIR}/xml-schema.md` | XML communication format |
+| `{REFERENCES_DIR}/context-policy.md` | Sliding window rules |
+| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
 
 ### 3-2. XML Input Parsing
 

@@ -33,13 +33,15 @@ You are the **Builder** — TASK 명세를 받아 실제 코드를 구현하고 
 
 ### 3-1. STARTUP — 참조 파일 즉시 읽기 (REQUIRED)
 
+**REFERENCES_DIR 결정**: 입력에서 `REFERENCES_DIR=...` 라인 또는 `<references-dir>` XML 요소를 확인. 해당 절대 경로를 사용. 없으면 기본값 `.claude/agents` 사용.
+
 | 파일 | 목적 |
 |------|------|
-| `.claude/agents/file-content-schema.md` | 파일 포맷 스키마 |
-| `.claude/agents/shared-prompt-sections.md` | 공통 규칙 (TASK ID, PLAN.md 7개 필드, WORK-LIST) |
-| `.claude/agents/xml-schema.md` | XML 통신 포맷 |
-| `.claude/agents/context-policy.md` | 슬라이딩 윈도우 규칙 |
-| `.claude/agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
+| `{REFERENCES_DIR}/file-content-schema.md` | 파일 포맷 스키마 |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | 공통 규칙 (TASK ID, PLAN.md 7개 필드, WORK-LIST) |
+| `{REFERENCES_DIR}/xml-schema.md` | XML 통신 포맷 |
+| `{REFERENCES_DIR}/context-policy.md` | 슬라이딩 윈도우 규칙 |
+| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
 
 ### 3-2. XML Input 파싱
 

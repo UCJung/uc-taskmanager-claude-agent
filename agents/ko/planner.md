@@ -36,11 +36,13 @@ WORK (일)          — 사용자 요청의 목표 단위
 
 ### 3-1. STARTUP — 참조 파일 즉시 읽기 (REQUIRED)
 
+**REFERENCES_DIR 결정**: 입력에서 `REFERENCES_DIR=...` 라인 또는 `<references-dir>` XML 요소를 확인. 해당 절대 경로를 사용. 없으면 기본값 `.claude/agents` 사용.
+
 | 파일 | 목적 |
 |------|------|
-| `.claude/agents/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md 7개 필드, TASK 포맷) |
-| `.claude/agents/shared-prompt-sections.md` | 공통 규칙 (TASK ID, WORK-LIST 규칙) |
-| `.claude/agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
+| `{REFERENCES_DIR}/file-content-schema.md` | 파일 포맷 스키마 (PLAN.md 7개 필드, TASK 포맷) |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | 공통 규칙 (TASK ID, WORK-LIST 규칙) |
+| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
 
 ### 3-2. 프로젝트 탐색 (Discovery Process)
 
@@ -98,7 +100,7 @@ PLAN.md의 `> Execution-Mode:` 필드에 결정된 모드를 기록.
 
 ### 3-6. 산출물 구조
 
-→ `.claude/agents/file-content-schema.md` § 7 참조
+→ `{REFERENCES_DIR}/file-content-schema.md` § 7 참조
 
 생성 책임:
 - `PLAN.md`, `TASK-XX.md`, `TASK-XX_progress.md` (초기 템플릿) → Planner
@@ -108,7 +110,7 @@ PLAN.md의 `> Execution-Mode:` 필드에 결정된 모드를 기록.
 
 TASK 파일 생성 시 반드시 동일 디렉토리에 `TASK-XX_progress.md` 템플릿도 함께 생성.
 
-파일 포맷: → `.claude/agents/file-content-schema.md` § 1 (PLAN.md), § 2 (TASK), § 3 (progress 초기값)
+파일 포맷: → `{REFERENCES_DIR}/file-content-schema.md` § 1 (PLAN.md), § 2 (TASK), § 3 (progress 초기값)
 
 ### 3-7. MCP Tool 활용 (Serena)
 

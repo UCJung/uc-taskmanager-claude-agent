@@ -8,6 +8,7 @@ XML communication format definition for uc-taskmanager agents.
 
 ```xml
 <dispatch to="{receiver}" work="{WORK_ID}" task="{TASK_ID}" execution-mode="{direct|pipeline|full}">
+  <references-dir>{absolute path to references directory}</references-dir>
   <context>
     <project>{project name}</project>
     <language>{lang_code}</language>

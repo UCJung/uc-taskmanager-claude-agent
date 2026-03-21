@@ -8,6 +8,7 @@ uc-taskmanager 에이전트 간 XML 통신 포맷 정의.
 
 ```xml
 <dispatch to="{receiver}" work="{WORK_ID}" task="{TASK_ID}" execution-mode="{direct|pipeline|full}">
+  <references-dir>{참조 파일 디렉토리의 절대 경로}</references-dir>
   <context>
     <project>{project name}</project>
     <language>{lang_code}</language>

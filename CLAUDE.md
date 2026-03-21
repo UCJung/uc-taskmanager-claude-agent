@@ -14,9 +14,9 @@
    - agents/en/*.md → npm/agents/*.md
    - agents/ko/*.md → npm/agents/ko/*.md
    - 에이전트 6개(specifier, planner, scheduler, builder, verifier, committer):
-     agents/en/*.md → plugin/agents/*.md (복사 후 `.claude/agents/` → `../skills/sdd-pipeline/references/` 경로 치환)
+     agents/en/*.md → plugin/agents/*.md (경로 치환 불필요 — `{REFERENCES_DIR}/`이 그대로 사용됨)
    - 참조 문서 6개(agent-flow, file-content-schema, shared-prompt-sections, context-policy, xml-schema, work-activity-log):
-     agents/en/*.md → plugin/skills/sdd-pipeline/references/*.md (복사 후 `.claude/agents/` → `../skills/sdd-pipeline/references/` 경로 치환)
+     agents/en/*.md → plugin/skills/sdd-pipeline/references/*.md (경로 치환 불필요)
 2. **DONE WORK 일괄 완료 처리** — WORK-LIST.md에서 DONE 상태인 WORK를 찾아 COMPLETED로 전환한다
    - WORK-LIST.md에서 `DONE` 상태인 행을 모두 찾아 제거
    - 해당 WORK 폴더(`works/WORK-NN/`)를 `works/_COMPLETED/`로 이동

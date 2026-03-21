@@ -107,7 +107,7 @@ echo "$DONE / $TOTAL"
 
 ## § 7. PLAN.md Required Meta-Information — 7 Fields
 
-→ `.claude/agents/file-content-schema.md` § 1 reference
+→ `{REFERENCES_DIR}/file-content-schema.md` § 1 reference
 
 | Field | Required | Description |
 |-------|----------|-------------|

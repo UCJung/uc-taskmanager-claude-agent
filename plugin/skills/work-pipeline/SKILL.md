@@ -13,6 +13,24 @@ Any message starting with `[...]` triggers this pipeline:
 - `[new-feature]`, `[enhancement]`, `[bugfix]`, `[new-work]`, `[WORK start]`
 - Or any custom tag in square brackets
 
+## References Directory (CRITICAL)
+
+When this skill is triggered, Claude Code provides the "Base directory for this skill" as an absolute path.
+Derive the **REFERENCES_DIR** from it:
+
+```
+REFERENCES_DIR = {Base directory}/../sdd-pipeline/references
+```
+
+You MUST pass this absolute path to **every sub-agent invocation** (specifier, planner, scheduler, builder, verifier, committer).
+Include it at the top of the prompt text:
+
+```
+REFERENCES_DIR={absolute_path}
+```
+
+Sub-agents need this path to read their reference files. Without it, they cannot find the files and will loop.
+
 ## Pipeline Flow
 
 1. **Call specifier agent** — analyzes the requirement, creates `works/WORK-NN/Requirement.md`, determines execution-mode (direct/pipeline/full)

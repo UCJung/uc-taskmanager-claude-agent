@@ -143,6 +143,29 @@ env -u CLAUDECODE -u ANTHROPIC_API_KEY claude -p \
 
 ---
 
+## References Directory Passing (REQUIRED)
+
+Main Claude MUST pass the references directory path to every sub-agent invocation.
+This allows sub-agents to locate their reference files regardless of installation method (npm or plugin).
+
+**How to pass:**
+- Prepend `REFERENCES_DIR={absolute_path}` at the top of the prompt for every Task tool call
+- For npm installations: use `.claude/agents` (default, resolved from project root)
+- For plugin installations: derive from the skill's "Base directory" (`{base_dir}/../sdd-pipeline/references`)
+
+**Example:**
+```
+REFERENCES_DIR=C:/Users/me/.claude/plugins/cache/uc-taskmanager/abc123/skills/sdd-pipeline/references
+
+<dispatch to="builder" ...>
+  ...
+</dispatch>
+```
+
+If REFERENCES_DIR is not available (e.g., npm installation without plugin), sub-agents fall back to `.claude/agents/`.
+
+---
+
 ## Context Handoff (Sliding Window)
 
 | Distance | Level | Content |

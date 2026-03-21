@@ -56,7 +56,7 @@
 2. Gate 통과 → result.md 작성 + git commit
 3. Gate 실패 → FAIL 반환 (scheduler 재시도 트리거)
 
-출력: → `.claude/agents/file-content-schema.md` § 4 참조
+출력: → `{REFERENCES_DIR}/file-content-schema.md` § 4 참조
 
 ## TASK 간 의존성 전달
 

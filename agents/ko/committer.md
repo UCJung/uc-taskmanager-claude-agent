@@ -33,13 +33,15 @@ You are the **Committer** — 검증 완료된 TASK의 result report를 생성�
 
 ### 3-1. STARTUP — 참조 파일 즉시 읽기 (REQUIRED)
 
+**REFERENCES_DIR 결정**: 입력에서 `REFERENCES_DIR=...` 라인 또는 `<references-dir>` XML 요소를 확인. 해당 절대 경로를 사용. 없으면 기본값 `.claude/agents` 사용.
+
 | 파일 | 목적 |
 |------|------|
-| `.claude/agents/file-content-schema.md` | 파일 포맷 스키마 |
-| `.claude/agents/shared-prompt-sections.md` | 공통 규칙 |
-| `.claude/agents/xml-schema.md` | XML 통신 포맷 |
-| `.claude/agents/context-policy.md` | 슬라이딩 윈도우 규칙 |
-| `.claude/agents/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
+| `{REFERENCES_DIR}/file-content-schema.md` | 파일 포맷 스키마 |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | 공통 규칙 |
+| `{REFERENCES_DIR}/xml-schema.md` | XML 통신 포맷 |
+| `{REFERENCES_DIR}/context-policy.md` | 슬라이딩 윈도우 규칙 |
+| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log 규칙 (log_work 함수, STAGE 테이블) |
 
 ### 3-2. XML Input 파싱
 
@@ -66,7 +68,7 @@ Gate 실패 시:
 
 ### 3-4. Result Report 생성
 
-→ `.claude/agents/file-content-schema.md` § 4 참조 (포맷 + 언어별 섹션 헤더)
+→ `{REFERENCES_DIR}/file-content-schema.md` § 4 참조 (포맷 + 언어별 섹션 헤더)
 
 `works/{WORK_ID}/TASK-XX_result.md` 생성.
 - builder context-handoff `what` → "Builder Context" 섹션
@@ -164,7 +166,7 @@ if [ "$DONE" -ge "$TOTAL" ]; then
 fi
 ```
 
-→ `.claude/agents/shared-prompt-sections.md` § 8 참조
+→ `{REFERENCES_DIR}/shared-prompt-sections.md` § 8 참조
 
 ---
 

@@ -32,12 +32,14 @@ You are the **Specifier** — the agent that transforms user requests into requi
 
 ### 3-1. STARTUP — Read Reference Files Immediately (REQUIRED)
 
+**Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line. Use that absolute path. If not provided, default to `.claude/agents`.
+
 | File | Purpose |
 |------|---------|
-| `.claude/agents/file-content-schema.md` | File format schema (PLAN.md, TASK, Requirement.md formats) |
-| `.claude/agents/shared-prompt-sections.md` | Common rules (TASK ID patterns, WORK-LIST rules, log_work function) |
-| `.claude/agents/xml-schema.md` | XML communication format (dispatch / task-result structure) |
-| `.claude/agents/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+| `{REFERENCES_DIR}/file-content-schema.md` | File format schema (PLAN.md, TASK, Requirement.md formats) |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | Common rules (TASK ID patterns, WORK-LIST rules, log_work function) |
+| `{REFERENCES_DIR}/xml-schema.md` | XML communication format (dispatch / task-result structure) |
+| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
 
 ### 3-2. WORK ID Determination
 
@@ -168,7 +170,7 @@ Specifier-specific rules:
 - Auto mode only when "proceed automatically" is explicitly stated (valid only within current WORK)
 
 ### WORK-LIST.md Rules
-→ see `.claude/agents/shared-prompt-sections.md` § 8
+→ see `{REFERENCES_DIR}/shared-prompt-sections.md` § 8
 
 - On WORK creation: add `IN_PROGRESS` row + update `LAST_WORK_ID` header
 

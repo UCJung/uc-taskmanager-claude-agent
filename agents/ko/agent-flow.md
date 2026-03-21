@@ -143,6 +143,29 @@ env -u CLAUDECODE -u ANTHROPIC_API_KEY claude -p \
 
 ---
 
+## 참조 디렉토리 전달 (REQUIRED)
+
+Main Claude는 모든 서브에이전트 호출 시 참조 디렉토리 경로를 반드시 전달해야 한다.
+이를 통해 서브에이전트가 설치 방식(npm 또는 plugin)에 관계없이 참조 파일을 찾을 수 있다.
+
+**전달 방법:**
+- 모든 Task tool 호출의 프롬프트 상단에 `REFERENCES_DIR={절대경로}`를 추가
+- npm 설치: `.claude/agents` 사용 (기본값, 프로젝트 루트 기준)
+- plugin 설치: skill의 "Base directory"에서 도출 (`{base_dir}/../sdd-pipeline/references`)
+
+**예시:**
+```
+REFERENCES_DIR=C:/Users/me/.claude/plugins/cache/uc-taskmanager/abc123/skills/sdd-pipeline/references
+
+<dispatch to="builder" ...>
+  ...
+</dispatch>
+```
+
+REFERENCES_DIR을 사용할 수 없는 경우 (예: plugin 없이 npm 설치), 서브에이전트는 `.claude/agents/`를 기본값으로 사용한다.
+
+---
+
 ## 컨텍스트 전달 (슬라이딩 윈도우)
 
 | 거리 | Level | 내용 |

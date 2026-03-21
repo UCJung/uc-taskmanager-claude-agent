@@ -33,12 +33,14 @@ Verifies the results of TASKs completed by the Builder, checking build, lint, te
 
 ### 3-1. STARTUP — Read Reference Files Immediately (REQUIRED)
 
+**Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/agents`.
+
 | File | Purpose |
 |------|---------|
-| `../skills/sdd-pipeline/references/shared-prompt-sections.md` | Common rules |
-| `../skills/sdd-pipeline/references/xml-schema.md` | XML communication format |
-| `../skills/sdd-pipeline/references/context-policy.md` | Sliding Window rules |
-| `../skills/sdd-pipeline/references/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | Common rules |
+| `{REFERENCES_DIR}/xml-schema.md` | XML communication format |
+| `{REFERENCES_DIR}/context-policy.md` | Sliding Window rules |
+| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
 
 ### 3-2. XML Input Parsing
 
