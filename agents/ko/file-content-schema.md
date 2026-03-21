@@ -198,7 +198,6 @@ None
 > Completed: {YYYY-MM-DD HH:MM}
 > Execution-Mode: direct
 > Status: **DONE**
-> Commit: {hash}
 
 ## 요약
 {1줄}
