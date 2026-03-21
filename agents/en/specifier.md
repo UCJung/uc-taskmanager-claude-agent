@@ -34,12 +34,23 @@ You are the **Specifier** — the agent that transforms user requests into requi
 
 **Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line. Use that absolute path. If not provided, default to `.claude/agents`.
 
-| File | Purpose |
-|------|---------|
-| `{REFERENCES_DIR}/file-content-schema.md` | File format schema (PLAN.md, TASK, Requirement.md formats) |
-| `{REFERENCES_DIR}/shared-prompt-sections.md` | Common rules (TASK ID patterns, WORK-LIST rules, log_work function) |
-| `{REFERENCES_DIR}/xml-schema.md` | XML communication format (dispatch / task-result structure) |
-| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+#### Reference Loading (ref-cache)
+
+1. Check if `<ref-cache>` exists in the received dispatch XML
+2. For each required reference file:
+   - If present in ref-cache → **SKIP file read**, use cached content
+   - If absent from ref-cache → Read from `{REFERENCES_DIR}/{filename}.md` and add to ref-cache
+3. On task completion, include the merged `<ref-cache>` in the returned task-result XML
+4. **Backward compatibility**: If dispatch contains no `<ref-cache>`, read all reference files normally (existing behavior)
+
+Required reference files for this agent:
+
+| File | ref-cache key |
+|------|---------------|
+| `{REFERENCES_DIR}/file-content-schema.md` | `file-content-schema` |
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | `shared-prompt-sections` |
+| `{REFERENCES_DIR}/xml-schema.md` | `xml-schema` |
+| `{REFERENCES_DIR}/work-activity-log.md` | `work-activity-log` |
 
 ### 3-2. WORK ID Determination
 
@@ -116,6 +127,7 @@ Requirement complexity assessment:
 ```
 
 → dispatch XML format: see `xml-schema.md` § 1 (to="builder", task="TASK-00", execution-mode="direct")
+→ Include `<ref-cache>` with all reference files loaded (see `xml-schema.md` § 6)
 
 ### 3-7. Planner Delegation — Complex Requirements (pipeline/full)
 
@@ -136,6 +148,7 @@ Requirement complexity assessment:
 ```
 
 → dispatch XML format: see `xml-schema.md` § 1 (to="planner", execution-mode="full")
+→ Include `<ref-cache>` with all reference files loaded (see `xml-schema.md` § 6)
 
 ### 3-8. Output Language Rule
 

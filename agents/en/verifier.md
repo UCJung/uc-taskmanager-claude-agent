@@ -35,12 +35,23 @@ Verifies the results of TASKs completed by the Builder, checking build, lint, te
 
 **Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/agents`.
 
-| File | Purpose |
-|------|---------|
-| `{REFERENCES_DIR}/shared-prompt-sections.md` | Common rules |
-| `{REFERENCES_DIR}/xml-schema.md` | XML communication format |
-| `{REFERENCES_DIR}/context-policy.md` | Sliding Window rules |
-| `{REFERENCES_DIR}/work-activity-log.md` | Activity Log rules (log_work function, STAGE table) |
+#### Reference Loading (ref-cache)
+
+1. Check if `<ref-cache>` exists in the received dispatch XML
+2. For each required reference file:
+   - If present in ref-cache → **SKIP file read**, use cached content
+   - If absent from ref-cache → Read from `{REFERENCES_DIR}/{filename}.md` and add to ref-cache
+3. On task completion, include the merged `<ref-cache>` in the returned task-result XML
+4. **Backward compatibility**: If dispatch contains no `<ref-cache>`, read all reference files normally (existing behavior)
+
+Required reference files for this agent:
+
+| File | ref-cache key |
+|------|---------------|
+| `{REFERENCES_DIR}/shared-prompt-sections.md` | `shared-prompt-sections` |
+| `{REFERENCES_DIR}/xml-schema.md` | `xml-schema` |
+| `{REFERENCES_DIR}/context-policy.md` | `context-policy` |
+| `{REFERENCES_DIR}/work-activity-log.md` | `work-activity-log` |
 
 ### 3-2. XML Input Parsing
 
@@ -96,6 +107,7 @@ Only check conventions specified in CLAUDE.md or project config.
 
 → task-result XML base structure: see `xml-schema.md` § 2
 → context-handoff element: see `xml-schema.md` § 4
+→ ref-cache element: see `xml-schema.md` § 6
 
 Verifier-specific additional fields:
 
@@ -116,6 +128,12 @@ Verifier-specific additional fields:
     <suggested-fix>{suggestion}</suggested-fix>
   </failure>
 </failure-details>
+<ref-cache>
+  <!-- Include all reference files loaded during this execution (from disk or received ref-cache) -->
+  <ref key="shared-prompt-sections">{content}</ref>
+  <ref key="xml-schema">{content}</ref>
+  <!-- ... other keys loaded ... -->
+</ref-cache>
 ```
 
 ---
