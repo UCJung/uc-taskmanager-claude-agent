@@ -17,8 +17,9 @@ Check and report the current status of WORKs and TASKs.
 
 | Status | Meaning |
 |--------|---------|
-| `IN_PROGRESS` | WORK has TASKs being executed |
-| `COMPLETED` | All TASKs committed and pushed |
+| `IN_PROGRESS` | WORK created, TASKs being executed |
+| `DONE` | All TASKs committed — committer auto-sets on last TASK |
+| `COMPLETED` | Archived to `_COMPLETED/` — set during push |
 
 ## Display Format
 

@@ -1,6 +1,8 @@
 # uc-taskmanager
 
-**Universal Claude Task Manager** — A general-purpose task pipeline subagent system for Claude Code CLI.
+**Universal Claude Task Manager** — A WORK-PIPELINE Agent that executes SDD (Specification-Driven Development) for Claude Code.
+
+It formalizes user requirements into specifications, builds execution plans (WORK), decomposes them into tasks (TASK) with dependency graphs (DAG), then automatically executes TASKs through a 6-agent pipeline.
 
 Install from the Claude Marketplace — no terminal, no CLI setup required.
 
@@ -20,31 +22,52 @@ Prefix any request with a `[]` tag to trigger the pipeline:
 
 ---
 
+## How It Works
+
+```
+User Request with [] tag
+        │
+        ▼
+    Specifier ──── analyzes requirement, creates Requirement.md
+        │           determines execution-mode
+        │
+   ┌────┼────────────────┐
+   ▼    ▼                ▼
+ direct  pipeline         full
+   │    │                │
+   │    ▼                ▼
+   │  Planner          Planner ── TASK decomposition + DAG
+   │    │                │
+   │    ▼                ▼
+   │  Main Claude      Scheduler ── DAG-based orchestration
+   │    │                │
+   ▼    ▼                ▼
+  Builder → Verifier → Committer  (× N for full mode)
+```
+
+---
+
 ## Agents
 
-The plugin includes 6 pipeline agents and 6 support files:
+6 pipeline agents work together through Main Claude orchestration:
 
-### Pipeline Agents
+| Agent | Role | Model |
+|-------|------|-------|
+| **specifier** | Analyzes user request → creates `Requirement.md` → determines execution-mode (direct/pipeline/full). In direct mode, also acts as Planner. | opus |
+| **planner** | Reads `Requirement.md` → creates WORK plan + decomposes into TASKs with dependency DAG | opus |
+| **scheduler** | Manages DAG → selects READY TASKs → dispatches builder/verifier/committer pipeline | haiku |
+| **builder** | Implements code changes, records progress checkpoints, runs self-check (build + lint) | sonnet |
+| **verifier** | Verifies build / lint / test / acceptance criteria (read-only, never modifies code) | haiku |
+| **committer** | Gates on verification → writes `result.md` → git commit → updates WORK status to DONE | haiku |
 
-| Agent | Role |
-|-------|------|
-| **specifier** | Detects `[]` tags, selects execution mode (direct / pipeline / full), creates plans |
-| **planner** | Creates WORK + decomposes into TASKs, generates PLAN.md with dependency graph |
-| **scheduler** | Manages DAG for a WORK, runs the builder → verifier → committer pipeline |
-| **builder** | Implements code changes, records progress checkpoints |
-| **verifier** | Runs build / lint / test verification (read-only) |
-| **committer** | Gates on progress.md completion → writes result.md → git commit |
+---
 
-### Support Files
+## Skills
 
-| File | Purpose |
-|------|---------|
-| `agent-flow.md` | Pipeline orchestration rules — how Main Claude calls each agent |
-| `file-content-schema.md` | Single source of truth for all file formats (PLAN.md, TASK.md, progress.md, result.md) |
-| `shared-prompt-sections.md` | Cacheable shared sections — reduces repeated token cost up to 90% |
-| `context-policy.md` | Sliding window context transfer rules between agents |
-| `work-activity-log.md` | Activity log format for builder stage tracking |
-| `xml-schema.md` | XML communication format for dispatch and task-result messages |
+| Skill | Trigger | Description |
+|-------|---------|-------------|
+| **work-pipeline** | `[]` tag in user message | Triggers the full WORK-PIPELINE (specifier → planner → scheduler → builder → verifier → committer) |
+| **work-status** | "WORK list", "show status" | Shows WORK progress and TASK completion status |
 
 ---
 
@@ -73,25 +96,40 @@ Once installed, prefix any request with a `[]` tag:
 
 ### Execution Modes
 
-The specifier automatically selects the right mode based on complexity:
+The specifier automatically selects the right mode based on requirement complexity:
 
 | Mode | When | What Happens |
 |------|------|--------------|
-| `direct` | Simple change, no build/test needed | Specifier implements + committer commits |
-| `pipeline` | Moderate task, build/test required | builder → verifier → committer |
-| `full` | Complex feature, multi-domain, 5+ tasks | planner → scheduler → [builder → verifier → committer] × N |
+| `direct` | FR 1-2, simple acceptance criteria | Specifier acts as Planner → creates Requirement.md + PLAN.md + TASK → dispatches Builder |
+| `pipeline` | FR 3+, build/test required, single domain | Specifier → Planner → Main Claude runs Builder → Verifier → Committer |
+| `full` | Multi-domain, complex DAG, 5+ TASKs | Specifier → Planner → Scheduler → [Builder → Verifier → Committer] × N |
 
-### WORK Pipeline (Complex Features)
+### Auto Mode
+
+Add "auto" or "자동으로" at the end to skip approval steps:
+
+```
+> [new-feature] Add dark mode auto
+```
+
+### WORK Pipeline Example
 
 ```
 > [new-feature] Build user authentication
 
+Claude: [specifier]
+  Requirement.md created — FR-01: JWT auth, FR-02: Login UI, FR-03: Tests
+  Execution-mode: full
+  Approve?
+
+> Approve
+
 Claude: [planner]
   WORK-01: User Authentication
   TASK-00: DB schema + migration      ← no dependencies
-  TASK-01: JWT auth API               ← TASK-00
-  TASK-02: Frontend login form        ← TASK-00 (parallel)
-  TASK-03: Integration tests          ← TASK-01, TASK-02
+  TASK-01: JWT auth API               ← depends on TASK-00
+  TASK-02: Frontend login form        ← depends on TASK-00 (parallel with TASK-01)
+  TASK-03: Integration tests          ← depends on TASK-01, TASK-02
 
   Approve this plan?
 
@@ -99,7 +137,9 @@ Claude: [planner]
 
 Claude: TASK-00 → builder ✅ → verifier ✅ → committer [a1b2c3]
         TASK-01 → builder ✅ → verifier ✅ → committer [d4e5f6]
-        ...
+        TASK-02 → builder ✅ → verifier ✅ → committer [g7h8i9]
+        TASK-03 → builder ✅ → verifier ✅ → committer [j0k1l2]
+        WORK-01 → DONE ✅
 ```
 
 ### Status Check
@@ -107,7 +147,6 @@ Claude: TASK-00 → builder ✅ → verifier ✅ → committer [a1b2c3]
 ```
 > WORK list
 > Show WORK-01 progress
-> What is the status of WORK-02: TASK-03?
 ```
 
 ### Resume After Interruption
@@ -128,7 +167,8 @@ The scheduler reads `PROGRESS.md` to find the last completed TASK and continues.
 | `[enhancement]` | Enhancement to existing feature |
 | `[bugfix]` | Bug fix |
 | `[refactoring]` | Refactoring |
-| `[new-work]` | Always create new WORK (skips complexity check) |
+| `[new-work]` | Always create new WORK |
+| Any `[custom-tag]` | Works with any tag in square brackets |
 
 No `[]` tag = Claude handles the request directly without pipeline routing.
 
@@ -140,23 +180,31 @@ All pipeline runs output to `works/WORK-NN/`:
 
 ```
 works/
-├── WORK-LIST.md              ← Master index of all WORKs
-└── WORK-01/
-    ├── PLAN.md               ← Plan + dependency graph
-    ├── PROGRESS.md           ← Live progress tracking
-    ├── TASK-00.md            ← Task specification
-    ├── TASK-00_progress.md   ← Builder checkpoint (real-time)
-    ├── TASK-00_result.md     ← Completion report (committer writes)
-    └── ...
+├── WORK-LIST.md              ← Master index (LAST_WORK_ID header + status table)
+├── _COMPLETED/               ← Archived completed WORKs
+└── WORK-NN/
+    ├── Requirement.md        ← Requirement specification (specifier creates)
+    ├── PLAN.md               ← Plan + dependency graph (7 metadata fields)
+    ├── PROGRESS.md           ← Scheduler progress tracking (full mode)
+    ├── TASK-XX.md            ← Task specification
+    ├── TASK-XX_progress.md   ← Builder checkpoint (real-time)
+    ├── TASK-XX_result.md     ← Completion report (committer writes)
+    └── work_WORK-NN.log      ← Activity log (all agents)
 ```
 
-Every decision is preserved as a traceable artifact — requirements, plans, results, and git commits.
+### WORK Status Lifecycle
+
+| Status | Set By | Meaning |
+|--------|--------|---------|
+| `IN_PROGRESS` | Specifier | WORK created, TASKs being executed |
+| `DONE` | Committer | All TASKs committed (automatic on last TASK) |
+| `COMPLETED` | Push procedure | Archived to `_COMPLETED/` |
 
 ---
 
 ## Requirements
 
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
+- [Claude Code CLI](https://code.claude.com)
 - Git initialized in your project (`git init`)
 - No other dependencies
 
@@ -164,9 +212,9 @@ Every decision is preserved as a traceable artifact — requirements, plans, res
 
 ## Notes
 
-- **English agents only** — this Marketplace Plugin ships English agents. For Korean agents (`--lang ko`) or per-project customization, use the [npm CLI](https://www.npmjs.com/package/uctm) instead.
+- **English agents only** — this Plugin ships English agents. For Korean agents (`--lang ko`) or per-project customization, use the [npm CLI](https://www.npmjs.com/package/uctm) instead.
 - **Override agents** — place a file with the same name in `.claude/agents/` to override any plugin agent for your project.
-- **Bypass mode** — to skip permission prompts (file creation, shell commands): `claude --dangerously-skip-permissions` (only use in trusted environments)
+- **Bypass mode** — `claude --dangerously-skip-permissions` to skip permission prompts (only use in trusted environments).
 
 ---
 
