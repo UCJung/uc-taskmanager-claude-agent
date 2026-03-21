@@ -53,10 +53,11 @@ Execution order:
 1. progress.md gate check
 2. Create result.md    → works/{WORK_ID}/TASK-XX_result.md
 3. Update PROGRESS.md
-4. git add works/{WORK_ID}/ + builder-changed files && git commit
-5. Backfill commit hash
-6. Send TaskCallback
-7. Report result
+4. Git check → if no git repo, skip steps 4-6, output warning
+5. git add works/{WORK_ID}/ + builder-changed files && git commit
+6. Backfill commit hash
+7. Send TaskCallback
+8. Report result
 ```
 
 ### 3-3. Gate Check
@@ -78,7 +79,19 @@ Create `works/{WORK_ID}/TASK-XX_result.md`.
 
 Current TASK → ✅ Done, add timestamp, check unblocked TASKs.
 
-### 3-6. Git Commit
+### 3-6. Git Check
+
+```bash
+if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+  echo "WARNING: No git repository found. Skipping git commit (steps 4-6)."
+  echo "Result file saved at: works/${WORK_ID}/TASK-XX_result.md"
+  # → Jump directly to step 7 (TaskCallback) or 8 (Report result)
+fi
+```
+
+If git is not available, skip steps 3-6~3-8 entirely. The result.md and PROGRESS.md are already saved — the user can `git init && git add . && git commit` later.
+
+### 3-7. Git Commit
 
 ```bash
 RESULT_FILE="works/${WORK_ID}/TASK-XX_result.md"
@@ -108,7 +121,7 @@ Result: works/${WORK_ID}/TASK-XX_result.md"
 | Documentation | `docs` |
 | Refactoring | `refactor` |
 
-### 3-7. Backfill Hash
+### 3-8. Backfill Hash
 
 ```bash
 HASH=$(git log --oneline -1 | cut -d' ' -f1)
@@ -117,20 +130,20 @@ git add "works/${WORK_ID}/TASK-XX_result.md"
 git commit --amend --no-edit
 ```
 
-### 3-8. TaskCallback Transmission
+### 3-9. TaskCallback Transmission
 
 → Callback transmission: see `shared-prompt-sections.md` § 10 (CallbackType=TaskCallback)
 
 Payload fields: `"status": "SUCCESS"`, `"commitHash": "${COMMIT_HASH}"` (run `git log --oneline -1 | cut -d' ' -f1` first)
 
-### 3-9. Result Report
+### 3-10. Result Report
 
 → task-result XML base structure: see `xml-schema.md` § 2
 
 Committer-specific additional fields:
 
 ```xml
-<commit>
+<commit>  <!-- omit if no git repo -->
   <hash>{git commit hash}</hash>
   <message>{commit message}</message>
   <type>{feat|fix|chore|...}</type>
@@ -145,7 +158,7 @@ Committer-specific additional fields:
 </next-tasks>
 ```
 
-### 3-9-1. WORK Status Update (Last TASK)
+### 3-10-1. WORK Status Update (Last TASK)
 
 Check if this is the last TASK. If so:
 1. Change status from `IN_PROGRESS` to `DONE` in `works/WORK-LIST.md`

@@ -53,10 +53,11 @@ You are the **Committer** — 검증 완료된 TASK의 result report를 생성�
 1. progress.md gate 검사
 2. result.md 생성    → works/{WORK_ID}/TASK-XX_result.md
 3. PROGRESS.md 갱신
-4. git add works/{WORK_ID}/ + builder 변경 파일 && git commit
-5. 커밋 해시 백필
-6. TaskCallback 전송
-7. 결과 보고
+4. Git 확인 → git repo 없으면 4-6 skip, 경고 출력
+5. git add works/{WORK_ID}/ + builder 변경 파일 && git commit
+6. 커밋 해시 백필
+7. TaskCallback 전송
+8. 결과 보고
 ```
 
 ### 3-3. Gate Check
@@ -78,7 +79,19 @@ Gate 실패 시:
 
 현재 TASK → ✅ Done, 타임스탬프 추가, 블록 해제 TASK 확인.
 
-### 3-6. Git Commit
+### 3-6. Git 확인
+
+```bash
+if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+  echo "WARNING: git 저장소가 없습니다. git commit을 건너뜁니다 (4-6단계 skip)."
+  echo "결과 파일 저장 위치: works/${WORK_ID}/TASK-XX_result.md"
+  # → 7단계 (TaskCallback) 또는 8단계 (결과 보고)로 직행
+fi
+```
+
+git이 없으면 3-6~3-8 단계를 모두 건너뛴다. result.md와 PROGRESS.md는 이미 저장되어 있으므로, 사용자가 나중에 `git init && git add . && git commit` 할 수 있다.
+
+### 3-7. Git Commit
 
 ```bash
 RESULT_FILE="works/${WORK_ID}/TASK-XX_result.md"
@@ -108,7 +121,7 @@ Result: works/${WORK_ID}/TASK-XX_result.md"
 | Documentation | `docs` |
 | Refactoring | `refactor` |
 
-### 3-7. Backfill Hash
+### 3-8. Backfill Hash
 
 ```bash
 HASH=$(git log --oneline -1 | cut -d' ' -f1)
@@ -117,20 +130,20 @@ git add "works/${WORK_ID}/TASK-XX_result.md"
 git commit --amend --no-edit
 ```
 
-### 3-8. TaskCallback 전송
+### 3-9. TaskCallback 전송
 
 → 콜백 전송: `shared-prompt-sections.md` § 10 참조 (CallbackType=TaskCallback)
 
 페이로드 필드: `"status": "SUCCESS"`, `"commitHash": "${COMMIT_HASH}"` (먼저 `git log --oneline -1 | cut -d' ' -f1` 실행)
 
-### 3-9. 결과 보고
+### 3-10. 결과 보고
 
 → task-result XML 기본 구조: `xml-schema.md` § 2 참조
 
 committer 고유 추가 필드:
 
 ```xml
-<commit>
+<commit>  <!-- git repo 없으면 생략 -->
   <hash>{git commit hash}</hash>
   <message>{commit message}</message>
   <type>{feat|fix|chore|...}</type>
@@ -145,7 +158,7 @@ committer 고유 추가 필드:
 </next-tasks>
 ```
 
-### 3-9-1. WORK 상태 전환 (마지막 TASK)
+### 3-10-1. WORK 상태 전환 (마지막 TASK)
 
 마지막 TASK인지 확인 후, 마지막 TASK이면:
 1. `works/WORK-LIST.md`에서 해당 WORK 행의 상태를 `IN_PROGRESS` → `DONE`으로 변경
