@@ -1,0 +1,5 @@
+[2026-03-21T13:56:05]_SPECIFIER_INIT_WORK-37 created -- Planner delegation (pipeline docs update)
+[2026-03-21T13:56:47]_SPECIFIER_REF_References: file-content-schema.md, shared-prompt-sections.md, xml-schema.md, work-activity-log.md, spec_pipeline-architecture_v1.1.md, pipeline-architecture-v1.1-visual.html
+[2026-03-21T13:56:53]_SPECIFIER_DISPATCH_Planner dispatch XML returned -- pipeline mode (FR 2 + NFR 3 + large docs)
+[2026-03-21T14:37:56]_PLANNER_REF_References: agents/en/file-content-schema.md, agents/en/shared-prompt-sections.md, agents/en/work-activity-log.md, agents/en/committer.md, docs/spec_pipeline-architecture_v1.1.md, docs/pipeline-architecture-v1.1-visual.html, works/WORK-37/Requirement.md
+[2026-03-21T14:37:56]_PLANNER_PLAN_PLAN.md, TASK-00.md, TASK-00_progress.md, TASK-01.md, TASK-01_progress.md created (Execution-Mode: full, 2 TASKs)

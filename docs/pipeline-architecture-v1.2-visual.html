@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>uc-taskmanager Pipeline Architecture v1.1</title>
+<title>uc-taskmanager Pipeline Architecture v1.2</title>
 <style>
 :root {
   --bg: #0f172a;
@@ -20,7 +20,7 @@
   --border: #334155;
   --shadow: rgba(0,0,0,0.3);
   --tab-active: #38bdf8;
-  --node-router: #38bdf8;
+  --node-specifier: #38bdf8;
   --node-planner: #818cf8;
   --node-scheduler: #a78bfa;
   --node-builder: #34d399;
@@ -534,28 +534,29 @@ tr:hover td { background: var(--bg-card-hover); }
   </div>
   <div class="header-right">
     <button class="btn" id="save-png-btn" onclick="savePng()">Save as PNG</button>
-    <button class="btn" onclick="toggleTheme()">테마 전환</button>
+    <button class="btn" onclick="toggleTheme()" data-i18n="header.theme">테마 전환</button>
+    <button class="btn" id="lang-btn" onclick="toggleLang()">EN</button>
   </div>
 </div>
 
 <nav class="nav">
-  <button class="nav-btn active" onclick="showTab('overview', this)">개요</button>
-  <button class="nav-btn" onclick="showTab('agents', this)">에이전트</button>
-  <button class="nav-btn" onclick="showTab('modes', this)">실행 모드</button>
-  <button class="nav-btn" onclick="showTab('pipeline', this)">파이프라인 흐름</button>
-  <button class="nav-btn" onclick="showTab('context', this)">슬라이딩 윈도우</button>
+  <button class="nav-btn active" onclick="showTab('overview', this)" data-i18n="nav.overview">개요</button>
+  <button class="nav-btn" onclick="showTab('agents', this)" data-i18n="nav.agents">에이전트</button>
+  <button class="nav-btn" onclick="showTab('modes', this)" data-i18n="nav.modes">실행 모드</button>
+  <button class="nav-btn" onclick="showTab('pipeline', this)" data-i18n="nav.pipeline">파이프라인 흐름</button>
+  <button class="nav-btn" onclick="showTab('context', this)" data-i18n="nav.context">슬라이딩 윈도우</button>
   <button class="nav-btn" onclick="showTab('dag', this)">DAG</button>
-  <button class="nav-btn" onclick="showTab('files', this)">파일 구조</button>
-  <button class="nav-btn" onclick="showTab('callbacks', this)">콜백 통합</button>
-  <button class="nav-btn" onclick="showTab('mcp', this)">MCP 도구</button>
+  <button class="nav-btn" onclick="showTab('files', this)" data-i18n="nav.files">파일 구조</button>
+  <button class="nav-btn" onclick="showTab('callbacks', this)" data-i18n="nav.callbacks">콜백 통합</button>
+  <button class="nav-btn" onclick="showTab('mcp', this)" data-i18n="nav.mcp">MCP 도구</button>
 </nav>
 
 <div class="content">
 
 <!-- ═══════════════════ TAB: 개요 ═══════════════════ -->
 <div id="tab-overview" class="tab-panel active">
-  <div class="section-title">🏗️ Pipeline Architecture v1.1 개요</div>
-  <div class="section-desc">
+  <div class="section-title">🏗️ Pipeline Architecture v1.2 개요</div>
+  <div class="section-desc" data-i18n="overview.desc">
     uc-taskmanager는 Claude Code CLI 위에서 동작하는 <strong>멀티 에이전트 작업 파이프라인 시스템</strong>이다.<br>
     사용자 요청을 분석하여 복잡도에 따라 세 가지 execution-mode 중 하나로 라우팅하고, 각 TASK를 에이전트 파이프라인으로 자동 처리한다.
   </div>
@@ -570,7 +571,7 @@ tr:hover td { background: var(--bg-card-hover); }
       </div>
       <div class="agent-card" style="border-left-color: var(--mode-direct)">
         <div class="agent-name" style="color:var(--mode-direct)">3종 Execution-Mode</div>
-        <div class="agent-role">복잡도에 따라 direct / pipeline / full 중 최적 경로 선택. Router가 판정.</div>
+        <div class="agent-role">복잡도에 따라 direct / pipeline / full 중 최적 경로 선택. Specifier가 판정.</div>
       </div>
       <div class="agent-card" style="border-left-color: var(--accent2)">
         <div class="agent-name" style="color:var(--accent2)">Main Claude 오케스트레이션</div>
@@ -598,12 +599,12 @@ tr:hover td { background: var(--bg-card-hover); }
         </div>
         <div class="flow-arrow">→</div>
         <div class="flow-node">
-          <div class="flow-box" style="background:rgba(56,189,248,0.1); border-color:var(--node-router); color:var(--node-router)">Main Claude</div>
+          <div class="flow-box" style="background:rgba(56,189,248,0.1); border-color:var(--node-specifier); color:var(--node-specifier)">Main Claude</div>
           <div class="flow-label">오케스트레이터</div>
         </div>
         <div class="flow-arrow">→</div>
         <div class="flow-node">
-          <div class="flow-box" style="background:rgba(56,189,248,0.1); border-color:var(--node-router); color:var(--node-router)">Router</div>
+          <div class="flow-box" style="background:rgba(56,189,248,0.1); border-color:var(--node-specifier); color:var(--node-specifier)">Specifier</div>
           <div class="flow-label">mode 결정</div>
         </div>
       </div>
@@ -611,7 +612,7 @@ tr:hover td { background: var(--bg-card-hover); }
     <div class="flow-branch">
       <div class="flow-branch-col">
         <div class="flow-branch-title badge-direct" style="background:rgba(251,191,36,0.12); color:var(--mode-direct)">direct</div>
-        <div class="flow-branch-box" style="background:rgba(251,191,36,0.08); border-color:var(--mode-direct); color:var(--mode-direct)">Router 단독 수행</div>
+        <div class="flow-branch-box" style="background:rgba(251,191,36,0.08); border-color:var(--mode-direct); color:var(--mode-direct)">Specifier 겸임 수행</div>
         <div class="flow-branch-arrow">↓</div>
         <div class="flow-branch-box" style="background:rgba(251,191,36,0.06); border-color:rgba(251,191,36,0.3); color:var(--text-muted)">구현 + commit + 콜백</div>
       </div>
@@ -641,12 +642,13 @@ tr:hover td { background: var(--bg-card-hover); }
       <table class="inv-table">
         <thead><tr><th>불변 항목</th><th>direct 수행 주체</th><th>pipeline/full 수행 주체</th></tr></thead>
         <tbody>
-          <tr><td><code>works/WORK-NN/</code> 디렉토리 생성</td><td>Router</td><td>Router / Planner</td></tr>
-          <tr><td><code>PLAN.md</code> 생성</td><td>Router</td><td>Router / Planner</td></tr>
-          <tr><td><code>TASK-XX.md</code> 파일 생성</td><td>Router</td><td>Router / Planner</td></tr>
-          <tr><td><code>TASK-XX_result.md</code> 생성</td><td><strong>Router</strong></td><td><strong>Committer</strong></td></tr>
-          <tr><td>COMMITTER DONE 콜백 전송</td><td><strong>Router</strong></td><td><strong>Committer</strong></td></tr>
-          <tr><td><code>WORK-LIST.md</code> IN_PROGRESS 추가</td><td>Router</td><td>Router</td></tr>
+          <tr><td><code>works/WORK-NN/</code> 디렉토리 생성</td><td>Specifier</td><td>Specifier</td></tr>
+          <tr><td><code>Requirement.md</code> 생성</td><td>Specifier</td><td>Specifier</td></tr>
+          <tr><td><code>PLAN.md</code> 생성</td><td>Specifier (겸임)</td><td>Planner</td></tr>
+          <tr><td><code>TASK-XX.md</code> 파일 생성</td><td>Specifier (겸임)</td><td>Planner</td></tr>
+          <tr><td><code>TASK-XX_result.md</code> 생성</td><td><strong>Committer</strong></td><td><strong>Committer</strong></td></tr>
+          <tr><td>IN_PROGRESS → DONE 전환</td><td><strong>Committer</strong></td><td><strong>Committer</strong></td></tr>
+          <tr><td><code>WORK-LIST.md</code> IN_PROGRESS 추가</td><td>Specifier</td><td>Specifier</td></tr>
         </tbody>
       </table>
     </div>
@@ -659,31 +661,32 @@ tr:hover td { background: var(--bg-card-hover); }
   <div class="section-desc">6개의 전문 에이전트가 각자의 역할로 협력하여 TASK를 완료한다. 모든 호출은 Main Claude가 오케스트레이션한다.</div>
 
   <div class="agent-grid">
-    <div class="agent-card" style="border-left-color: var(--node-router)">
-      <div class="agent-name" style="color: var(--node-router)">Router</div>
-      <div class="agent-role">사용자 요청 분석 → execution-mode 결정 및 실행 오케스트레이션</div>
+    <div class="agent-card" style="border-left-color: var(--node-specifier)">
+      <div class="agent-name" style="color: var(--node-specifier)">Specifier</div>
+      <div class="agent-role" data-i18n="agent.specifier.role">사용자 요청 분석 → Requirement.md 생성 → execution-mode 결정</div>
       <div class="agent-meta">
         <span class="badge badge-model">opus</span>
         <span class="badge badge-mode">항상 실행</span>
       </div>
       <div style="margin-top: 0.7rem; font-size: 0.8rem; color: var(--text-muted);">
-        WORK ID 결정 · config rules 적용 · direct 단독 수행 · planner/scheduler/builder dispatch XML 반환
+        <span data-i18n="agent.specifier.detail">WORK ID 결정 · Requirement.md 생성 · 요구사항 복잡도 기반 mode 판정 · direct 시 Planner 겸임 · dispatch XML 반환</span>
       </div>
     </div>
     <div class="agent-card" style="border-left-color: var(--node-planner)">
       <div class="agent-name" style="color: var(--node-planner)">Planner</div>
-      <div class="agent-role">WORK 생성 + TASK 분해 + DAG 설계</div>
+      <div class="agent-role" data-i18n="agent.planner.role">WORK 생성 + TASK 분해 + DAG 설계</div>
       <div class="agent-meta">
         <span class="badge badge-model">opus</span>
-        <span class="badge badge-full">full 전용</span>
+        <span class="badge badge-pipeline">pipeline</span>
+        <span class="badge badge-full">full</span>
       </div>
       <div style="margin-top: 0.7rem; font-size: 0.8rem; color: var(--text-muted);">
-        프로젝트 탐색 · TASK ~30분~2시간 단위 분해 · 의존성 DAG 설계 · 사용자 승인 후 파일 생성
+        Requirement.md 기반 설계 · TASK ~30분~2시간 단위 분해 · 의존성 DAG 설계 · 사용자 승인 후 파일 생성
       </div>
     </div>
     <div class="agent-card" style="border-left-color: var(--node-scheduler)">
       <div class="agent-name" style="color: var(--node-scheduler)">Scheduler</div>
-      <div class="agent-role">DAG 관리 + Builder/Verifier/Committer 파이프라인 실행</div>
+      <div class="agent-role" data-i18n="agent.scheduler.role">DAG 관리 + Builder/Verifier/Committer 파이프라인 실행</div>
       <div class="agent-meta">
         <span class="badge badge-model">haiku</span>
         <span class="badge badge-full">full 전용</span>
@@ -694,7 +697,7 @@ tr:hover td { background: var(--bg-card-hover); }
     </div>
     <div class="agent-card" style="border-left-color: var(--node-builder)">
       <div class="agent-name" style="color: var(--node-builder)">Builder</div>
-      <div class="agent-role">TASK 실제 구현 (파일 생성/수정) + progress.md 기록</div>
+      <div class="agent-role" data-i18n="agent.builder.role">TASK 실제 구현 (파일 생성/수정) + progress.md 기록</div>
       <div class="agent-meta">
         <span class="badge badge-model">sonnet</span>
         <span class="badge badge-pipeline">pipeline</span>
@@ -706,7 +709,7 @@ tr:hover td { background: var(--bg-card-hover); }
     </div>
     <div class="agent-card" style="border-left-color: var(--node-verifier)">
       <div class="agent-name" style="color: var(--node-verifier)">Verifier</div>
-      <div class="agent-role">구현 결과 검증 (빌드·린트·테스트·AC) — 읽기 전용</div>
+      <div class="agent-role" data-i18n="agent.verifier.role">구현 결과 검증 (빌드·린트·테스트·AC) — 읽기 전용</div>
       <div class="agent-meta">
         <span class="badge badge-model">haiku</span>
         <span class="badge badge-pipeline">pipeline</span>
@@ -718,7 +721,7 @@ tr:hover td { background: var(--bg-card-hover); }
     </div>
     <div class="agent-card" style="border-left-color: var(--node-committer)">
       <div class="agent-name" style="color: var(--node-committer)">Committer</div>
-      <div class="agent-role">result.md 작성 + git commit + TaskCallback 전송</div>
+      <div class="agent-role" data-i18n="agent.committer.role">result.md 작성 + git commit + TaskCallback 전송</div>
       <div class="agent-meta">
         <span class="badge badge-model">haiku</span>
         <span class="badge badge-pipeline">pipeline</span>
@@ -738,8 +741,8 @@ tr:hover td { background: var(--bg-card-hover); }
 
 <!-- ═══════════════════ TAB: 실행 모드 ═══════════════════ -->
 <div id="tab-modes" class="tab-panel">
-  <div class="section-title">⚡ Execution-Mode 3종 체계</div>
-  <div class="section-desc">Router가 <code style="color:var(--accent3)">.agent/router_rule_config.json</code>의 rules를 우선 적용하여 판정한다. config 없을 경우 내장 기준을 사용한다.</div>
+  <div class="section-title" data-i18n="modes.title">⚡ Execution-Mode 3종 체계</div>
+  <div class="section-desc">Specifier가 요구사항 복잡도(FR/NFR 수, Acceptance Criteria)를 기반으로 판정한다. <code style="color:var(--accent3)">.agent/router_rule_config.json</code>의 rules가 있으면 우선 적용한다.</div>
 
   <!-- Routing table -->
   <div class="card">
@@ -773,24 +776,19 @@ tr:hover td { background: var(--bg-card-hover); }
   <div class="flow-diagram" style="margin-bottom: 1.5rem;">
     <div class="flow-header">
       <div class="flow-title">3.1 direct 모드</div>
-      <div class="flow-badge" style="background:rgba(251,191,36,0.12); color:var(--mode-direct)">Router 단독</div>
+      <div class="flow-badge" style="background:rgba(251,191,36,0.12); color:var(--mode-direct)">Specifier 겸임</div>
     </div>
-    <div class="section-desc" style="margin-bottom: 1rem;">Router가 서브에이전트 없이 자신의 세션에서 전 과정을 직접 수행한다. 세션 초기화 비용 0.</div>
+    <div class="section-desc" style="margin-bottom: 1rem;">Specifier가 Planner를 겸임하여 Requirement.md + PLAN.md + TASK-00.md를 생성한 후 Builder에 dispatch한다.</div>
     <div class="steps">
-      <div class="step"><div class="step-num">1</div><div class="step-text">WORK ID 결정</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-text">WORK ID 결정 + <code>mkdir works/WORK-NN/</code></div></div>
       <div class="step"><div class="step-num">2</div><div class="step-text"><code>log_work INIT</code></div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-text"><code>mkdir works/WORK-NN/</code> <span class="highlight">← 반드시 생성</span></div></div>
-      <div class="step"><div class="step-num">4</div><div class="step-text"><code>PLAN.md</code> 생성 (Execution-Mode: direct)</div></div>
-      <div class="step"><div class="step-num">5</div><div class="step-text"><code>TASK-00.md</code> 생성 <span class="highlight">← 반드시 생성</span></div></div>
-      <div class="step"><div class="step-num">6</div><div class="step-text"><code>TASK-00_progress.md</code> 생성 (Status: PENDING)</div></div>
-      <div class="step"><div class="step-num">7</div><div class="step-text"><code>log_work REF</code></div></div>
-      <div class="step"><div class="step-num">8</div><div class="step-text">코드 수정 + self-check (build &amp;&amp; lint)</div></div>
-      <div class="step"><div class="step-num">9</div><div class="step-text"><code>log_work BUILD</code></div></div>
-      <div class="step"><div class="step-num">10</div><div class="step-text"><code>TASK-00_progress.md</code> → Status: COMPLETED</div></div>
-      <div class="step"><div class="step-num">11</div><div class="step-text"><code>TASK-00_result.md</code> 생성 <span class="highlight">← 반드시 생성</span></div></div>
-      <div class="step"><div class="step-num">12</div><div class="step-text"><code>git add -A &amp;&amp; git commit</code></div></div>
-      <div class="step"><div class="step-num">13</div><div class="step-text">커밋 해시 백필 → <code>git commit --amend --no-edit</code></div></div>
-      <div class="step"><div class="step-num">14</div><div class="step-text"><code>log_work COMMIT</code> → COMMITTER DONE 콜백 전송</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text"><code>Requirement.md</code> 생성 <span class="highlight">← 반드시 생성</span></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">프로젝트 탐색 (Tech Stack 감지)</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text"><code>PLAN.md</code> 생성 (Execution-Mode: direct)</div></div>
+      <div class="step"><div class="step-num">6</div><div class="step-text"><code>TASK-00.md</code> + <code>TASK-00_progress.md</code> 생성</div></div>
+      <div class="step"><div class="step-num">7</div><div class="step-text"><code>WORK-LIST.md</code> IN_PROGRESS 행 추가</div></div>
+      <div class="step"><div class="step-num">8</div><div class="step-text"><code>log_work PLAN</code> → 사용자 승인 요청</div></div>
+      <div class="step"><div class="step-num">9</div><div class="step-text">Builder dispatch XML 반환 → Main Claude가 B→V→C 실행</div></div>
     </div>
   </div>
 
@@ -800,11 +798,16 @@ tr:hover td { background: var(--bg-card-hover); }
       <div class="flow-title">3.2 pipeline 모드</div>
       <div class="flow-badge" style="background:rgba(52,211,153,0.12); color:var(--mode-pipeline)">TASK 1개 단순 구조</div>
     </div>
-    <div class="section-desc" style="margin-bottom: 1rem;">Router가 PLAN + TASK 파일을 생성한 후 Main Claude를 통해 서브에이전트를 순차 dispatch한다.</div>
+    <div class="section-desc" style="margin-bottom: 1rem;">Specifier가 Requirement.md를 생성하고 Planner에 위임한다. Planner가 PLAN + TASK를 생성한 후 Main Claude가 B→V→C를 순차 실행한다.</div>
     <div class="flow-nodes" style="justify-content:flex-start; flex-wrap:wrap; gap: 0.3rem; margin-bottom: 1rem;">
       <div class="flow-node">
-        <div class="flow-box" style="background:rgba(56,189,248,0.08); border-color:var(--node-router); color:var(--node-router)">Router</div>
-        <div class="flow-label">PLAN + TASK 생성</div>
+        <div class="flow-box" style="background:rgba(56,189,248,0.08); border-color:var(--node-specifier); color:var(--node-specifier)">Specifier</div>
+        <div class="flow-label">Requirement.md</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="flow-box" style="background:rgba(129,140,248,0.08); border-color:var(--node-planner); color:var(--node-planner)">Planner</div>
+        <div class="flow-label">PLAN + TASK</div>
       </div>
       <div class="flow-arrow">→</div>
       <div class="flow-node">
@@ -828,8 +831,8 @@ tr:hover td { background: var(--bg-card-hover); }
       </div>
     </div>
     <div class="steps">
-      <div class="step"><div class="step-num">1</div><div class="step-text">router: WORK ID 결정, <code>PLAN.md</code>, <code>TASK-00.md</code>, <code>TASK-00_progress.md</code> 생성</div></div>
-      <div class="step"><div class="step-num">2</div><div class="step-text">router: builder dispatch XML 반환</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-text">specifier: WORK ID 결정, Requirement.md 생성, planner dispatch XML 반환</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Main Claude: planner 호출 → PLAN.md + TASK 생성 (사용자 승인 후)</div></div>
       <div class="step"><div class="step-num">3</div><div class="step-text">Main Claude: builder 서브에이전트 호출</div></div>
       <div class="step"><div class="step-num">4</div><div class="step-text">Main Claude: verifier 서브에이전트 호출 (builder context-handoff 전달)</div></div>
       <div class="step"><div class="step-num">5</div><div class="step-text">Main Claude: committer 서브에이전트 호출 (verifier FULL + builder SUMMARY context-handoff 전달)</div></div>
@@ -842,11 +845,11 @@ tr:hover td { background: var(--bg-card-hover); }
       <div class="flow-title">3.3 full 모드</div>
       <div class="flow-badge" style="background:rgba(129,140,248,0.12); color:var(--mode-full)">멀티 TASK / DAG</div>
     </div>
-    <div class="section-desc" style="margin-bottom: 1rem;">Router가 planner에게 계획을 위임하고, scheduler가 DAG 기반으로 파이프라인을 반복 실행한다.</div>
+    <div class="section-desc" style="margin-bottom: 1rem;">Specifier가 Requirement.md를 생성하고 Planner에 위임한다. Planner가 TASK를 분해하고, Scheduler가 DAG 기반으로 파이프라인을 반복 실행한다.</div>
     <div class="flow-nodes" style="justify-content:flex-start; flex-wrap:wrap; gap: 0.3rem; margin-bottom: 1rem;">
       <div class="flow-node">
-        <div class="flow-box" style="background:rgba(56,189,248,0.08); border-color:var(--node-router); color:var(--node-router)">Router</div>
-        <div class="flow-label">WORK 디렉토리 생성</div>
+        <div class="flow-box" style="background:rgba(56,189,248,0.08); border-color:var(--node-specifier); color:var(--node-specifier)">Specifier</div>
+        <div class="flow-label">Requirement.md</div>
       </div>
       <div class="flow-arrow">→</div>
       <div class="flow-node">
@@ -878,7 +881,7 @@ tr:hover td { background: var(--bg-card-hover); }
       <div>
         <div style="font-weight:600; margin-bottom:0.5rem; font-size:0.87rem; color:var(--text-muted)">신규 WORK</div>
         <div class="steps">
-          <div class="step"><div class="step-num">1</div><div class="step-text">router: WORK ID 결정, 디렉토리 생성, planner dispatch XML 반환</div></div>
+          <div class="step"><div class="step-num">1</div><div class="step-text">specifier: WORK ID 결정, Requirement.md 생성, planner dispatch XML 반환</div></div>
           <div class="step"><div class="step-num">2</div><div class="step-text">Main Claude: planner 호출 → PLAN.md + TASK 파일 생성 (사용자 승인 후)</div></div>
           <div class="step"><div class="step-num">3</div><div class="step-text">Main Claude: scheduler 호출</div></div>
         </div>
@@ -999,10 +1002,10 @@ tr:hover td { background: var(--bg-card-hover); }
       <table>
         <thead><tr><th>Dispatcher</th><th>Receiver</th><th>execution-mode</th><th>설명</th></tr></thead>
         <tbody>
-          <tr><td>Router</td><td>(자기 자신)</td><td><span class="badge badge-direct">direct</span></td><td>Router가 구현+commit+콜백 직접 수행</td></tr>
-          <tr><td>Router</td><td>Builder</td><td><span class="badge badge-pipeline">pipeline</span></td><td>TASK 1개 구현</td></tr>
-          <tr><td>Router</td><td>Planner</td><td><span class="badge badge-full">full</span></td><td>복잡 WORK 계획 수립</td></tr>
-          <tr><td>Router</td><td>Scheduler</td><td><span class="badge badge-full">full</span></td><td>기존 WORK 실행</td></tr>
+          <tr><td>Specifier</td><td>Builder</td><td><span class="badge badge-direct">direct</span></td><td>Specifier 겸임 후 Builder dispatch</td></tr>
+          <tr><td>Specifier</td><td>Planner</td><td><span class="badge badge-pipeline">pipeline</span> <span class="badge badge-full">full</span></td><td>Requirement.md 기반 계획 위임</td></tr>
+          <tr><td>Main Claude</td><td>Builder</td><td><span class="badge badge-pipeline">pipeline</span></td><td>TASK 1개 구현</td></tr>
+          <tr><td>Main Claude</td><td>Scheduler</td><td><span class="badge badge-full">full</span></td><td>WORK 실행 (DAG 기반)</td></tr>
           <tr><td>Scheduler</td><td>Builder</td><td><span class="badge badge-full">full</span></td><td>TASK N개 구현</td></tr>
           <tr><td>Scheduler</td><td>Verifier</td><td><span class="badge badge-full">full</span></td><td>TASK N개 검증</td></tr>
           <tr><td>Scheduler</td><td>Committer</td><td><span class="badge badge-full">full</span></td><td>TASK N개 커밋</td></tr>
@@ -1219,8 +1222,9 @@ tr:hover td { background: var(--bg-card-hover); }
     <div class="card-title">🗂️ 디렉토리 구조</div>
     <div class="file-tree">
 <span class="dir">works/</span><br>
-&nbsp;&nbsp;<span class="file">WORK-LIST.md</span> &nbsp;<span class="comment"># 전체 WORK 목록 (IN_PROGRESS / COMPLETED)</span><br>
+&nbsp;&nbsp;<span class="file">WORK-LIST.md</span> &nbsp;<span class="comment"># 전체 WORK 목록 (LAST_WORK_ID 헤더 + IN_PROGRESS / DONE)</span><br>
 &nbsp;&nbsp;<span class="dir">WORK-NN/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="required">Requirement.md</span> &nbsp;<span class="comment"># 요구사항 명세 (FR/NFR/AC)</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="required">PLAN.md</span> &nbsp;<span class="comment"># WORK 개요 + DAG (7개 필수 메타정보 필드)</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="conditional">PROGRESS.md</span> &nbsp;<span class="comment"># scheduler 진행 상태 (full 모드만)</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="required">TASK-XX.md</span> &nbsp;<span class="comment"># TASK 명세 (WORK prefix 없음)</span><br>
@@ -1240,10 +1244,11 @@ tr:hover td { background: var(--bg-card-hover); }
       <table style="width:100%; font-size:0.83rem;">
         <thead><tr><th style="padding:0.4rem 0.6rem; text-align:left; color:var(--accent); border-bottom:1px solid var(--border);">종류</th><th style="padding:0.4rem 0.6rem; text-align:left; color:var(--accent); border-bottom:1px solid var(--border);">형식</th><th style="padding:0.4rem 0.6rem; text-align:left; color:var(--accent); border-bottom:1px solid var(--border);">생성 주체</th></tr></thead>
         <tbody>
-          <tr><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">WORK 계획</td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);"><code style="color:var(--accent3);">PLAN.md</code></td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">planner / router</td></tr>
-          <tr><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">TASK 계획</td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);"><code style="color:var(--accent3);">TASK-NN.md</code></td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">planner / router</td></tr>
+          <tr><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">요구사항</td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);"><code style="color:var(--accent3);">Requirement.md</code></td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">specifier</td></tr>
+          <tr><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">WORK 계획</td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);"><code style="color:var(--accent3);">PLAN.md</code></td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">planner / specifier</td></tr>
+          <tr><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">TASK 계획</td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);"><code style="color:var(--accent3);">TASK-NN.md</code></td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">planner / specifier</td></tr>
           <tr><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">TASK 진행</td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);"><code style="color:var(--accent3);">TASK-NN_progress.md</code></td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">builder</td></tr>
-          <tr><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">TASK 결과</td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);"><code style="color:var(--accent3);">TASK-NN_result.md</code></td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">committer / router</td></tr>
+          <tr><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">TASK 결과</td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);"><code style="color:var(--accent3);">TASK-NN_result.md</code></td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">committer</td></tr>
           <tr><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">WORK 진행</td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);"><code style="color:var(--accent3);">PROGRESS.md</code></td><td style="padding:0.4rem 0.6rem; border-bottom:1px solid var(--border);">scheduler</td></tr>
           <tr><td style="padding:0.4rem 0.6rem;">Activity Log</td><td style="padding:0.4rem 0.6rem;"><code style="color:var(--accent3);">work_WORK-NN.log</code></td><td style="padding:0.4rem 0.6rem;">모든 에이전트</td></tr>
         </tbody>
@@ -1257,7 +1262,7 @@ tr:hover td { background: var(--bg-card-hover); }
       <div class="card-title">📝 PLAN.md 7개 필수 메타정보 필드</div>
       <div class="file-tree">
 &gt; Created: {YYYY-MM-DD}<br>
-&gt; 요구사항: {REQ-XXX | N/A}<br>
+&gt; 요구사항: works/WORK-NN/Requirement.md<br>
 &gt; Execution-Mode: {direct | pipeline | full}<br>
 &gt; Project: {project name}<br>
 &gt; Tech Stack: {stack}<br>
@@ -1313,7 +1318,7 @@ log_work() {<br>
       <div class="callback-name" style="color:var(--accent3)">ProgressCallback</div>
       <div class="callback-timing">🕐 builder 체크포인트마다</div>
       <div class="callback-by">
-        <div>direct: <span style="color:var(--node-router)">Router</span></div>
+        <div>direct: <span style="color:var(--node-committer)">Committer</span></div>
         <div>pipeline/full: <span style="color:var(--node-builder)">Builder</span></div>
       </div>
     </div>
@@ -1321,7 +1326,7 @@ log_work() {<br>
       <div class="callback-name" style="color:var(--accent5)">TaskCallback</div>
       <div class="callback-timing">🕐 git commit 완료 후 (불변 보장)</div>
       <div class="callback-by">
-        <div>direct: <span style="color:var(--node-router)">Router</span></div>
+        <div>direct: <span style="color:var(--node-committer)">Committer</span></div>
         <div>pipeline/full: <span style="color:var(--node-committer)">Committer</span></div>
       </div>
     </div>
@@ -1350,7 +1355,7 @@ CallbackToken: &lt;bearer-token&gt;
       <table>
         <thead><tr><th>execution-mode</th><th>TaskCallback</th><th>ProgressCallback</th></tr></thead>
         <tbody>
-          <tr><td><span class="badge badge-direct">direct</span></td><td><strong style="color:var(--node-router)">Router</strong></td><td><strong style="color:var(--node-router)">Router</strong></td></tr>
+          <tr><td><span class="badge badge-direct">direct</span></td><td><strong style="color:var(--node-committer)">Committer</strong></td><td><strong style="color:var(--node-builder)">Builder</strong></td></tr>
           <tr><td><span class="badge badge-pipeline">pipeline</span></td><td><strong style="color:var(--node-committer)">Committer</strong></td><td><strong style="color:var(--node-builder)">Builder</strong></td></tr>
           <tr><td><span class="badge badge-full">full</span></td><td><strong style="color:var(--node-committer)">Committer</strong></td><td><strong style="color:var(--node-builder)">Builder</strong></td></tr>
         </tbody>
@@ -1386,8 +1391,8 @@ CallbackToken: &lt;bearer-token&gt;
       <table class="mcp-table">
         <thead><tr><th>에이전트</th><th>MCP 도구</th><th>용도</th></tr></thead>
         <tbody>
-          <tr><td class="mcp-agent" style="color:var(--node-router)">Router</td><td class="mcp-tool">mcp__sequential-thinking__sequentialthinking</td><td>복잡도 판정 경계 분석</td></tr>
-          <tr><td class="mcp-agent" style="color:var(--node-router)">Router</td><td class="mcp-tool">mcp__serena__*</td><td>direct 모드 코드 수정 시 심볼 단위 접근</td></tr>
+          <tr><td class="mcp-agent" style="color:var(--node-specifier)">Specifier</td><td class="mcp-tool">mcp__sequential-thinking__sequentialthinking</td><td>복잡도 판정 경계 분석</td></tr>
+          <tr><td class="mcp-agent" style="color:var(--node-specifier)">Specifier</td><td class="mcp-tool">mcp__serena__*</td><td>Planner 겸임 시 프로젝트 탐색</td></tr>
           <tr><td class="mcp-agent" style="color:var(--node-planner)">Planner</td><td class="mcp-tool">mcp__sequential-thinking__sequentialthinking</td><td>TASK 4개 이상 / 복잡 의존성 분해</td></tr>
           <tr><td class="mcp-agent" style="color:var(--node-planner)">Planner</td><td class="mcp-tool">mcp__serena__*</td><td>기존 코드 구조 파악 (get_symbols_overview 우선)</td></tr>
           <tr><td class="mcp-agent" style="color:var(--node-builder)">Builder</td><td class="mcp-tool">mcp__serena__*</td><td>코드 탐색 (list_dir → get_symbols_overview → find_symbol → Read 순)</td></tr>
@@ -1492,6 +1497,104 @@ function toggleDag(id) {
   status.textContent = c.label;
 }
 
+// ── i18n Language Toggle ──
+let currentLang = 'ko';
+const i18n = {
+  // Nav buttons
+  'nav.overview': { ko: '개요', en: 'Overview' },
+  'nav.agents': { ko: '에이전트', en: 'Agents' },
+  'nav.modes': { ko: '실행 모드', en: 'Exec Modes' },
+  'nav.pipeline': { ko: '파이프라인 흐름', en: 'Pipeline Flow' },
+  'nav.context': { ko: '슬라이딩 윈도우', en: 'Sliding Window' },
+  'nav.dag': { ko: 'DAG', en: 'DAG' },
+  'nav.files': { ko: '파일 구조', en: 'File Structure' },
+  'nav.callbacks': { ko: '콜백 통합', en: 'Callbacks' },
+  'nav.mcp': { ko: 'MCP 도구', en: 'MCP Tools' },
+  // Header
+  'header.theme': { ko: '테마 전환', en: 'Toggle Theme' },
+  // Overview tab
+  'overview.title': { ko: '🏗️ Pipeline Architecture v1.2 개요', en: '🏗️ Pipeline Architecture v1.2 Overview' },
+  'overview.desc': {
+    ko: 'uc-taskmanager는 Claude Code CLI 위에서 동작하는 <strong>멀티 에이전트 작업 파이프라인 시스템</strong>이다.<br>사용자 요청을 분석하여 복잡도에 따라 세 가지 execution-mode 중 하나로 라우팅하고, 각 TASK를 에이전트 파이프라인으로 자동 처리한다.',
+    en: 'uc-taskmanager is a <strong>multi-agent task pipeline system</strong> running on Claude Code CLI.<br>It analyzes user requests and routes them to one of three execution-modes based on complexity, automatically processing each TASK through the agent pipeline.'
+  },
+  'overview.principles': { ko: '🎯 핵심 설계 원칙', en: '🎯 Core Design Principles' },
+  'principle.worktask': { ko: 'WORK / TASK 2단계 계층', en: 'WORK / TASK 2-Level Hierarchy' },
+  'principle.worktask.desc': { ko: 'WORK(일) → TASK(작업) 구조로 목표를 분해. 각 TASK는 독립 커밋 가능 단위.', en: 'Decompose goals into WORK → TASK structure. Each TASK is an independently committable unit.' },
+  'principle.modes': { ko: '3종 Execution-Mode', en: '3 Execution Modes' },
+  'principle.modes.desc': { ko: '복잡도에 따라 direct / pipeline / full 중 최적 경로 선택. Specifier가 판정.', en: 'Select optimal route among direct / pipeline / full based on complexity. Specifier determines the mode.' },
+  'principle.orch': { ko: 'Main Claude 오케스트레이션', en: 'Main Claude Orchestration' },
+  'principle.orch.desc': { ko: '모든 서브에이전트 호출은 Main Claude가 수행. 서브에이전트는 결과 XML만 반환.', en: 'All sub-agent calls are made by Main Claude. Sub-agents only return result XML.' },
+  'principle.context': { ko: '슬라이딩 윈도우 컨텍스트', en: 'Sliding Window Context' },
+  'principle.context.desc': { ko: '에이전트 간 reasoning 전달로 토큰 절감. FULL / SUMMARY / DROP 3단계 정책.', en: 'Token savings via inter-agent reasoning transfer. 3-level policy: FULL / SUMMARY / DROP.' },
+  'principle.invariant': { ko: '불변 보장', en: 'Invariant Guarantees' },
+  'principle.invariant.desc': { ko: '모든 모드에서 result.md 생성과 COMMITTER DONE 콜백 전송을 보장.', en: 'Guarantees result.md creation and COMMITTER DONE callback in all modes.' },
+  'overview.flow': { ko: '🔄 전체 흐름 — Main Claude 중심', en: '🔄 Overall Flow — Main Claude Centric' },
+  'flow.trigger': { ko: '사용자 요청 트리거', en: 'User Request Trigger' },
+  'flow.orch': { ko: '오케스트레이터', en: 'Orchestrator' },
+  'flow.decide': { ko: 'mode 결정', en: 'Mode Decision' },
+  'flow.specifier.solo': { ko: 'Specifier 겸임 수행', en: 'Specifier (Planner Role)' },
+  'flow.impl': { ko: '구현 + commit + 콜백', en: 'Implement + Commit + Callback' },
+  'overview.invariants': { ko: '🔒 불변 보장 항목 (모든 모드 공통)', en: '🔒 Invariant Guarantees (All Modes)' },
+  'inv.header.item': { ko: '불변 항목', en: 'Invariant Item' },
+  'inv.header.direct': { ko: 'direct 수행 주체', en: 'direct Actor' },
+  'inv.header.pipefull': { ko: 'pipeline/full 수행 주체', en: 'pipeline/full Actor' },
+  // Agents tab
+  'agents.title': { ko: '🤖 에이전트 구성', en: '🤖 Agent Configuration' },
+  'agents.desc': { ko: '6개의 전문 에이전트가 각자의 역할로 협력하여 TASK를 완료한다. 모든 호출은 Main Claude가 오케스트레이션한다.', en: '6 specialized agents cooperate with their respective roles to complete TASKs. All calls are orchestrated by Main Claude.' },
+  'agent.specifier.role': { ko: '사용자 요청 분석 → Requirement.md 생성 → execution-mode 결정', en: 'Analyze user request → Create Requirement.md → Determine execution-mode' },
+  'agent.specifier.detail': { ko: '<span data-i18n="agent.specifier.detail">WORK ID 결정 · Requirement.md 생성 · 요구사항 복잡도 기반 mode 판정 · direct 시 Planner 겸임 · dispatch XML 반환</span>', en: 'WORK ID determination · Requirement.md creation · Mode decision based on requirement complexity · Planner role in direct mode · dispatch XML return' },
+  'agent.planner.role': { ko: 'WORK 생성 + TASK 분해 + DAG 설계', en: 'WORK creation + TASK decomposition + DAG design' },
+  'agent.planner.detail': { ko: 'Requirement.md 기반 설계 · TASK ~30분~2시간 단위 분해 · 의존성 DAG 설계 · 사용자 승인 후 파일 생성', en: 'Design based on Requirement.md · TASK decomposition in 30min~2hr units · Dependency DAG design · File creation after user approval' },
+  'agent.scheduler.role': { ko: 'DAG 관리 + Builder/Verifier/Committer 파이프라인 실행', en: 'DAG management + Builder/Verifier/Committer pipeline execution' },
+  'agent.scheduler.detail': { ko: 'DAG Resolution · READY TASK 선별 · 최대 3회 재dispatch · PROGRESS.md 업데이트 · Pipeline Stage Callbacks', en: 'DAG Resolution · READY TASK selection · Max 3 re-dispatches · PROGRESS.md update · Pipeline Stage Callbacks' },
+  'agent.builder.role': { ko: 'TASK 실제 구현 (파일 생성/수정) + progress.md 기록', en: 'TASK implementation (file creation/modification) + progress.md logging' },
+  'agent.builder.detail': { ko: 'Serena MCP 우선 코드 탐색 · Self-check (build+lint) · progress.md 실시간 갱신 · ProgressCallback 전송', en: 'Serena MCP-first code exploration · Self-check (build+lint) · Real-time progress.md update · ProgressCallback send' },
+  'agent.verifier.role': { ko: '구현 결과 검증 (빌드·린트·테스트·AC) — 읽기 전용', en: 'Implementation verification (build·lint·test·AC) — Read-only' },
+  'agent.verifier.detail': { ko: 'Step 0~6: progress.md Gate → 빌드 → 린트 → 테스트 → AC 검증 → 파일 존재 → 컨벤션. 소스 수정 금지.', en: 'Step 0~6: progress.md Gate → Build → Lint → Test → AC verification → File existence → Convention. No source modification.' },
+  'agent.committer.role': { ko: 'result.md 작성 + git commit + TaskCallback 전송', en: 'result.md creation + git commit + TaskCallback send' },
+  'agent.committer.detail': { ko: 'Gate Check (3조건) → result.md → git commit → 커밋 해시 백필 → TaskCallback 전송', en: 'Gate Check (3 conditions) → result.md → git commit → Commit hash backfill → TaskCallback send' },
+  'agents.info': { ko: '<strong>Main Claude 오케스트레이션:</strong> 모든 에이전트 호출은 Main Claude가 수행한다. 서브에이전트는 작업 완료 후 결과 XML(dispatch 또는 task-result)만 반환하고, Main Claude가 반환값을 받아 다음 에이전트를 호출한다.', en: '<strong>Main Claude Orchestration:</strong> All agent calls are made by Main Claude. Sub-agents return only result XML (dispatch or task-result) after work completion, and Main Claude receives the return value to call the next agent.' },
+  // Modes tab
+  'modes.title': { ko: '⚡ Execution-Mode 3종 체계', en: '⚡ 3 Execution-Mode System' },
+  'modes.desc': { ko: 'Specifier가 요구사항 복잡도(FR/NFR 수, Acceptance Criteria)를 기반으로 판정한다.', en: 'Specifier determines the mode based on requirement complexity (FR/NFR count, Acceptance Criteria).' },
+  'modes.routing': { ko: '📊 라우팅 기준표', en: '📊 Routing Criteria Table' },
+  'modes.direct.title': { ko: '3.1 direct 모드', en: '3.1 direct mode' },
+  'modes.direct.badge': { ko: 'Specifier 겸임', en: 'Specifier Combined' },
+  'modes.direct.desc': { ko: 'Specifier가 Planner를 겸임하여 Requirement.md + PLAN.md + TASK-00.md를 생성한 후 Builder에 dispatch한다.', en: 'Specifier takes on the Planner role, creates Requirement.md + PLAN.md + TASK-00.md, then dispatches to Builder.' },
+  'modes.pipeline.title': { ko: '3.2 pipeline 모드', en: '3.2 pipeline mode' },
+  'modes.pipeline.desc': { ko: 'Specifier가 Requirement.md를 생성하고 Planner에 위임한다. Planner가 PLAN + TASK를 생성한 후 Main Claude가 B→V→C를 순차 실행한다.', en: 'Specifier creates Requirement.md and delegates to Planner. Planner creates PLAN + TASK, then Main Claude executes B→V→C sequentially.' },
+  'modes.full.title': { ko: '3.3 full 모드', en: '3.3 full mode' },
+  'modes.full.desc': { ko: 'Specifier가 Requirement.md를 생성하고 Planner에 위임한다. Planner가 TASK를 분해하고, Scheduler가 DAG 기반으로 파이프라인을 반복 실행한다.', en: 'Specifier creates Requirement.md and delegates to Planner. Planner decomposes TASKs, and Scheduler runs the pipeline iteratively based on DAG.' },
+  // Pipeline tab
+  'pipeline.title': { ko: '🔁 TASK 파이프라인 흐름', en: '🔁 TASK Pipeline Flow' },
+  'pipeline.desc': { ko: '각 TASK는 Builder → Verifier → Committer 순서로 실행된다. 모든 단계가 context-handoff XML로 연결된다.', en: 'Each TASK is executed in Builder → Verifier → Committer order. All stages are connected via context-handoff XML.' },
+  // Context tab
+  'context.title': { ko: '🪟 슬라이딩 윈도우 컨텍스트 정책', en: '🪟 Sliding Window Context Policy' },
+  'context.desc': { ko: '에이전트 간 reasoning을 전달하는 핵심 메커니즘. 단계 거리에 따라 전달 수준을 달리하여 토큰을 절감한다.', en: 'Core mechanism for transferring reasoning between agents. Varies transfer level by step distance to save tokens.' },
+  // DAG tab
+  'dag.title': { ko: '🕸️ DAG 의존성 관리 (full 모드)', en: '🕸️ DAG Dependency Management (full mode)' },
+  // Files tab
+  'files.title': { ko: '📁 WORK / TASK 파일 구조', en: '📁 WORK / TASK File Structure' },
+  'files.desc': { ko: '모든 execution-mode에서 동일한 파일 구조를 사용한다. 파일명 규칙은 parseTaskFilename() 인식 기준을 따른다.', en: 'All execution-modes use the same file structure. Filename conventions follow parseTaskFilename() recognition criteria.' },
+  // Callbacks tab
+  'callbacks.title': { ko: '📡 외부 콜백 통합', en: '📡 External Callback Integration' },
+  'callbacks.desc': { ko: '외부 시스템과의 연동을 위한 3종 콜백. 모든 모드에서 COMMITTER DONE 콜백(TaskCallback) 전송은 불변 보장된다.', en: '3 types of callbacks for external system integration. COMMITTER DONE callback (TaskCallback) transmission is invariantly guaranteed in all modes.' },
+  // MCP tab
+  'mcp.title': { ko: '🔧 MCP 도구 현황', en: '🔧 MCP Tools Status' },
+};
+
+function toggleLang() {
+  currentLang = currentLang === 'ko' ? 'en' : 'ko';
+  document.getElementById('lang-btn').textContent = currentLang === 'ko' ? 'EN' : 'KO';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (i18n[key] && i18n[key][currentLang]) {
+      el.innerHTML = i18n[key][currentLang];
+    }
+  });
+}
+
 // ── Save as PNG ──
 function savePng() {
   // Inline SVG capture approach: capture the overview tab as SVG
@@ -1529,7 +1632,7 @@ function savePng() {
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     URL.revokeObjectURL(url);
     const a = document.createElement('a');
-    a.download = 'pipeline-architecture-v1.1.png';
+    a.download = 'pipeline-architecture-v1.2.png';
     a.href = canvas.toDataURL('image/png');
     a.click();
     btn.textContent = 'Save as PNG';
