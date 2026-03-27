@@ -62,3 +62,66 @@ Examples: \`[new-feature]\`, \`[bugfix]\`, \`[enhancement]\`, \`[new-work]\`, et
 export function getClaudeMdSection(lang) {
   return lang === 'ko' ? CLAUDE_MD_SECTION_KO : CLAUDE_MD_SECTION_EN;
 }
+
+/**
+ * Bash permissions required by uc-taskmanager agents.
+ * Merged into .claude/settings.local.json during init.
+ *
+ * Categories:
+ *   - File discovery: ls, cat, basename, find, wc, sort, tail, head
+ *   - Pattern matching: grep, sed, cut, tr
+ *   - Formatting: printf, echo
+ *   - Build/Lint: node, npm, bun, yarn, cargo, go, python, ruff, make
+ *   - Git: git add, git commit, git log, git rev-parse
+ *   - Network: curl (callback)
+ */
+export const REQUIRED_PERMISSIONS = [
+  // File read/write tools (project-root scoped)
+  'Read(/**)',
+  'Edit(/**)',
+  'Write(/**)',
+  'Read(**)',
+  'Edit(**)',
+  'Write(**)',
+
+  // File discovery & text utilities
+  'Bash(ls:*)',
+  'Bash(cat:*)',
+  'Bash(mkdir:*)',
+  'Bash(basename:*)',
+  'Bash(find:*)',
+  'Bash(wc:*)',
+  'Bash(sort:*)',
+  'Bash(tail:*)',
+  'Bash(head:*)',
+  'Bash(echo:*)',
+  'Bash(printf:*)',
+
+  // Pattern matching & text processing
+  'Bash(grep:*)',
+  'Bash(sed:*)',
+  'Bash(cut:*)',
+  'Bash(tr:*)',
+
+  // Build & Lint (auto-detect per project type)
+  'Bash(node:*)',
+  'Bash(npm run:*)',
+  'Bash(npm test:*)',
+  'Bash(bun run:*)',
+  'Bash(yarn:*)',
+  'Bash(cargo:*)',
+  'Bash(go build:*)',
+  'Bash(go test:*)',
+  'Bash(python:*)',
+  'Bash(ruff:*)',
+  'Bash(make:*)',
+
+  // Git operations (committer)
+  'Bash(git add:*)',
+  'Bash(git commit:*)',
+  'Bash(git log:*)',
+  'Bash(git rev-parse:*)',
+
+  // Network (callback transmission)
+  'Bash(curl:*)',
+];

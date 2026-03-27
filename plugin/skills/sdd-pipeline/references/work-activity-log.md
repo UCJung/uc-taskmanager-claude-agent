@@ -10,19 +10,21 @@ Defines the rules for each agent to record WORK progress in the `works/{WORK_ID}
 * During work: Work items and work content
 * On task completion: The prompt message sent to other agents** Content of the prompt message received at agent startup (Required)
 
-## log_work Function
+## log_work Method
 
-```bash
-AGENT_NAME="SPECIFIER"  # Set appropriately in each agent file
+**Do NOT use Bash** for activity log writes. Use the `Write` tool (or `Edit` tool to append).
 
-log_work() {
-  local WORK_ID="$1" AGENT="$2" STAGE="$3" DESC="$4"
-  mkdir -p "works/${WORK_ID}"
-  printf '[%s]_%s_%s_%s\n' \
-    "$(date '+%Y-%m-%dT%H:%M:%S')" "$AGENT" "$STAGE" "$DESC" \
-    >> "works/${WORK_ID}/work_${WORK_ID}.log"
-}
+Format each log entry as:
 ```
+[YYYY-MM-DDTHH:MM:SS]_AGENT_STAGE_description
+```
+
+Example: to log an INIT stage, use the **Write** tool to append to `works/{WORK_ID}/work_{WORK_ID}.log`:
+```
+[2026-03-28T14:30:00]_SPECIFIER_INIT_WORK-09 created — Execution-Mode: direct
+```
+
+→ **Bash command rules: see `shared-prompt-sections.md` § 13**
 
 ---
 

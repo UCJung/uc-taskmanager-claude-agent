@@ -164,28 +164,17 @@ Rules:
 
 ## § 10. Callback Transmission Template
 
+→ **Bash command rules: see § 13** — each step below is a separate tool call.
+
 Replace `{CallbackType}` with the actual key name (e.g., `ProgressCallback`, `TaskCallback`).
 
-```bash
-CALLBACK_URL=$(grep "^{CallbackType}:" CLAUDE.md 2>/dev/null | sed 's/^{CallbackType}: //' | tr -d '\r')
-CALLBACK_TOKEN=$(grep "^CallbackToken:" CLAUDE.md 2>/dev/null | sed 's/^CallbackToken: //' | tr -d '\r')
+**Step 1.** Use `Grep` tool to find `{CallbackType}:` line in CLAUDE.md. If not found, skip callback entirely.
 
-if [ -n "$CALLBACK_URL" ] && [ "$CALLBACK_URL" != "{CallbackType}:" ]; then
-  PAYLOAD=$(cat <<EOF
-{
-  "workId": "${WORK_ID}",
-  "taskId": "${TASK_ID}",
-  ... agent-specific fields ...
-}
-EOF
-  )
-  AUTH_HEADER=""
-  [ -n "$CALLBACK_TOKEN" ] && AUTH_HEADER="-H \"X-Runner-Api-Key: ${CALLBACK_TOKEN}\""
-  curl -s -X POST "$CALLBACK_URL" \
-    -H "Content-Type: application/json" \
-    $AUTH_HEADER \
-    -d "$PAYLOAD" > /dev/null 2>&1
-fi
+**Step 2.** Use `Grep` tool to find `CallbackToken:` line in CLAUDE.md (optional).
+
+**Step 3.** Send callback with a single `curl` command:
+```bash
+curl -s -X POST "CALLBACK_URL" -H "Content-Type: application/json" -H "X-Runner-Api-Key: TOKEN" -d '{"workId":"WORK-01","taskId":"TASK-00",...}'
 ```
 
 Agent-specific payload fields:
@@ -223,7 +212,41 @@ On gate failure → return FAIL task-result immediately. Do not proceed to subse
 
 ---
 
+## § 13. Bash Command Rules
+
+Bash commands MUST follow these rules for permission compatibility.
+
+**MANDATORY:**
+- One simple command per Bash call — NO compound commands (`&&`, `||`, `;`, `|`)
+- NO `cd dir && command` — you are already in the project root
+- NO multi-line scripts — split into separate Bash calls
+- NO sub-shell expansions in arguments — e.g., `$(date ...)` inside `printf`
+- Use relative paths from project root (e.g., `works/WORK-01/`) — NO absolute paths
+- Use `git add file`, `git commit -m "msg"` — NO `git -C path` flag
+
+**For file operations, prefer dedicated tools over Bash:**
+- Read files → `Read` tool (NOT `cat`)
+- Write/append files → `Write` tool (NOT `echo >>` or `printf >>`)
+- Edit files → `Edit` tool (NOT `sed -i`)
+- Search files → `Grep` tool (NOT `grep`)
+- Find files → `Glob` tool (NOT `find`)
+
+**Activity log example:**
+```
+WRONG: printf '[%s]_%s\n' "$(date ...)" "INIT" >> work.log
+RIGHT: Use Write tool to append a line to the log file
+```
+
+**Git example:**
+```
+WRONG: cd /path/to/project && git add file && git commit -m "msg"
+RIGHT: git add file        (one call)
+       git commit -m "msg"  (next call)
+```
+
+---
+
 ## Version
 
 - Created: 2026-03-10
-- Updated: 2026-03-21
+- Updated: 2026-03-28

@@ -34,5 +34,3 @@ README 업데이트 범위:
 
 ko
 CommitLanguage: en
-
-

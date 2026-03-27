@@ -37,6 +37,8 @@ uctm init --lang en   # English agents
 uctm init             # 대화형 언어 선택
 ```
 
+init 과정에서 에이전트에 필요한 Bash 권한을 `settings.local.json`에 자동 설정할지 물어봅니다. 이를 통해 파이프라인 실행 시 권한 프롬프트가 발생하지 않습니다.
+
 ### 시작하기
 
 설치 완료 후 (두 방법 모두), Claude Code를 실행하고 파이프라인 태그를 사용하세요: []시작하는 지시를 내리면 Agent가 동작합니다.
@@ -46,7 +48,7 @@ claude
 > [추가기능] hello world 기능 추가해줘
 ```
 
-파일 생성, 셸 명령 등의 권한 질문 없이 실행하려면 바이패스 모드를 사용하세요:
+`uctm init`에서 권한 자동 설정을 완료했다면 별도 옵션 없이 파이프라인이 실행됩니다. 그렇지 않으면 바이패스 모드를 사용하세요:
 
 ```bash
 claude --dangerously-skip-permissions
@@ -314,10 +316,11 @@ scheduler가 `PROGRESS.md`와 `result.md` 파일을 읽어 현재 상태를 보�
 2. **uc-taskmanager** 검색
 3. **Install Plugin** 클릭
 4. Claude Code가 plugin의 `agents/` 디렉토리에서 에이전트를 자동으로 인식
+5. Claude Code에서 `/uctm-init`을 실행하여 `works/`, `CLAUDE.md`, Bash 권한 설정
 
-Marketplace Plugin은 **영어 에이전트만 포함**합니다 (6개 핵심 에이전트 + 6개 참조 문서).
+Marketplace Plugin은 **영어 에이전트만 포함**합니다 (6개 핵심 에이전트 + 6개 참조 문서 + 3개 스킬).
 
-> **Marketplace Plugin vs npm CLI**: Plugin은 설치 단계 없이 항상 최신 상태를 유지합니다. npm CLI는 한국어 에이전트(`--lang ko`)와 `CLAUDE.md`를 통한 프로젝트별 커스터마이징을 지원합니다.
+> **Marketplace Plugin vs npm CLI**: Plugin은 설치 단계 없이 항상 최신 상태를 유지합니다. npm CLI는 한국어 에이전트(`--lang ko`)와 `CLAUDE.md`를 통한 프로젝트별 커스터마이징을 지원합니다. 양쪽 모두 권한 자동 설정을 포함합니다.
 
 ### npm CLI (전체 언어 지원 + 커스터마이징)
 
@@ -980,8 +983,10 @@ uc-taskmanager/
 │   │   │   └── references/  ← agents/en/에서 동기화 (6개 참조 문서)
 │   │   ├── work-pipeline/
 │   │   │   └── SKILL.md
-│   │   └── work-status/
-│   │       └── SKILL.md
+│   │   ├── work-status/
+│   │   │   └── SKILL.md
+│   │   └── init/
+│   │       └── SKILL.md     ← /uctm-init (works/, CLAUDE.md, 권한 설정)
 │   ├── .claude-plugin/
 │   │   └── plugin.json      ← Plugin 매니페스트 (name, version, agents 배열)
 │   └── README.md

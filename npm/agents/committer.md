@@ -107,38 +107,31 @@ fi
 
 ### 3-6. Git Check
 
-```bash
-if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-  echo "WARNING: No git repository found. Skipping git commit."
-  echo "Result file saved at: works/${WORK_ID}/TASK-XX_result.md"
-  # → Jump directly to step 7 (TaskCallback)
-fi
-```
+→ **Bash command rules: see `shared-prompt-sections.md` § 13**
 
-If git is not available, skip step 3-7 (Git Commit). The result.md, PROGRESS.md, and WORK-LIST.md are already saved — the user can `git init && git add . && git commit` later.
+Run `git rev-parse --is-inside-work-tree` (single command). If it fails, skip steps 3-7 and jump to step 7 (TaskCallback). The result.md, PROGRESS.md, and WORK-LIST.md are already saved.
 
 ### 3-7. Git Commit
 
-```bash
-RESULT_FILE="works/${WORK_ID}/TASK-XX_result.md"
-[ ! -f "$RESULT_FILE" ] && echo "ABORT: result file not found" && exit 1
+**Each command below is a separate Bash call — do NOT chain with `&&` or `;`:**
 
-# Stage WORK management files (Requirement, PLAN, TASK, progress, result)
-git add "works/${WORK_ID}/"
+1. Verify result file exists: use `Read` tool on `works/{WORK_ID}/TASK-XX_result.md`
+2. `git add works/{WORK_ID}/`
+3. `git add works/WORK-LIST.md`
+4. `git add <builder-changed-file-1>` (one `git add` per file, or space-separated in one call)
+5. `git commit -m "{type}(TASK-XX): {title}..."` (commit message via heredoc)
 
-# Stage WORK-LIST.md (includes DONE status if last TASK)
+```
+# Example — each line is a SEPARATE Bash call:
+git add works/WORK-01/
 git add works/WORK-LIST.md
+git add src/app.js
+git commit -m "feat(TASK-00): Add authentication module
 
-# Stage builder-changed files from progress.md
-# (parse Files changed section and add each file)
-git add <builder-changed-files>
+- Created auth middleware
+- Added JWT token validation
 
-git commit -m "{type}(TASK-XX): {title}
-
-- {change 1}
-- {change 2}
-
-Result: works/${WORK_ID}/TASK-XX_result.md"
+Result: works/WORK-01/TASK-00_result.md"
 ```
 
 | Content | Type |
