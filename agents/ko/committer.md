@@ -107,38 +107,31 @@ fi
 
 ### 3-6. Git 확인
 
-```bash
-if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-  echo "WARNING: git 저장소가 없습니다. git commit을 건너뜁니다."
-  echo "결과 파일 저장 위치: works/${WORK_ID}/TASK-XX_result.md"
-  # → 7단계 (TaskCallback)로 직행
-fi
-```
+→ **Bash 명령 규칙: `shared-prompt-sections.md` § 13 참조**
 
-git이 없으면 3-7 (Git Commit) 단계를 건너뛴다. result.md, PROGRESS.md, WORK-LIST.md는 이미 저장되어 있으므로, 사용자가 나중에 `git init && git add . && git commit` 할 수 있다.
+`git rev-parse --is-inside-work-tree` 실행 (단일 명령). 실패 시 3-7 단계를 건너뛰고 7단계 (TaskCallback)로 직행. result.md, PROGRESS.md, WORK-LIST.md는 이미 저장되어 있다.
 
 ### 3-7. Git Commit
 
-```bash
-RESULT_FILE="works/${WORK_ID}/TASK-XX_result.md"
-[ ! -f "$RESULT_FILE" ] && echo "ABORT: result file not found" && exit 1
+**아래 각 명령은 별도 Bash 호출 — `&&` 또는 `;` 로 연결 금지:**
 
-# Stage WORK management files (Requirement, PLAN, TASK, progress, result)
-git add "works/${WORK_ID}/"
+1. 결과 파일 존재 확인: `Read` 도구로 `works/{WORK_ID}/TASK-XX_result.md` 확인
+2. `git add works/{WORK_ID}/`
+3. `git add works/WORK-LIST.md`
+4. `git add <builder-changed-file-1>` (파일당 하나, 또는 공백 구분으로 한 호출에 나열)
+5. `git commit -m "{type}(TASK-XX): {title}..."` (커밋 메시지는 heredoc 사용)
 
-# Stage WORK-LIST.md (마지막 TASK이면 DONE 상태 포함)
+```
+# 예시 — 각 줄이 별도 Bash 호출:
+git add works/WORK-01/
 git add works/WORK-LIST.md
+git add src/app.js
+git commit -m "feat(TASK-00): Add authentication module
 
-# Stage builder-changed files from progress.md
-# (parse Files changed section and add each file)
-git add <builder-changed-files>
+- Created auth middleware
+- Added JWT token validation
 
-git commit -m "{type}(TASK-XX): {title}
-
-- {change 1}
-- {change 2}
-
-Result: works/${WORK_ID}/TASK-XX_result.md"
+Result: works/WORK-01/TASK-00_result.md"
 ```
 
 | Content | Type |

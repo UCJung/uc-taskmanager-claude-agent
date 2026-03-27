@@ -10,19 +10,21 @@
 * 작업 진행 시 : 작업항목 및 작업내용 
 * 수행작업 완료 시 : 타 Agent에 전송한 프롬프트 메시지** Agent 시작 시 수신한 프롬프트 메시지 내용 (Required 필수)
 
-## log_work 함수
+## log_work 방법
 
-```bash
-AGENT_NAME="SPECIFIER"  # 각 에이전트 파일에서 적절히 설정
+Activity log 기록에 **Bash를 사용하지 않는다**. `Write` 도구 (또는 `Edit` 도구로 추가)를 사용한다.
 
-log_work() {
-  local WORK_ID="$1" AGENT="$2" STAGE="$3" DESC="$4"
-  mkdir -p "works/${WORK_ID}"
-  printf '[%s]_%s_%s_%s\n' \
-    "$(date '+%Y-%m-%dT%H:%M:%S')" "$AGENT" "$STAGE" "$DESC" \
-    >> "works/${WORK_ID}/work_${WORK_ID}.log"
-}
+각 로그 항목 포맷:
 ```
+[YYYY-MM-DDTHH:MM:SS]_AGENT_STAGE_설명
+```
+
+예시: INIT 단계 로그 기록 시, **Write** 도구로 `works/{WORK_ID}/work_{WORK_ID}.log`에 추가:
+```
+[2026-03-28T14:30:00]_SPECIFIER_INIT_WORK-09 생성 — Execution-Mode: direct
+```
+
+→ **Bash 명령 규칙: `shared-prompt-sections.md` § 13 참조**
 
 ---
 

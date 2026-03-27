@@ -164,28 +164,17 @@ LAST_WORK_ID: WORK-XX
 
 ## § 10. 콜백 전송 템플릿
 
+→ **Bash 명령 규칙: § 13 참조** — 아래 각 단계는 별도 도구 호출이다.
+
 `{CallbackType}`을 실제 키 이름으로 대체 (예: `ProgressCallback`, `TaskCallback`).
 
-```bash
-CALLBACK_URL=$(grep "^{CallbackType}:" CLAUDE.md 2>/dev/null | sed 's/^{CallbackType}: //' | tr -d '\r')
-CALLBACK_TOKEN=$(grep "^CallbackToken:" CLAUDE.md 2>/dev/null | sed 's/^CallbackToken: //' | tr -d '\r')
+**1단계.** `Grep` 도구로 CLAUDE.md에서 `{CallbackType}:` 줄을 찾는다. 없으면 콜백을 건너뛴다.
 
-if [ -n "$CALLBACK_URL" ] && [ "$CALLBACK_URL" != "{CallbackType}:" ]; then
-  PAYLOAD=$(cat <<EOF
-{
-  "workId": "${WORK_ID}",
-  "taskId": "${TASK_ID}",
-  ... 에이전트별 필드 ...
-}
-EOF
-  )
-  AUTH_HEADER=""
-  [ -n "$CALLBACK_TOKEN" ] && AUTH_HEADER="-H \"X-Runner-Api-Key: ${CALLBACK_TOKEN}\""
-  curl -s -X POST "$CALLBACK_URL" \
-    -H "Content-Type: application/json" \
-    $AUTH_HEADER \
-    -d "$PAYLOAD" > /dev/null 2>&1
-fi
+**2단계.** `Grep` 도구로 CLAUDE.md에서 `CallbackToken:` 줄을 찾는다 (선택).
+
+**3단계.** 단일 `curl` 명령으로 콜백 전송:
+```bash
+curl -s -X POST "CALLBACK_URL" -H "Content-Type: application/json" -H "X-Runner-Api-Key: TOKEN" -d '{"workId":"WORK-01","taskId":"TASK-00",...}'
 ```
 
 에이전트별 페이로드 필드:
@@ -223,7 +212,41 @@ Gate 실패 시 → 즉시 FAIL task-result 반환. 이후 단계 진행 금지.
 
 ---
 
+## § 13. Bash 명령 규칙
+
+Bash 명령은 권한 호환성을 위해 다음 규칙을 반드시 따른다.
+
+**필수:**
+- Bash 호출 1회에 단순 명령 1개 — 복합 명령 금지 (`&&`, `||`, `;`, `|`)
+- `cd dir && command` 금지 — 이미 프로젝트 루트에서 실행 중
+- 멀티라인 스크립트 금지 — 별도 Bash 호출로 분리
+- 인자 내 서브셸 확장 금지 — 예: `printf` 안에 `$(date ...)`
+- 프로젝트 루트 기준 상대경로 사용 (예: `works/WORK-01/`) — 절대경로 금지
+- `git add file`, `git commit -m "msg"` 형식 — `git -C path` 플래그 금지
+
+**파일 작업은 Bash 대신 전용 도구 사용:**
+- 파일 읽기 → `Read` 도구 (`cat` 금지)
+- 파일 쓰기/추가 → `Write` 도구 (`echo >>`, `printf >>` 금지)
+- 파일 편집 → `Edit` 도구 (`sed -i` 금지)
+- 파일 검색 → `Grep` 도구 (`grep` 금지)
+- 파일 찾기 → `Glob` 도구 (`find` 금지)
+
+**Activity log 예시:**
+```
+잘못: printf '[%s]_%s\n' "$(date ...)" "INIT" >> work.log
+올바름: Write 도구로 로그 파일에 한 줄 추가
+```
+
+**Git 예시:**
+```
+잘못: cd /path/to/project && git add file && git commit -m "msg"
+올바름: git add file        (1회 호출)
+        git commit -m "msg"  (다음 호출)
+```
+
+---
+
 ## Version
 
 - Created: 2026-03-10
-- Updated: 2026-03-21
+- Updated: 2026-03-28

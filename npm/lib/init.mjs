@@ -2,12 +2,15 @@ import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
-import { AGENT_FILES, getAgentsSrcDir, getClaudeMdSection } from './constants.mjs';
+import { AGENT_FILES, getAgentsSrcDir, getClaudeMdSection, REQUIRED_PERMISSIONS } from './constants.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+import { createInterface } from 'node:readline';
+
 const green = (s) => `\x1b[32m${s}\x1b[0m`;
 const dim = (s) => `\x1b[2m${s}\x1b[0m`;
+const yellow = (s) => `\x1b[33m${s}\x1b[0m`;
 
 function copyAgents(destDir, lang) {
   const srcDir = getAgentsSrcDir(lang);
@@ -56,7 +59,54 @@ function updateClaudeMd(projectDir, lang) {
   return true;
 }
 
-export function init(isGlobal, lang) {
+function mergePermissions(projectDir) {
+  const settingsPath = join(projectDir, '.claude', 'settings.local.json');
+  let settings = {};
+
+  if (existsSync(settingsPath)) {
+    try {
+      settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
+    } catch {
+      settings = {};
+    }
+  }
+
+  if (!settings.permissions) settings.permissions = {};
+  if (!Array.isArray(settings.permissions.allow)) settings.permissions.allow = [];
+
+  const existing = new Set(settings.permissions.allow);
+  let added = 0;
+
+  for (const perm of REQUIRED_PERMISSIONS) {
+    if (!existing.has(perm)) {
+      settings.permissions.allow.push(perm);
+      added++;
+    }
+  }
+
+  if (added > 0) {
+    const dir = dirname(settingsPath);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
+  }
+
+  return { added, total: settings.permissions.allow.length };
+}
+
+async function promptPermissions() {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    console.log(`\n  ${yellow('?')} Auto-configure Bash permissions for agents? (recommended)`);
+    console.log(`    ${dim('Adds required permissions to .claude/settings.local.json')}`);
+    rl.question('    [Y/n] ', (answer) => {
+      rl.close();
+      const choice = answer.trim().toLowerCase();
+      resolve(choice === '' || choice === 'y' || choice === 'yes');
+    });
+  });
+}
+
+export async function init(isGlobal, lang) {
   const exampleTag = lang === 'ko'
     ? `[추가기능] Add a hello world feature`
     : `[new-feature] Add a hello world feature`;
@@ -96,6 +146,18 @@ export function init(isGlobal, lang) {
     console.log(`    ${green('✓')} works/ directory created`);
   } else {
     console.log(`    ${dim('-')} works/ directory already exists`);
+  }
+
+  const wantPermissions = await promptPermissions();
+  if (wantPermissions) {
+    const { added, total } = mergePermissions(projectDir);
+    if (added > 0) {
+      console.log(`    ${green('✓')} ${added} permissions added to .claude/settings.local.json (total: ${total})`);
+    } else {
+      console.log(`    ${dim('-')} All permissions already configured (${total})`);
+    }
+  } else {
+    console.log(`    ${dim('-')} Skipped permission setup`);
   }
 
   console.log(`\n  ${dim('Next steps:')}`);

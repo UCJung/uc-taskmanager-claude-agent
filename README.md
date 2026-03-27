@@ -42,6 +42,8 @@ uctm init --lang ko   # 한국어 에이전트 (Korean — npm only)
 uctm init             # Interactive language selection
 ```
 
+During init, you'll be prompted to auto-configure Bash permissions for agents (`settings.local.json`). This eliminates permission prompts during pipeline execution.
+
 ### Start Using
 
 Once installed (either method), start Claude Code and use pipeline tags:
@@ -51,7 +53,7 @@ claude
 > [new-feature] Add a hello world feature
 ```
 
-To run without permission prompts (file creation, shell commands, etc.), use bypass mode:
+If you ran `uctm init` with permission auto-configuration, the pipeline runs without prompts. Otherwise, use bypass mode:
 
 ```bash
 claude --dangerously-skip-permissions
@@ -331,10 +333,11 @@ Once published, install directly from the Claude Marketplace — no terminal req
 2. Search for **uc-taskmanager**
 3. Click **Install Plugin**
 4. Claude Code automatically discovers agents from the plugin's `agents/` directory
+5. Run `/uctm-init` in Claude Code to set up `works/`, `CLAUDE.md`, and Bash permissions
 
-The Marketplace Plugin includes **English agents only** (6 core agents in `agents/` + 6 support files in `skills/sdd-pipeline/references/`).
+The Marketplace Plugin includes **English agents only** (6 core agents in `agents/` + 6 support files in `skills/sdd-pipeline/references/` + 3 skills).
 
-> **Marketplace Plugin vs npm CLI**: The Plugin requires no installation steps and is always up to date. The npm CLI supports Korean agents (`--lang ko`) and project-level customization via `CLAUDE.md`.
+> **Marketplace Plugin vs npm CLI**: The Plugin requires no installation steps and is always up to date. The npm CLI supports Korean agents (`--lang ko`) and project-level customization via `CLAUDE.md`. Both include automatic permission configuration.
 
 ### npm CLI (All Languages + Customization)
 
@@ -1033,8 +1036,10 @@ uc-taskmanager/
 │   │   │   └── references/  ← Synced from agents/en/ (6 support files)
 │   │   ├── work-pipeline/
 │   │   │   └── SKILL.md
-│   │   └── work-status/
-│   │       └── SKILL.md
+│   │   ├── work-status/
+│   │   │   └── SKILL.md
+│   │   └── init/
+│   │       └── SKILL.md     ← /uctm-init (setup works/, CLAUDE.md, permissions)
 │   ├── .claude-plugin/
 │   │   └── plugin.json      ← Plugin manifest (name, version, agents array)
 │   └── README.md

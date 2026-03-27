@@ -100,7 +100,7 @@ async function main() {
       lang = await promptLang();
     }
     const { init } = await import('../lib/init.mjs');
-    init(isGlobal, lang);
+    await init(isGlobal, lang);
     return;
   }
 

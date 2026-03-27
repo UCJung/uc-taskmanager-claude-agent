@@ -68,6 +68,7 @@ User Request with [] tag
 |-------|---------|-------------|
 | **work-pipeline** | `[]` tag in user message | Triggers the full WORK-PIPELINE (specifier → planner → scheduler → builder → verifier → committer) |
 | **work-status** | "WORK list", "show status" | Shows WORK progress and TASK completion status |
+| **uctm-init** | `/uctm-init`, "uctm 초기화" | Initializes project: creates `works/`, updates `CLAUDE.md`, configures Bash permissions in `settings.local.json` |
 
 ---
 
@@ -77,8 +78,9 @@ User Request with [] tag
 2. Search for **uc-taskmanager**
 3. Click **Install Plugin**
 4. Open Claude Code — agents are immediately available
+5. Run `/uctm-init` to set up `works/` directory, `CLAUDE.md` agent rules, and Bash permissions
 
-No configuration required. The plugin works out of the box.
+The `/uctm-init` step configures `settings.local.json` with the permissions agents need (file read/write, git, build commands), so the pipeline runs without permission prompts.
 
 ---
 
@@ -214,7 +216,8 @@ works/
 
 - **English agents only** — this Plugin ships English agents. For Korean agents (`--lang ko`) or per-project customization, use the [npm CLI](https://www.npmjs.com/package/uctm) instead.
 - **Override agents** — place a file with the same name in `.claude/agents/` to override any plugin agent for your project.
-- **Bypass mode** — `claude --dangerously-skip-permissions` to skip permission prompts (only use in trusted environments).
+- **Run `/uctm-init` first** — configures permissions so the pipeline runs without prompts. Without init, agents will trigger permission requests for file writes, git commands, and build tools.
+- **Bypass mode** — alternatively, `claude --dangerously-skip-permissions` skips all permission prompts (only use in trusted environments).
 
 ---
 
