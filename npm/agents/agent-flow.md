@@ -30,39 +30,35 @@
 1. Invoke specifier → creates Requirement.md + PLAN.md + TASK-00 + returns builder dispatch XML
 2. ⛔ STOP — Present summary to user and WAIT for approval (do NOT invoke builder)
 3. Invoke builder (dispatch XML as prompt) — includes self-check
-4. Invoke committer (builder result as prompt)
+4. Invoke verifier+committer (builder result as prompt) — verify then commit in one spawn
 ```
 
-> Verifier skipped: Builder performs self-check (build/lint), so separate verification is unnecessary for a single TASK.
+> Verifier+Committer combined: single spawn performs verification, then creates result.md and git commit.
 
 ---
 
 ## Pipeline Mode (Separate Planner Invocation)
 
 ```
-1. Invoke specifier → creates Requirement.md + returns planner dispatch XML
-2. ⛔ STOP — Present Requirement.md summary and WAIT for planning approval
-3. Invoke planner (dispatch XML as prompt) → creates PLAN.md + TASK-NN + determines execution-mode
-4. ⛔ STOP — Present PLAN.md + TASK list and WAIT for development approval
-5. Invoke builder (per-TASK dispatch XML as prompt)
-6. Invoke verifier (builder result as prompt)
-7. Invoke committer (verifier result as prompt)
+1. Invoke specifier+planner (single spawn) → creates Requirement.md + PLAN.md + TASK-NN + determines execution-mode
+2. ⛔ STOP — Present Requirement.md + PLAN.md + TASK list and WAIT for approval
+3. Invoke builder (per-TASK dispatch XML as prompt)
+4. Invoke verifier+committer (builder result as prompt) — verify then commit in one spawn
 ```
+
+> Specifier+Planner combined: specifier.md role first (Requirement.md), then planner.md role (PLAN.md + TASKs) in one spawn.
 
 ---
 
 ## Full Mode (With Scheduler)
 
 ```
-1. Invoke specifier → creates Requirement.md + returns planner dispatch XML
-2. ⛔ STOP — Present Requirement.md summary and WAIT for planning approval
-3. Invoke planner → PLAN.md + TASK decomposition + execution-mode: full
-4. ⛔ STOP — Present PLAN.md + TASK list and WAIT for development approval
-5. Invoke scheduler → DAG analysis + READY TASK + returns builder dispatch XML
-6. Invoke builder (dispatch XML as prompt) → implementation
-7. Invoke verifier (builder result as prompt) → verification
-8. Invoke committer (verifier result as prompt) → commit
-9. If incomplete TASKs remain, return to step 5
+1. Invoke specifier+planner (single spawn) → Requirement.md + PLAN.md + TASKs + execution-mode: full
+2. ⛔ STOP — Present Requirement.md + PLAN.md + TASK list and WAIT for approval
+3. Invoke scheduler → DAG analysis + READY TASK + returns builder dispatch XML
+4. Invoke builder (dispatch XML as prompt) → implementation
+5. Invoke verifier+committer (builder result as prompt) → verify then commit in one spawn
+6. If incomplete TASKs remain, return to step 3
 ```
 
 Parallel execution: When scheduler returns multiple READY TASKs, invoke builders concurrently.
@@ -75,32 +71,81 @@ Resume pipeline for a WORK that already has PLAN.md + TASKs:
 
 ```
 1. Invoke scheduler → check READY TASKs + return builder dispatch XML
-2. Execute builder → verifier → committer in sequence
-3. If incomplete TASKs remain, return to step 1
+2. Invoke builder → implementation
+3. Invoke verifier+committer → verify then commit in one spawn
+4. If incomplete TASKs remain, return to step 1
 ```
+
+---
+
+## Combined Agent Invocation
+
+### Specifier+Planner (single spawn)
+
+When invoking specifier in pipeline/full mode, include both agent definitions:
+
+```
+Prompt to agent:
+  "You will perform two roles in sequence.
+
+   Role 1 — Specifier: Read specifier.md and create Requirement.md.
+   Role 2 — Planner: Read planner.md and create PLAN.md + TASK files.
+
+   Execute Role 1 first, then Role 2. Return the combined result."
+```
+
+- Use specifier's model (opus) for the spawn
+- Agent reads both specifier.md and planner.md from REFERENCES_DIR
+- Returns: Requirement.md + PLAN.md + TASK files + execution-mode
+
+### Verifier+Committer (single spawn)
+
+When invoking verification after builder completes:
+
+```
+Prompt to agent:
+  "You will perform two roles in sequence.
+
+   Role 1 — Verifier: Read verifier.md and verify build/lint/test.
+   Role 2 — Committer: Read committer.md and create result.md + git commit.
+
+   Execute Role 1 first. If verification PASSES, execute Role 2.
+   If verification FAILS, skip Role 2 and return FAIL result."
+```
+
+- Use verifier's model (haiku) for the spawn
+- Agent reads both verifier.md and committer.md from REFERENCES_DIR
+- On PASS: returns verification result + commit hash
+- On FAIL: returns verification failure only (no commit)
 
 ---
 
 ## Agent Role Summary
 
-| Agent | Return Value | Invoked By |
-|-------|-------------|------------|
-| specifier | Requirement.md + (when assumed) PLAN.md/TASK + dispatch XML | Main Claude |
-| planner | PLAN.md/TASK files created + execution-mode | Main Claude |
-| scheduler | READY TASK + dispatch XML | Main Claude |
-| builder | task-result XML (including context-handoff) | Main Claude |
-| verifier | task-result XML | Main Claude |
-| committer | task-result XML + commit hash | Main Claude |
+| Agent | Role | Model | Combined With |
+|-------|------|-------|---------------|
+| specifier | Requirement analysis | opus | + planner (pipeline/full) |
+| planner | PLAN + TASK decomposition | opus | combined into specifier spawn |
+| scheduler | DAG management + dispatch | haiku | standalone |
+| builder | Code implementation | sonnet | standalone |
+| verifier | Build/lint/test verification | haiku | + committer |
+| committer | Result report + git commit | haiku | combined into verifier spawn |
 
 ---
 
-## Sub-agent Invocation Count by Mode
+## Sub-agent Spawn Count by Mode
 
-| Mode | Specifier | Planner | Scheduler | Builder | Verifier | Committer | Total |
-|------|:---------:|:-------:|:---------:|:-------:|:--------:|:---------:|:-----:|
-| direct | O (assumed) | X | X | O | X | O | **3** |
-| pipeline | O | O | X | O | O | O | **5** |
-| full | O | O | O | O | O | O | **6** |
+| Mode | Spec+Plan | Scheduler | Builder | Veri+Commit | Total |
+|------|:---------:|:---------:|:-------:|:-----------:|:-----:|
+| direct | 1 (assumed) | — | 1 | 1 | **3** |
+| pipeline | 1 (combined) | — | 1 | 1 | **3** |
+| full (N TASKs) | 1 (combined) | 1 | N | N | **2 + 2N** |
+
+**Before vs After (6 TASKs):**
+
+| | Before | After | Reduction |
+|---|:---:|:---:|:---:|
+| Spawns | 2 + 3×6 = 20 | 2 + 2×6 = 14 | **-30%** |
 
 ---
 
@@ -113,13 +158,15 @@ Resume pipeline for a WORK that already has PLAN.md + TASKs:
 | Mode | Approvals | Timing | What to show user |
 |------|:---------:|--------|-------------------|
 | direct | 1 | After Specifier completes | Requirement.md + PLAN.md + TASK-00.md summary |
-| pipeline/full | 2 | After Specifier → After Planner | 1st: Requirement.md summary, 2nd: PLAN.md + TASK list |
+| pipeline/full | 1 | After Specifier+Planner completes | Requirement.md + PLAN.md + TASK list |
 | auto-approve | 0 | — | Skip all approval gates |
 
+> Note: pipeline/full now has **1 approval** (not 2), since specifier and planner run in one spawn.
+
 **How to request approval:**
-1. Present a summary of what the specifier/planner created (files, scope, execution-mode)
+1. Present a summary of what the specifier+planner created (files, scope, execution-mode)
 2. Ask: "Proceed?" or equivalent
-3. **WAIT for user response** — do NOT invoke builder/planner until approved
+3. **WAIT for user response** — do NOT invoke builder until approved
 
 ---
 
@@ -204,13 +251,11 @@ If REFERENCES_DIR is not available (e.g., npm installation without plugin), sub-
 ### Flow Example
 
 ```
-specifier (no ref-cache in) → reads files → returns task-result with <ref-cache>
-  ↓ Main Claude copies <ref-cache> into dispatch
-planner (ref-cache in) → skips file reads → returns task-result with <ref-cache>
+specifier+planner (no ref-cache in) → reads files → returns task-result with <ref-cache>
   ↓ Main Claude copies <ref-cache> into dispatch
 builder (ref-cache in) → skips file reads → returns task-result with <ref-cache>
   ↓ Main Claude copies <ref-cache> into dispatch
-verifier → committer → ...
+verifier+committer (ref-cache in) → skips file reads → commit
 ```
 
 ### Phase 2: Selective Section Delivery
@@ -221,12 +266,10 @@ Instead of passing full reference files, Main Claude extracts only the sections 
 
 | Agent | shared-prompt-sections | file-content-schema | xml-schema | context-policy | work-activity-log |
 |-------|:---:|:---:|:---:|:---:|:---:|
-| **specifier** | §1,§7,§8,§9,§11 | §0,§1,§2,§3 | §1,§3 | — | full |
-| **planner** | §1,§2,§11 | §1,§2,§3 | — | — | full |
+| **specifier+planner** | §1,§2,§7,§8,§9,§11 | §0,§1,§2,§3 | §1,§3 | — | full |
 | **scheduler** | §4,§8,§10 | §1,§6 | §1,§3,§4,§5 | full | full |
 | **builder** | §1,§2,§10,§12 | §2,§3 | §1,§2,§4 | Builder section | full |
-| **verifier** | §1,§2,§12 | — | §1,§2,§4 | Verifier section | full |
-| **committer** | §1,§2,§8,§10 | §3,§4,§5,§6,§7 | §1,§2,§4 | Committer+Retry | full |
+| **verifier+committer** | §1,§2,§8,§10,§12 | §3,§4,§5,§6,§7 | §1,§2,§4 | Verifier+Committer | full |
 
 **Delivery format**: Condense each `<ref key="">` to contain only the needed sections, not the full file. Use one-line summaries for simple rules, keep full content only for templates and code blocks.
 

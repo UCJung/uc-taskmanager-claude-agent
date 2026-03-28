@@ -104,10 +104,7 @@ Read `.claude/settings.local.json` (create if not exists). Merge the following p
   "Bash(python:*)",
   "Bash(ruff:*)",
   "Bash(make:*)",
-  "Bash(git add:*)",
-  "Bash(git commit:*)",
-  "Bash(git log:*)",
-  "Bash(git rev-parse:*)",
+  "Bash(git:*)",
   "Bash(curl:*)"
 ]
 ```

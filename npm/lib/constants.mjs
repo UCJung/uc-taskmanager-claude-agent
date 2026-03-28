@@ -117,10 +117,7 @@ export const REQUIRED_PERMISSIONS = [
   'Bash(make:*)',
 
   // Git operations (committer)
-  'Bash(git add:*)',
-  'Bash(git commit:*)',
-  'Bash(git log:*)',
-  'Bash(git rev-parse:*)',
+  'Bash(git:*)',
 
   // Network (callback transmission)
   'Bash(curl:*)',
