@@ -28,22 +28,22 @@ Prefix any request with a `[]` tag to trigger the pipeline:
 User Request with [] tag
         │
         ▼
-    Specifier ──── analyzes requirement, creates Requirement.md
-        │           determines execution-mode
+  Specifier+Planner ──── analyzes requirement, creates Requirement.md
+   (single spawn)         determines execution-mode
         │
    ┌────┼────────────────┐
    ▼    ▼                ▼
  direct  pipeline         full
    │    │                │
    │    ▼                ▼
-   │  Planner          Planner ── TASK decomposition + DAG
-   │    │                │
-   │    ▼                ▼
    │  Main Claude      Scheduler ── DAG-based orchestration
    │    │                │
    ▼    ▼                ▼
-  Builder → Verifier → Committer  (× N for full mode)
+  Builder → Verifier+Committer  (× N for full mode)
+             (single spawn)
 ```
+
+Spawns reduced ~30% vs. previous versions through agent consolidation.
 
 ---
 
@@ -53,12 +53,11 @@ User Request with [] tag
 
 | Agent | Role | Model |
 |-------|------|-------|
-| **specifier** | Analyzes user request → creates `Requirement.md` → determines execution-mode (direct/pipeline/full). In direct mode, also acts as Planner. | opus |
-| **planner** | Reads `Requirement.md` → creates WORK plan + decomposes into TASKs with dependency DAG | opus |
+| **specifier+planner** | Analyzes user request → creates `Requirement.md` → determines execution-mode → creates WORK plan + TASK DAG (single spawn for pipeline/full mode) | opus |
+| **specifier** | In direct mode only: acts as combined specifier+planner in a single spawn | opus |
 | **scheduler** | Manages DAG → selects READY TASKs → dispatches builder/verifier/committer pipeline | haiku |
 | **builder** | Implements code changes, records progress checkpoints, runs self-check (build + lint) | sonnet |
-| **verifier** | Verifies build / lint / test / acceptance criteria (read-only, never modifies code) | haiku |
-| **committer** | Gates on verification → writes `result.md` → git commit → updates WORK status to DONE | haiku |
+| **verifier+committer** | Verifies build / lint / test / acceptance criteria → gates on result → writes `result.md` → git commit → updates WORK status (single spawn for all modes) | haiku |
 
 ---
 
@@ -68,7 +67,7 @@ User Request with [] tag
 |-------|---------|-------------|
 | **work-pipeline** | `[]` tag in user message | Triggers the full WORK-PIPELINE (specifier → planner → scheduler → builder → verifier → committer) |
 | **work-status** | "WORK list", "show status" | Shows WORK progress and TASK completion status |
-| **uctm-init** | `/uctm-init`, "uctm 초기화" | Initializes project: creates `works/`, updates `CLAUDE.md`, configures Bash permissions in `settings.local.json` |
+| **uctm-init** | `/uctm-init`, "uctm 초기화" | Initializes project: creates `works/`, updates `CLAUDE.md`, installs plugin resources (`.claude-plugin`, `skills/`), configures Bash permissions in `settings.local.json` |
 
 ---
 
@@ -78,9 +77,9 @@ User Request with [] tag
 2. Search for **uc-taskmanager**
 3. Click **Install Plugin**
 4. Open Claude Code — agents are immediately available
-5. Run `/uctm-init` to set up `works/` directory, `CLAUDE.md` agent rules, and Bash permissions
+5. Run `/uctm-init` to set up `works/` directory, `CLAUDE.md` agent rules, install plugin resources, and configure Bash permissions
 
-The `/uctm-init` step configures `settings.local.json` with the permissions agents need (file read/write, git, build commands), so the pipeline runs without permission prompts.
+The `/uctm-init` step installs `.claude-plugin` and `skills/` into your project and configures `settings.local.json` with the permissions agents need (file read/write, git, build commands), so the pipeline runs without permission prompts.
 
 ---
 
@@ -102,9 +101,9 @@ The specifier automatically selects the right mode based on requirement complexi
 
 | Mode | When | What Happens |
 |------|------|--------------|
-| `direct` | FR 1-2, simple acceptance criteria | Specifier acts as Planner → creates Requirement.md + PLAN.md + TASK → dispatches Builder |
-| `pipeline` | FR 3+, build/test required, single domain | Specifier → Planner → Main Claude runs Builder → Verifier → Committer |
-| `full` | Multi-domain, complex DAG, 5+ TASKs | Specifier → Planner → Scheduler → [Builder → Verifier → Committer] × N |
+| `direct` | FR 1-2, simple acceptance criteria | Specifier (single spawn) → creates Requirement.md + PLAN.md + TASK → dispatches Builder → Verifier+Committer |
+| `pipeline` | FR 3+, build/test required, single domain | Specifier+Planner (single spawn) → Main Claude runs Builder → Verifier+Committer |
+| `full` | Multi-domain, complex DAG, 5+ TASKs | Specifier+Planner (single spawn) → Scheduler → [Builder → Verifier+Committer] × N |
 
 ### Auto Mode
 
@@ -137,10 +136,10 @@ Claude: [planner]
 
 > Approve. Run automatically.
 
-Claude: TASK-00 → builder ✅ → verifier ✅ → committer [a1b2c3]
-        TASK-01 → builder ✅ → verifier ✅ → committer [d4e5f6]
-        TASK-02 → builder ✅ → verifier ✅ → committer [g7h8i9]
-        TASK-03 → builder ✅ → verifier ✅ → committer [j0k1l2]
+Claude: TASK-00 → builder ✅ → verifier+committer ✅ [a1b2c3]
+        TASK-01 → builder ✅ → verifier+committer ✅ [d4e5f6]
+        TASK-02 → builder ✅ → verifier+committer ✅ [g7h8i9]
+        TASK-03 → builder ✅ → verifier+committer ✅ [j0k1l2]
         WORK-01 → DONE ✅
 ```
 
@@ -216,7 +215,7 @@ works/
 
 - **English agents only** — this Plugin ships English agents. For Korean agents (`--lang ko`) or per-project customization, use the [npm CLI](https://www.npmjs.com/package/uctm) instead.
 - **Override agents** — place a file with the same name in `.claude/agents/` to override any plugin agent for your project.
-- **Run `/uctm-init` first** — configures permissions so the pipeline runs without prompts. Without init, agents will trigger permission requests for file writes, git commands, and build tools.
+- **Run `/uctm-init` first** — installs plugin resources (`.claude-plugin`, `skills/`) and configures Bash permissions so the pipeline runs without prompts. Without init, agents will trigger permission requests for file writes, git commands, and build tools.
 - **Bypass mode** — alternatively, `claude --dangerously-skip-permissions` skips all permission prompts (only use in trusted environments).
 
 ---

@@ -1,8 +1,8 @@
 # UC TeamSpace × UC TaskManager — 통합 시스템 설계 명세서 (SDD)
 
-> Version: 1.5.0
-> Date: 2026-03-22
-> Author: Claude Code (claude-sonnet-4-6) — v1.0~v1.3 + v1.4 현행화 (claude-opus-4-6)
+> Version: 1.6.0
+> Date: 2026-03-28
+> Author: Claude Code (claude-sonnet-4-6) — v1.0~v1.3 + v1.4 현행화 (claude-opus-4-6) + v1.6 현행화
 > Scope: WORK-PIPELINE (uc-taskmanager) + Runner + 요구사항 관리 (uc-teamspace)
 
 ---
@@ -17,6 +17,7 @@
 | 1.3.0 | 2026-03-14 | execution-mode 속성 설계. Router 3경로 산출물 구조 통일, PLAN.md Execution-Mode 필드 추가, XML dispatch 속성 확장, 에이전트별 모드 반응 규칙 정의. S-TASK 산출물 누락 문제 근본 해결 |
 | 1.4.0 | 2026-03-19 | 프로젝트 현행화. 파일 경로 `tasks/multi-tasks/` → `works/`, TASK 파일명 프리픽스 제거(`TASK-XX.md`), 구분자 언더스코어 전환(`TASK-XX_progress.md`), mini-PLAN → PLAN.md 통일, Router 모델 Opus 승격, Planner/Router MCP 도구 추가, execution-mode 판정 기준 `router_rule_config.json` 반영, 에이전트 파일 12개 현행화 |
 | 1.5.0 | 2026-03-22 | ref-cache Reference File Caching 서브섹션 추가 (§3.13). Phase 1 체인 전파 + Phase 2 선택 전달, 측정 지표(파일 읽기 64% 감소, 토큰 15% 절감), 파이프라인 스펙 참조 |
+| 1.6.0 | 2026-03-28 | spawn 결합 아키텍처 반영 (§3.1, §3.2): specifier+planner 단일 spawn, verifier+committer 단일 spawn. spawn 수 갱신(direct 3, pipeline 3, full 2+2N). 자동 권한 설정(`uctm init` 시 Bash 권한 자동 구성). plugin 리소스(.claude-plugin, skills) npm 패키지 포함(v1.5.0). agent 프롬프트 pipe 명령어 제거(Windows 호환성). |
 
 ---
 
@@ -195,6 +196,22 @@ uc-taskmanager/                     ← 별도 레포
 - Verifier는 읽기 전용 — 코드 수정 시도 자체를 차단하여 검증 독립성 보장
 - Router와 Scheduler만 Task 도구(서브에이전트 디스패치)를 보유
 
+**Spawn 결합 구조 (v1.6.0 신규):**
+
+실행 효율을 위해 두 에이전트 쌍이 **단일 spawn**으로 결합 실행된다:
+
+| 결합 쌍 | 실행 방식 | 적용 모드 |
+|---------|----------|----------|
+| **Specifier + Planner** | 단일 spawn — specifier가 planner 역할까지 수행 (PLAN + TASK 파일 생성) | pipeline, full |
+| **Verifier + Committer** | 단일 spawn — verifier 검증 후 동일 spawn 내에서 committer 역할 수행 (result.md + git commit) | direct, pipeline, full |
+
+spawn 결합으로 총 spawn 수가 약 30% 감소한다:
+- **direct**: 3 spawns (builder → verifier+committer)
+- **pipeline**: 3 spawns (specifier+planner → builder → verifier+committer)
+- **full (N TASK)**: 2+2N spawns (specifier+planner + scheduler + [builder + verifier+committer]×N)
+
+에이전트 정의(프롬프트)는 개별 에이전트로 유지된다. spawn 결합은 실행 구조이지 에이전트 정의 변경이 아니다.
+
 ### 3.2 세 가지 실행 경로 — execution-mode 통합 (v1.3 재설계)
 
 > **v1.2 대비:** 3경로가 서로 다른 산출물 구조(works/ vs simple-tasks/)를 생성하여 Runner가 S-TASK 결과를 인식하지 못하는 문제가 있었다. v1.3에서는 **모든 경로가 `works/WORK-NN/` 구조를 생성**하되, PLAN.md의 `Execution-Mode` 필드로 실행 방식을 구분한다.
@@ -215,7 +232,7 @@ Router는 프로젝트 루트의 `.agent/router_rule_config.json`에서 판정 �
 3. `full_conditions 중 하나라도 충족` → `full`
 
 **핵심 설계 원칙 — 분리:**
-- **변동 영역 (파이프라인 깊이):** 에이전트 호출 수로 토큰 절감. direct=3, pipeline=4, full=6+
+- **변동 영역 (파이프라인 깊이):** spawn 수로 토큰 절감. direct=3 spawns, pipeline=3 spawns, full=2+2N spawns (v1.6: spawn 결합으로 30% 감소)
 - **고정 영역 (산출물 구조):** 모든 경로에서 `works/WORK-NN/` + `PLAN.md` + `TASK-XX_result.md` + `COMMITTER DONE 콜백` 보장
 
 **Router의 PLAN.md 생성 (direct / pipeline 경로):**
@@ -385,21 +402,21 @@ v1.3부터 `tasks/simple-tasks/` 폴더, v1.4부터 `tasks/multi-tasks/` 경로�
 </task-result>
 ```
 
-**Dispatcher → Receiver 매핑 (v1.3 통합):**
+**Dispatcher → Receiver 매핑 (v1.6 갱신 — spawn 결합 반영):**
 
-| Dispatcher | Receiver | execution-mode | 흐름 |
-|------------|----------|:--------------:|------|
-| Router | (자기 자신) | `direct` | **서브에이전트 없음.** Router가 코드 수정 + result.md + commit + 콜백 직접 수행 |
-| Router | Planner | `full`만 | 복잡 WORK 계획 수립 |
-| Router | Scheduler | `full`만 | 계획된 WORK 실행 |
-| Router | Builder | `pipeline`만 | TASK 1개 구현 (PLAN.md 생성 후) |
-| Router | Verifier | `pipeline`만 | TASK 1개 검증 (Builder 완료 후) |
-| Router | Committer | `pipeline`만 | TASK 1개 커밋 (Builder/Verifier 완료 후) |
-| Scheduler | Builder | `full` (상속) | TASK N개 순차 구현 |
-| Scheduler | Verifier | `full` (상속) | TASK N개 순차 검증 |
-| Scheduler | Committer | `full` (상속) | TASK N개 순차 커밋 |
-
+| Dispatcher | Receiver | execution-mode | 흐름 | Spawn |
+|------------|----------|:--------------:|------|:-----:|
+| Main Claude | Builder | `direct` | TASK 구현 | 1 |
+| Main Claude | Verifier+Committer | `direct` | 검증+커밋 단일 spawn | 1 |
+| Main Claude | Specifier+Planner | `pipeline`만 | PLAN+TASK 생성 단일 spawn | 1 |
+| Specifier+Planner | Builder | `pipeline`만 | TASK 1개 구현 | 1 |
+| Main Claude | Verifier+Committer | `pipeline`만 | 검증+커밋 단일 spawn | 1 |
+| Main Claude | Specifier+Planner | `full`만 | PLAN+TASK 생성 + Scheduler dispatch | 1 |
+| Specifier+Planner | Scheduler | `full`만 | 계획된 WORK 실행 위임 | — |
+| Scheduler | Builder | `full` (상속) | TASK N개 순차 구현 | N |
+| Scheduler | Verifier+Committer | `full` (상속) | TASK N개 순차 검증+커밋 단일 spawn | N |
 > **v1.2 대비 변경점:** `Router → Builder (stask="S-TASK-NNNNN")` 경로가 폐지되고, 모든 dispatch에 `work="WORK-NN"` + `execution-mode="{mode}"` 속성이 사용된다.
+> **v1.6 대비 변경점:** Verifier와 Committer가 단일 spawn으로 결합. Specifier와 Planner도 단일 spawn 결합. 총 spawn 수 30% 감소.
 
 **`<cache-hint>` 토큰 절감 메커니즘:**
 

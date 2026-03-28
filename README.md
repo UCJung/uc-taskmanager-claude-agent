@@ -42,7 +42,7 @@ uctm init --lang ko   # 한국어 에이전트 (Korean — npm only)
 uctm init             # Interactive language selection
 ```
 
-During init, you'll be prompted to auto-configure Bash permissions for agents (`settings.local.json`). This eliminates permission prompts during pipeline execution.
+`uctm init` automatically configures Bash permissions for agents in `settings.local.json` and installs `.claude-plugin` and `skills/` resources. No prompts required — the pipeline runs immediately after init.
 
 ### Start Using
 
@@ -53,7 +53,7 @@ claude
 > [new-feature] Add a hello world feature
 ```
 
-If you ran `uctm init` with permission auto-configuration, the pipeline runs without prompts. Otherwise, use bypass mode:
+Since `uctm init` automatically sets up permissions, the pipeline runs without additional prompts. If you need to bypass permissions in a CI/isolated environment:
 
 ```bash
 claude --dangerously-skip-permissions
@@ -137,7 +137,7 @@ I'm cost-conscious (honestly). So this agent applies four token-saving strategie
 **(1) Serena MCP for codebase analysis.**
 The agent prioritizes [Serena MCP](https://github.com/oraios/serena) for code exploration — reading symbols instead of entire files. (Huge thanks to the Serena team.)
 
-**(2) Three execution modes to minimize subagent overhead.** The WORK-PIPELINE has 6 agent stages running sequentially. For a single-TASK WORK, that's 6 subagent sessions — each consuming tokens just to boot up. Wasteful. So the specifier agent decides the execution mode based on complexity: **direct** mode uses only 3 agent calls (specifier → builder → committer), skipping planner, scheduler, and verifier. See [Three Execution Modes](#concept-three-execution-modes).
+**(2) Three execution modes + spawn consolidation to minimize subagent overhead.** The WORK-PIPELINE has 6 agent stages running sequentially. For a single-TASK WORK, that's 6 subagent sessions — each consuming tokens just to boot up. Wasteful. So the specifier agent decides the execution mode based on complexity: **direct** mode uses only 3 agent calls (specifier → builder → verifier+committer), skipping planner and scheduler. On top of this, related agents are combined into a single spawn: specifier+planner run together, and verifier+committer run together — reducing total spawns by **~30%** (6 TASKs: 20 → 14 spawns). See [Three Execution Modes](#concept-three-execution-modes).
 
 **(3) Structured XML communication.** Subagents can't nest — Main Claude orchestrates everything.
 * When one agent finishes and the next agent starts, Main Claude sits in between, causing data to be transmitted twice. This communication is a blob of text —
@@ -333,13 +333,13 @@ Once published, install directly from the Claude Marketplace — no terminal req
 2. Search for **uc-taskmanager**
 3. Click **Install Plugin**
 4. Claude Code automatically discovers agents from the plugin's `agents/` directory
-5. Run `/uctm-init` in Claude Code to set up `works/`, `CLAUDE.md`, and Bash permissions
+5. Run `/uctm-init` in Claude Code to set up `works/`, `CLAUDE.md`, Bash permissions, `.claude-plugin`, and `skills/`
 
-The Marketplace Plugin includes **English agents only** (6 core agents in `agents/` + 6 support files in `skills/sdd-pipeline/references/` + 3 skills).
+The Marketplace Plugin includes **English agents only** (6 core agents in `agents/` + 6 support files in `skills/sdd-pipeline/references/` + 3 skills + `.claude-plugin` manifest).
 
 > **Marketplace Plugin vs npm CLI**: The Plugin requires no installation steps and is always up to date. The npm CLI supports Korean agents (`--lang ko`) and project-level customization via `CLAUDE.md`. Both include automatic permission configuration.
 
-### npm CLI (All Languages + Customization)
+### npm CLI (All Languages + Customization) — v1.5.0
 
 ```bash
 npm install -g uctm
@@ -399,14 +399,24 @@ User Request → Main Claude (orchestrator)
               execution-mode returned
                     │
       ├─ direct  (no build/test required)
-      │   → specifier returns dispatch XML → Main Claude calls builder → committer
+      │   → specifier returns dispatch XML → Main Claude calls builder → [verifier+committer]
       │
       ├─ pipeline  (build/test required, single domain, sequential)
-      │   → Main Claude calls: builder → verifier → committer (in sequence)
+      │   → Main Claude calls: [specifier+planner] → builder → [verifier+committer]
       │
       └─ full  (multi-domain / complex DAG / new module / 5+ tasks)
-          → Main Claude calls: planner → scheduler → [builder → verifier → committer] × N
+          → Main Claude calls: [specifier+planner] → scheduler → [builder → verifier+committer] × N
 ```
+
+**Sub-agent Spawn Count by Mode:**
+
+| Mode | Spawns | Agents |
+|------|--------|--------|
+| direct | 3 | specifier + builder + verifier+committer |
+| pipeline | 3 | specifier+planner + builder + verifier+committer |
+| full (N TASKs) | 2+2N | specifier+planner + scheduler + [builder + verifier+committer] × N |
+
+Compared to the previous approach (separate spawns): **6 TASKs: 20 → 14 spawns (-30%)**.
 
 All three modes output to `works/WORK-NN/` and guarantee `result.md` + `COMMITTER DONE` callback.
 
@@ -422,21 +432,21 @@ WORK (unit of work)       A single goal. The unit requested by the user.
 
 ### pipeline mode (Single Task, Delegated)
 
-Subagent-delegated path for moderate single tasks. Main Claude calls each agent in sequence. Specifier stays clean.
+Subagent-delegated path for moderate single tasks. specifier+planner run in a single spawn, then builder, then verifier+committer.
 
 ```
-Main Claude → builder(sonnet) → verifier(haiku) → committer(haiku)
-              (each called individually by Main Claude)
+Main Claude → [specifier+planner](opus) → builder(sonnet) → [verifier+committer](haiku)
+              (each group called as a single spawn by Main Claude)
 ```
 
 ### direct mode (Trivial)
 
-Main Claude calls specifier, which determines direct mode and returns a dispatch XML. Main Claude then calls builder (implements the change) and committer (commits).
+Main Claude calls specifier, which determines direct mode and returns a dispatch XML. Main Claude then calls builder (implements the change) and verifier+committer (verifies and commits) as a single spawn.
 
 ```
 Main Claude → specifier: Analyze → return dispatch XML → [back to Main Claude]
 Main Claude → builder: Implement → Self-check → [back to Main Claude]
-Main Claude → committer: Commit → result.md
+Main Claude → [verifier+committer]: Verify → Commit → result.md
 ```
 
 ---
@@ -465,37 +475,37 @@ Main Claude → committer: Commit → result.md
 ### pipeline mode (Simple → Delegated)
 
 ```
-  specifier         builder          verifier         committer
- ┌──────────┐      ┌──────────┐     ┌──────────┐     ┌──────────┐
- │PLAN      │─────▶│Code      │────▶│Build/Test│────▶│Result    │
- │+TASK     │      │Implement │     │Verify    │     │→ git     │
- └──────────┘      └──────────┘     └──────────┘     └──────────┘
-                    (sonnet)         (haiku)           (haiku)
-              ← each called by Main Claude →
+  specifier+planner    builder       verifier+committer
+ ┌──────────────┐     ┌──────────┐     ┌────────────────┐
+ │PLAN          │────▶│Code      │────▶│Build/Test      │
+ │+TASK         │     │Implement │     │Verify→ git     │
+ └──────────────┘     └──────────┘     └────────────────┘
+   (opus, 1 spawn)     (sonnet)         (haiku, 1 spawn)
+              ← each group called by Main Claude →
 ```
 
 ### direct mode (Trivial)
 
 ```
-  specifier        builder                            committer
- ┌──────────┐     ┌──────────────────────────┐       ┌──────────┐
- │ Analyze  │────▶│ Implement → Self-check   │──────▶│Commit    │
- │ dispatch │     └──────────────────────────┘       │→ result  │
- └──────────┘      (no build/test required)          └──────────┘
+  specifier        builder                    verifier+committer
+ ┌──────────┐     ┌──────────────────────┐     ┌──────────────┐
+ │ Analyze  │────▶│ Implement → Self-chk │────▶│Verify→Commit │
+ │ dispatch │     └──────────────────────┘     │→ result      │
+ └──────────┘      (no build/test required)    └──────────────┘
 ```
 
 ### Agents
 
 Six agents work together in a clean, isolated pipeline:
 
-| Agent | Role | Model | Permission | MCP |
-|-------|------|-------|------------|-----|
-| **specifier** | `[]` tag detection, execution-mode selection (direct/pipeline/full), PLAN creation, WORK-LIST management, returns dispatch XML for all modes | **opus** | read + dispatch | Serena (codebase exploration), sequential-thinking (complexity check) |
-| **planner** | Create WORK + decompose TASKs + generate PLAN.md (full mode) + pre-create progress templates | **opus** | read-only | Serena (codebase exploration), sequential-thinking (task decomposition) |
-| **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch | — |
-| **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena (symbol-level explore/edit) |
-| **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification (read-only) | **haiku** | read + execute | — |
-| **committer** | Gate check (progress.md) → write result.md → git commit → COMMITTER DONE callback | **haiku** | read + write + git | — |
+| Agent | Role | Model | Permission | MCP | Spawn |
+|-------|------|-------|------------|-----|-------|
+| **specifier** | `[]` tag detection, execution-mode selection (direct/pipeline/full), PLAN creation, WORK-LIST management, returns dispatch XML for all modes | **opus** | read + dispatch | Serena (codebase exploration), sequential-thinking (complexity check) | combined with planner (pipeline/full) |
+| **planner** | Create WORK + decompose TASKs + generate PLAN.md (full mode) + pre-create progress templates | **opus** | read-only | Serena (codebase exploration), sequential-thinking (task decomposition) | combined with specifier |
+| **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch | — | standalone (full mode only) |
+| **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena (symbol-level explore/edit) | standalone |
+| **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification (read-only) | **haiku** | read + execute | — | combined with committer |
+| **committer** | Gate check (progress.md) → write result.md → git commit → COMMITTER DONE callback | **haiku** | read + write + git | — | combined with verifier |
 
 ### Support Files (included in Plugin)
 
@@ -647,6 +657,8 @@ Claude: [scheduler → auto mode]
 ### Agent File Design
 
 All agent files (`agents/*.md`) are written with a single principle: **core content only, no decoration**. Descriptions, emphasis markers, and redundant examples have been removed. The result is ~1,600 lines total across all agents — less than half the original size — while covering the same functional scope.
+
+Agent prompts avoid pipe (`|`) commands in Bash sequences for cross-platform compatibility (Windows, Linux, macOS). Each command runs as a single call without shell pipelines.
 
 Each agent file follows a consistent four-section structure:
 
@@ -826,9 +838,11 @@ For a monorepo with strict build requirements:
 ### Three Execution Modes
 
 The specifier matches effort to complexity via `execution-mode`:
-- **direct**: 1-line typo fix — Main Claude calls specifier, which returns a dispatch XML. Main Claude then calls builder (implements) + committer (commits). Minimal subagent overhead.
-- **pipeline**: Moderate fix — Main Claude calls builder → verifier → committer in sequence. Main Claude only orchestrates, minimizing its own context usage
-- **full**: Complex features — full planning, decomposition, and tracking
+- **direct**: 1-line typo fix — Main Claude calls specifier, which returns a dispatch XML. Main Claude then calls builder (implements) + [verifier+committer] (verifies and commits). 3 spawns total.
+- **pipeline**: Moderate fix — Main Claude calls [specifier+planner] → builder → [verifier+committer] in sequence. 3 spawns total.
+- **full**: Complex features — [specifier+planner] → scheduler → [builder + verifier+committer] × N. 2+2N spawns total.
+
+Agent pairs are combined into a single spawn to eliminate redundant context loading. This reduces total spawns by **~30%** across all modes.
 
 All three modes output to `works/WORK-NN/` with identical artifact structure (PLAN.md + result.md + COMMITTER DONE callback), ensuring Runner integration works regardless of mode.
 

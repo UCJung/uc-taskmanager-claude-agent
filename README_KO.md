@@ -37,7 +37,7 @@ uctm init --lang en   # English agents
 uctm init             # 대화형 언어 선택
 ```
 
-init 과정에서 에이전트에 필요한 Bash 권한을 `settings.local.json`에 자동 설정할지 물어봅니다. 이를 통해 파이프라인 실행 시 권한 프롬프트가 발생하지 않습니다.
+`uctm init`은 에이전트에 필요한 Bash 권한을 `settings.local.json`에 자동 설정하고, `.claude-plugin` 및 `skills/` 리소스도 함께 설치합니다. 별도의 프롬프트 없이 init 직후 파이프라인을 바로 실행할 수 있습니다.
 
 ### 시작하기
 
@@ -48,7 +48,7 @@ claude
 > [추가기능] hello world 기능 추가해줘
 ```
 
-`uctm init`에서 권한 자동 설정을 완료했다면 별도 옵션 없이 파이프라인이 실행됩니다. 그렇지 않으면 바이패스 모드를 사용하세요:
+`uctm init`이 권한을 자동 설정하므로 별도 옵션 없이 파이프라인이 실행됩니다. CI/격리 환경에서 권한을 우회해야 할 경우:
 
 ```bash
 claude --dangerously-skip-permissions
@@ -130,7 +130,7 @@ WORK-31 개발 승인 요청
 이 Agent는 코드베이스 탐색 시 [Serena MCP](https://github.com/oraios/serena)를 우선 적용하게 지침을 내려놨다. 
 파일 전체를 읽는 대신 심볼 단위로 읽는다. (Serena 개발 팀 여러분 너무너무 감사합니다.)
 
-**(2) 세 가지 실행 모드로 서브에이전트 오버헤드 최소화.** WORK-PIPELINE은 총 6단계의 Agent가 순차적으로 동작한다. TASK 하나짜리 WORK에 6개의 Sub Agent를 실행시키면? 매번 초기 로딩에 토큰이 사용된다. 아깝다. 그래서 요구사항을 명세화하는 Agent가 복잡도에 따라 실행 방법을 결정한다. **direct** 모드는 specifier → builder → committer의 최소 3단계만 실행 — 중간 단계(planner, scheduler, verifier) 생략. 자세한 사항은 [세 가지 실행 모드](#개념-세-가지-실행-모드-execution-mode) 참고.
+**(2) 세 가지 실행 모드 + spawn 결합으로 서브에이전트 오버헤드 최소화.** WORK-PIPELINE은 총 6단계의 Agent가 순차적으로 동작한다. TASK 하나짜리 WORK에 6개의 Sub Agent를 실행시키면? 매번 초기 로딩에 토큰이 사용된다. 아깝다. 그래서 요구사항을 명세화하는 Agent가 복잡도에 따라 실행 방법을 결정한다. **direct** 모드는 specifier → builder → [verifier+committer]의 최소 3 spawn만 실행. 여기에 연관 에이전트를 단일 spawn으로 결합(specifier+planner, verifier+committer)하여 전체 spawn 수를 **~30% 감소**시킨다 (6 TASK 기준: 20 → 14 spawn). 자세한 사항은 [세 가지 실행 모드](#개념-세-가지-실행-모드-execution-mode) 참고.
 
 **(3) 구조화된 XML 통신.** Sub agent는 nest하게 sub agent를 실행시킬 수 없다. 그래서 모든 절차를 지휘하는 것은 Main Claude다. 
 * Agent 실행이 종료되고 다음 Agent를 실행시킬 때 Main Claude가 중간에 끼게 되어 데이터 통신을 두 번 하게 된다. 이 통신이 텍스트 덩어리다 — 
@@ -316,13 +316,13 @@ scheduler가 `PROGRESS.md`와 `result.md` 파일을 읽어 현재 상태를 보�
 2. **uc-taskmanager** 검색
 3. **Install Plugin** 클릭
 4. Claude Code가 plugin의 `agents/` 디렉토리에서 에이전트를 자동으로 인식
-5. Claude Code에서 `/uctm-init`을 실행하여 `works/`, `CLAUDE.md`, Bash 권한 설정
+5. Claude Code에서 `/uctm-init`을 실행하여 `works/`, `CLAUDE.md`, Bash 권한, `.claude-plugin`, `skills/` 설정
 
-Marketplace Plugin은 **영어 에이전트만 포함**합니다 (6개 핵심 에이전트 + 6개 참조 문서 + 3개 스킬).
+Marketplace Plugin은 **영어 에이전트만 포함**합니다 (6개 핵심 에이전트 + 6개 참조 문서 + 3개 스킬 + `.claude-plugin` 매니페스트).
 
 > **Marketplace Plugin vs npm CLI**: Plugin은 설치 단계 없이 항상 최신 상태를 유지합니다. npm CLI는 한국어 에이전트(`--lang ko`)와 `CLAUDE.md`를 통한 프로젝트별 커스터마이징을 지원합니다. 양쪽 모두 권한 자동 설정을 포함합니다.
 
-### npm CLI (전체 언어 지원 + 커스터마이징)
+### npm CLI (전체 언어 지원 + 커스터마이징) — v1.5.0
 
 ```bash
 npm install -g uctm
@@ -382,14 +382,24 @@ Main Claude가 `[]` 태그를 감지하면 **specifier** 서브에이전트를 �
               execution-mode 판정
                     │
       ├─ direct  (빌드/테스트 검증 불필요)
-      │   → specifier가 dispatch XML 반환 → Main Claude가 builder → committer 순차 호출
+      │   → specifier가 dispatch XML 반환 → Main Claude가 builder → [verifier+committer] 순차 호출
       │
       ├─ pipeline  (빌드/테스트 필요, 단일 도메인, 순차 처리)
-      │   → Main Claude가 순차 호출: builder → verifier → committer
+      │   → Main Claude가 순차 호출: [specifier+planner] → builder → [verifier+committer]
       │
       └─ full  (멀티 도메인 / 복잡 DAG / 신규 모듈 / 5+ TASK)
-          → Main Claude가 순차 호출: planner → scheduler → [builder → verifier → committer] × N
+          → Main Claude가 순차 호출: [specifier+planner] → scheduler → [builder → verifier+committer] × N
 ```
+
+**모드별 Sub-agent Spawn 수:**
+
+| 모드 | Spawn 수 | 에이전트 구성 |
+|------|----------|--------------|
+| direct | 3 | specifier + builder + verifier+committer |
+| pipeline | 3 | specifier+planner + builder + verifier+committer |
+| full (N TASK) | 2+2N | specifier+planner + scheduler + [builder + verifier+committer] × N |
+
+이전 방식(개별 spawn) 대비: **6 TASK 기준 20 → 14 spawns (-30%)**.
 
 3가지 모드 모두 `works/WORK-NN/`에 동일한 산출물 구조(PLAN.md + result.md + COMMITTER DONE 콜백)를 생성합니다.
 
@@ -405,21 +415,21 @@ WORK (일)                 하나의 목표. 사용자가 요청한 단위.
 
 ### pipeline 모드 (단일 작업, 위임)
 
-중간 규모 단일 작업을 Main Claude가 순차 호출로 처리. Main Claude는 오케스트레이터 역할만 하므로 컨텍스트 사용을 최소화합니다.
+중간 규모 단일 작업을 Main Claude가 순차 호출로 처리. specifier+planner가 단일 spawn으로 실행되고, 이후 builder, verifier+committer 순으로 처리합니다.
 
 ```
-Main Claude → builder(sonnet) → verifier(haiku) → committer(haiku)
-              (각각 Main Claude가 개별 호출)
+Main Claude → [specifier+planner](opus) → builder(sonnet) → [verifier+committer](haiku)
+              (각 그룹이 단일 spawn으로 Main Claude에 의해 호출)
 ```
 
 ### direct 모드 (초단순)
 
-Main Claude가 specifier를 호출하면 dispatch XML을 반환합니다. Main Claude가 builder(구현)와 committer(커밋)를 순차 호출합니다.
+Main Claude가 specifier를 호출하면 dispatch XML을 반환합니다. Main Claude가 builder(구현)와 [verifier+committer](검증+커밋)를 순차 호출합니다.
 
 ```
 Main Claude → specifier: 분석 → dispatch XML 반환 → [Main Claude로 복귀]
 Main Claude → builder: 구현 → self-check → [Main Claude로 복귀]
-Main Claude → committer: 커밋 → result.md
+Main Claude → [verifier+committer]: 검증 → 커밋 → result.md
 ```
 
 ---
@@ -448,35 +458,35 @@ Main Claude → committer: 커밋 → result.md
 ### pipeline 모드 (단순 → 위임)
 
 ```
-  specifier         builder          verifier         committer
- ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │PLAN      │────▶│코드 구현  │────▶│빌드/테스트│────▶│결과보고서 │
- │+TASK생성 │     │파일 생성  │     │검증 실행  │     │→ git커밋 │
- └──────────┘     └──────────┘     └──────────┘     └──────────┘
-  (컨텍스트 유지)   (sonnet)         (haiku)           (haiku)
-               ← 각각 Main Claude가 개별 호출 →
+  specifier+planner    builder       verifier+committer
+ ┌──────────────┐     ┌──────────┐     ┌────────────────┐
+ │PLAN          │────▶│코드 구현  │────▶│빌드/테스트      │
+ │+TASK생성     │     │파일 생성  │     │검증 → git커밋   │
+ └──────────────┘     └──────────┘     └────────────────┘
+  (opus, 단일 spawn)   (sonnet)         (haiku, 단일 spawn)
+               ← 각 그룹을 Main Claude가 개별 호출 →
 ```
 
 ### direct 모드 (초단순)
 
 ```
-  specifier        builder                                 committer
- ┌──────────┐     ┌──────────────────────────────┐        ┌──────────┐
- │ 분석     │────▶│ 구현 → self-check             │───────▶│커밋      │
- │ dispatch │     └──────────────────────────────┘        │→ result  │
- └──────────┘      (빌드/테스트 불필요)                    └──────────┘
+  specifier        builder                    verifier+committer
+ ┌──────────┐     ┌──────────────────────┐     ┌──────────────┐
+ │ 분석     │────▶│ 구현 → self-check     │────▶│검증 → 커밋   │
+ │ dispatch │     └──────────────────────┘     │→ result      │
+ └──────────┘      (빌드/테스트 불필요)         └──────────────┘
 ```
 
 ### 에이전트
 
-| 에이전트 | 역할 | 모델 | 권한 | MCP |
-|----------|------|------|------|-----|
-| **specifier** | `[]` 태그 감지, execution-mode 판정(direct/pipeline/full), PLAN 생성, WORK-LIST 관리, dispatch XML 반환 | **opus** | read + dispatch | Serena(direct 코드수정), sequential-thinking(복잡도판정) |
-| **planner** | WORK 생성 + TASK 분해 + PLAN.md(Execution-Mode:full) + progress 템플릿 선생성 | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) |
-| **scheduler** | 특정 WORK의 DAG 관리 + [B→V→C]×N 파이프라인 실행 | **haiku** | read + dispatch | — |
-| **builder** | 코드 구현 + progress.md 체크포인트 기록 | **sonnet** | full access | Serena(심볼단위탐색/편집) |
-| **verifier** | progress gate 검사 → 빌드/린트/테스트 검증 (읽기 전용) | **haiku** | read + execute | — |
-| **committer** | gate 검사 → result.md 생성 → git commit → COMMITTER DONE 콜백 | **haiku** | read + write + git | — |
+| 에이전트 | 역할 | 모델 | 권한 | MCP | Spawn |
+|----------|------|------|------|-----|-------|
+| **specifier** | `[]` 태그 감지, execution-mode 판정(direct/pipeline/full), PLAN 생성, WORK-LIST 관리, dispatch XML 반환 | **opus** | read + dispatch | Serena(코드베이스탐색), sequential-thinking(복잡도판정) | planner와 결합 (pipeline/full) |
+| **planner** | WORK 생성 + TASK 분해 + PLAN.md(Execution-Mode:full) + progress 템플릿 선생성 | **opus** | read-only | Serena(코드베이스탐색), sequential-thinking(TASK분해) | specifier와 결합 |
+| **scheduler** | 특정 WORK의 DAG 관리 + [B→V+C]×N 파이프라인 실행 | **haiku** | read + dispatch | — | 단독 (full 모드만) |
+| **builder** | 코드 구현 + progress.md 체크포인트 기록 | **sonnet** | full access | Serena(심볼단위탐색/편집) | 단독 |
+| **verifier** | progress gate 검사 → 빌드/린트/테스트 검증 (읽기 전용) | **haiku** | read + execute | — | committer와 결합 |
+| **committer** | gate 검사 → result.md 생성 → git commit → COMMITTER DONE 콜백 | **haiku** | read + write + git | — | verifier와 결합 |
 
 ### 참조 문서 (Plugin에 포함)
 
@@ -628,6 +638,8 @@ Claude: [scheduler → 자동 모드]
 ### 에이전트 파일 설계
 
 모든 에이전트 파일(`agents/*.md`)은 하나의 원칙으로 작성됩니다: **핵심 내용만, 장식 없이**. 설명, 강조 마커, 중복 예시를 제거한 결과 전체 에이전트 합산 약 1,600줄로 — 원래 크기의 절반 이하 — 동일한 기능 범위를 커버합니다.
+
+에이전트 프롬프트는 Bash 시퀀스에서 파이프(`|`) 명령어를 사용하지 않습니다 — Windows, Linux, macOS 등 플랫폼 호환성을 위해 각 명령을 개별 호출로 처리합니다.
 
 각 에이전트 파일은 일관된 4섹션 구조를 따릅니다:
 
@@ -793,11 +805,11 @@ specifier는 프로젝트 루트의 `.agent/router_rule_config.json`을 읽어 �
 ### 세 가지 실행 모드
 
 Main Claude가 specifier를 호출하면, specifier가 복잡도에 맞는 `execution-mode`를 판정합니다:
-- **direct**: 1줄 오타 수정 — Main Claude가 specifier 호출 → dispatch XML 반환 → builder(구현) + committer(커밋) 순차 호출
-- **pipeline**: 중간 규모 수정 — Main Claude가 builder → verifier → committer 순차 호출. Main Claude는 오케스트레이터 역할만 하므로 컨텍스트 사용 최소화
-- **full**: 복잡한 기능 — 전체 계획, 분해, 추적
+- **direct**: 1줄 오타 수정 — specifier → builder → [verifier+committer]. 3 spawn.
+- **pipeline**: 중간 규모 수정 — [specifier+planner] → builder → [verifier+committer]. 3 spawn.
+- **full**: 복잡한 기능 — [specifier+planner] → scheduler → [builder + verifier+committer] × N. 2+2N spawn.
 
-3가지 모드 모두 동일한 산출물 구조(`WORK-NN/` + result.md + 콜백)를 생성하므로 Runner 연동이 모드에 무관하게 동작합니다.
+연관 에이전트를 단일 spawn으로 결합하여 전체 spawn 수를 **~30% 감소**시킵니다. 3가지 모드 모두 동일한 산출물 구조(`WORK-NN/` + result.md + 콜백)를 생성하므로 Runner 연동이 모드에 무관하게 동작합니다.
 
 ### 구조화된 에이전트 통신
 
@@ -997,12 +1009,13 @@ uc-taskmanager/
 ├── CLAUDE.md                ← 프로젝트 지침 (push 절차, 언어, 에이전트 호출 규칙)
 ├── LICENSE
 ├── docs/                    ← 설계 명세
-│   ├── spec_pipeline-architecture.md       ← 파이프라인 구조 및 에이전트 역할
-│   ├── spec_pipeline-architecture_v1.2.md  ← 파이프라인 아키텍처 v1.2 (Specifier 기반, 3단계 상태)
+│   ├── spec_pipeline-architecture_v1.3.md  ← 파이프라인 아키텍처 v1.3 (ref-cache, Specifier 기반)
 │   ├── spec_sliding-window-context.md      ← 슬라이딩 윈도우 컨텍스트 설계
 │   ├── spec_callback-integration.md        ← 외부 시스템 콜백 연동 가이드
 │   ├── spec_SDD_with_ucagent_requirement.md ← SDD 요구사항관리 시스템 설계
-│   ├── pipeline-architecture-visual.html   ← 인터랙티브 파이프라인 시각화
+│   ├── pipeline-architecture-v1.3-visual.html ← 인터랙티브 파이프라인 시각화 (ref-cache 탭 포함)
+│   ├── SDD-requirement-visual.html         ← 인터랙티브 SDD 시각화 (ref-cache 탭 포함)
+│   ├── callback-integration-visual.html    ← 인터랙티브 콜백 시각화
 │   └── sliding-window-context-visual.html  ← 인터랙티브 슬라이딩 윈도우 시각화
 └── works/                   ← WORK 디렉토리 (자동 생성)
     ├── WORK-LIST.md          ← 마스터 인덱스

@@ -125,26 +125,34 @@ Main Claude → specifier 세션:
   ↑ 모두 동일 세션, 컨텍스트 누적됨
 ```
 
-### pipeline 모드 — Main Claude → Builder → Verifier → Committer
+### pipeline 모드 — Main Claude → Builder → Verifier+Committer (단일 spawn)
+
+v1.6.0부터 verifier와 committer가 **단일 spawn**으로 결합 실행된다.
+builder의 context-handoff는 Main Claude를 통해 verifier+committer spawn에 전달된다.
 
 ```
-Main Claude가 각 서브에이전트를 순차 호출하며 context-handoff를 중개한다.
+Main Claude가 서브에이전트를 순차 호출하며 context-handoff를 중개한다.
 
 builder 완료 → Main Claude에 반환
-  └─ Main Claude → verifier 호출 시 전달: builder context-handoff (FULL)
+  └─ Main Claude → verifier+committer 단일 spawn 호출 시 전달:
+                    builder context-handoff (FULL)
                     → builder가 왜 그렇게 짰는지 알고 타겟 검증 가능
 
-verifier 완료 → Main Claude에 반환
-  └─ Main Claude → committer 호출 시 전달: verifier context-handoff (FULL)
-                     builder context-handoff (SUMMARY)
-                     → result.md 작성에 필요한 정보만 보유
+[verifier+committer 단일 spawn 내부]
+  - Verifier가 먼저 검증 수행 (builder FULL context 보유)
+  - 검증 완료 후 Committer가 result.md 작성 + git commit
+  - verifier → committer context 전달이 동일 spawn 내에서 처리됨
+    (별도 XML handoff 없이 단일 세션 컨텍스트 공유)
 ```
 
 ```
-committer가 받는 컨텍스트:
-  verifier.what + why + caution + incomplete  ← FULL
-  builder.what (1~2줄 요약)                   ← SUMMARY
-  planner/scheduler 내용                      ← DROP (pipeline 모드엔 없음)
+verifier+committer spawn이 받는 컨텍스트:
+  builder.what + why + caution + incomplete  ← FULL
+  planner/scheduler 내용                     ← DROP (pipeline 모드엔 없음)
+
+committer가 활용하는 컨텍스트 (동일 spawn 내):
+  verifier 검증 결과    ← 동일 세션 컨텍스트 (별도 handoff 불필요)
+  builder.what (요약)  ← 같은 spawn이 보유한 FULL에서 추출
 ```
 
 ### full 모드 — TASK 간 의존성 전달
@@ -229,7 +237,7 @@ builder가 재dispatch되면 progress.md를 읽고 **마지막 완료된 체크�
 
 ## 6. committer Gate 역할
 
-committer(pipeline / full 모드)는 작업 시작 전 반드시 다음을 확인한다:
+committer(pipeline / full 모드)는 verifier+committer 단일 spawn 내에서 verifier 검증 완료 후 작업을 시작하며, 다음을 확인한다:
 
 ```
 [Gate 검사]
@@ -328,3 +336,4 @@ direct 모드의 경우 서브에이전트 세션 초기화 비용(~12,500 토�
 *최초 작성: 2026-03-12 | WORK-07 구현 기반 | WORK-08 테스트 검증 완료*
 *갱신: 2026-03-14 | WORK-10 — SDD v1.3 execution-mode 3종 체계 반영 (direct/pipeline/full)*
 *갱신: 2026-03-15 | WORK-19 — progress.md / result.md 구조를 file-content-schema.md와 일치, file-content-schema.md 참조 추가*
+*갱신: 2026-03-28 | WORK-45 — verifier+committer 단일 spawn 결합 반영. pipeline 모드 context handoff 경로 갱신 (verifier→committer 간 별도 handoff가 동일 spawn 내 컨텍스트 공유로 변경). §6 committer Gate 역할 설명 갱신.*
