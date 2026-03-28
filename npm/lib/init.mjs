@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
@@ -22,6 +22,41 @@ function copyAgents(destDir, lang) {
     copyFileSync(src, join(destDir, file));
     count++;
   }
+  return count;
+}
+
+function copyDirRecursive(src, dest) {
+  mkdirSync(dest, { recursive: true });
+  let count = 0;
+  for (const entry of readdirSync(src)) {
+    const srcPath = join(src, entry);
+    const destPath = join(dest, entry);
+    if (statSync(srcPath).isDirectory()) {
+      count += copyDirRecursive(srcPath, destPath);
+    } else {
+      copyFileSync(srcPath, destPath);
+      count++;
+    }
+  }
+  return count;
+}
+
+function copyPluginResources(destBaseDir) {
+  const pkgRoot = join(__dirname, '..');
+  let count = 0;
+
+  // .claude-plugin/
+  const pluginSrc = join(pkgRoot, '.claude-plugin');
+  if (existsSync(pluginSrc)) {
+    count += copyDirRecursive(pluginSrc, join(destBaseDir, '.claude-plugin'));
+  }
+
+  // skills/
+  const skillsSrc = join(pkgRoot, 'skills');
+  if (existsSync(skillsSrc)) {
+    count += copyDirRecursive(skillsSrc, join(destBaseDir, 'skills'));
+  }
+
   return count;
 }
 
@@ -97,10 +132,15 @@ export async function init(isGlobal, lang) {
     : `[new-feature] Add a hello world feature`;
 
   if (isGlobal) {
-    const globalDir = join(homedir(), '.claude', 'agents');
+    const globalClaudeDir = join(homedir(), '.claude');
+    const globalDir = join(globalClaudeDir, 'agents');
     const count = copyAgents(globalDir, lang);
     console.log(`\n  Installing to ${dim('~/.claude/agents/')} (${lang}) ...`);
     console.log(`    ${green('✓')} ${count} agent files copied`);
+    const globalResCount = copyPluginResources(globalClaudeDir);
+    if (globalResCount > 0) {
+      console.log(`    ${green('✓')} ${globalResCount} plugin resource files copied`);
+    }
     console.log(`\n  ${dim('Next steps:')}`);
     console.log(`    1. Open any project and run ${dim("'claude'")}`);
     console.log(`    2. Type: ${dim(exampleTag)}\n`);
@@ -114,6 +154,12 @@ export async function init(isGlobal, lang) {
 
   const count = copyAgents(destDir, lang);
   console.log(`    ${green('✓')} ${count} agent files copied`);
+
+  const claudeDir = join(projectDir, '.claude');
+  const resCount = copyPluginResources(claudeDir);
+  if (resCount > 0) {
+    console.log(`    ${green('✓')} ${resCount} plugin resource files copied (.claude-plugin, skills)`);
+  }
 
   if (ensureRouterConfig(projectDir)) {
     console.log(`    ${green('✓')} .agent/router_rule_config.json created`);

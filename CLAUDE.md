@@ -30,6 +30,17 @@ README 업데이트 범위:
 - 동작 방식이 변경된 경우 Pipeline 또는 Why This Approach 섹션 반영
 - 변경 없으면 업데이트 생략
 
+## npm 버전업 절차
+
+사용자가 npm 버전업을 요청하면 다음을 추가로 수행한다:
+
+1. **플러그인 리소스 복사** — plugin 폴더의 아래 항목을 npm/ 하위로 복사
+   - `plugin/.claude-plugin` → `npm/.claude-plugin`
+   - `plugin/skills/` → `npm/skills/`
+2. 에이전트 동기화 (Push 절차 1단계와 동일)
+3. `npm version patch|minor|major` 실행
+4. `npm publish`
+
 ## Language
 
 ko

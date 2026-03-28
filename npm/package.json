@@ -10,7 +10,9 @@
     "bin/",
     "lib/",
     "agents/",
-    ".agent/"
+    ".agent/",
+    ".claude-plugin/",
+    "skills/"
   ],
   "engines": {
     "node": ">=18"
