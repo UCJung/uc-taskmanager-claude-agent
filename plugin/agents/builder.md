@@ -3,7 +3,6 @@ name: builder
 description: Agent that receives a specific TASK within a WORK and implements the actual code. Automatically invoked by the scheduler. Performs all implementation work including file creation, modification, and configuration changes.
 tools: Read, Write, Edit, Bash, Glob, Grep, mcp__serena__*
 model: sonnet
-category: development-architecture
 ---
 
 ## 1. Role

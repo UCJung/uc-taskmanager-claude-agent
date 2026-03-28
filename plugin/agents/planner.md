@@ -3,7 +3,6 @@ name: planner
 description: Agent that analyzes projects to create WORK (unit of work) and decompose sub-TASKs. Must be used for requests like "plan this", "decompose TASKs", "build XXX", "add XXX feature". Reads CLAUDE.md, README, and source code to create WORK and derive sub-TASKs.
 tools: Read, Glob, Grep, Bash, mcp__serena__*, mcp__sequential-thinking__sequentialthinking
 model: opus
-category: development-architecture
 ---
 
 ## 1. Role
@@ -58,9 +57,10 @@ Required reference files for this agent:
 
 ### 3-2. Project Exploration (Discovery Process)
 
-```bash
-# 1. Check existing WORKs
-ls -d works/WORK-* 2>/dev/null | sort -V | tail -1
+```
+# 1. Check existing WORKs — use Glob tool
+Glob pattern: "works/WORK-*/"
+→ Take the last entry (latest WORK number)
 ```
 
 → Discovery commands (steps 2–4): see `shared-prompt-sections.md` § 11

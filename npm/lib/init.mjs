@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
-import { AGENT_FILES, getAgentsSrcDir, getClaudeMdSection, REQUIRED_PERMISSIONS } from './constants.mjs';
+import { AGENT_FILES, getAgentsSrcDir, REQUIRED_PERMISSIONS } from './constants.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -41,21 +41,6 @@ function ensureWorksDir(projectDir) {
   const worksDir = join(projectDir, 'works');
   if (existsSync(worksDir)) return false;
   mkdirSync(worksDir, { recursive: true });
-  return true;
-}
-
-function updateClaudeMd(projectDir, lang) {
-  const section = getClaudeMdSection(lang);
-  const claudeMdPath = join(projectDir, 'CLAUDE.md');
-  if (existsSync(claudeMdPath)) {
-    const content = readFileSync(claudeMdPath, 'utf8');
-    if (content.includes('Agent 호출 규칙') || content.includes('Agent Invocation Rules') || content.includes('agent-flow.md')) {
-      return false;
-    }
-    writeFileSync(claudeMdPath, content.trimEnd() + '\n\n' + section);
-  } else {
-    writeFileSync(claudeMdPath, '# CLAUDE.md\n\n' + section);
-  }
   return true;
 }
 
@@ -134,12 +119,6 @@ export async function init(isGlobal, lang) {
     console.log(`    ${green('✓')} .agent/router_rule_config.json created`);
   } else {
     console.log(`    ${dim('-')} .agent/router_rule_config.json already exists`);
-  }
-
-  if (updateClaudeMd(projectDir, lang)) {
-    console.log(`    ${green('✓')} CLAUDE.md updated`);
-  } else {
-    console.log(`    ${dim('-')} CLAUDE.md already has agent rules`);
   }
 
   if (ensureWorksDir(projectDir)) {

@@ -3,7 +3,6 @@ name: committer
 description: Agent that first generates the result report for a verified TASK and then performs git commit. Automatically invoked by the scheduler. Result files are created in the corresponding WORK directory.
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: haiku
-category: development-architecture
 ---
 
 ## 1. Role

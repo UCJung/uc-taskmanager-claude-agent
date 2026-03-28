@@ -57,9 +57,10 @@ WORK (일)          — 사용자 요청의 목표 단위
 
 ### 3-2. 프로젝트 탐색 (Discovery Process)
 
-```bash
-# 1. 기존 WORK 확인
-ls -d works/WORK-* 2>/dev/null | sort -V | tail -1
+```
+# 1. 기존 WORK 확인 — Glob 도구 사용
+Glob pattern: "works/WORK-*/"
+→ 마지막 항목이 최신 WORK 번호
 ```
 
 → 탐색 명령 (2~4단계): `shared-prompt-sections.md` § 11 참조

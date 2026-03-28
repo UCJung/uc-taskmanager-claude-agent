@@ -28,7 +28,7 @@ elif [ -f "Cargo.toml" ]; then
 elif [ -f "go.mod" ]; then
   go build ./... 2>&1
 elif [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then
-  python -m py_compile $(find . -name "*.py" -not -path "*/venv/*" | head -20) 2>&1
+  python -m py_compile $(find . -maxdepth 3 -name "*.py" -not -path "*/venv/*" 2>/dev/null) 2>&1
 elif [ -f "Makefile" ]; then
   make build 2>&1 || make 2>&1
 fi
@@ -68,22 +68,20 @@ works/{WORK_ID}/
 
 ## § 4. File System Discovery Scripts
 
-```bash
+```
 # Find latest WORK with incomplete TASKs
-for dir in $(ls -d works/WORK-* 2>/dev/null | sort -V -r); do
-  WORK_ID=$(basename $dir)
-  TOTAL=$(ls $dir/TASK-*.md 2>/dev/null | grep -v result | wc -l)
-  DONE=$(ls $dir/TASK-*_result.md 2>/dev/null | wc -l)
-  [ "$DONE" -lt "$TOTAL" ] && echo "$WORK_ID" && break
-done
+# Use Glob tool: pattern "works/WORK-*/" → list all WORK directories (sorted)
+# For each WORK (descending), compare:
+#   Glob "works/WORK-NN/TASK-*.md" (exclude *_result.md, *_progress.md) → TOTAL
+#   Glob "works/WORK-NN/TASK-*_result.md" → DONE
+# First WORK where DONE < TOTAL is the active WORK
 
 # List all WORKs
-ls -d works/WORK-* 2>/dev/null | sort -V
+# Use Glob tool: pattern "works/WORK-*/"
 
 # TASK completion status
-TOTAL=$(ls works/${WORK_ID}/TASK-*.md 2>/dev/null | grep -v result | wc -l)
-DONE=$(ls works/${WORK_ID}/TASK-*_result.md 2>/dev/null | wc -l)
-echo "$DONE / $TOTAL"
+# TOTAL = count of Glob "works/${WORK_ID}/TASK-??.md"
+# DONE  = count of Glob "works/${WORK_ID}/TASK-*_result.md"
 ```
 
 ---
@@ -190,13 +188,13 @@ Agent-specific payload fields:
 grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null
 
 # 2. Tech stack
-cat package.json 2>/dev/null | head -50
-cat pyproject.toml 2>/dev/null | head -30
-cat Cargo.toml 2>/dev/null | head -20
-cat go.mod 2>/dev/null | head -10
+head -50 package.json 2>/dev/null
+head -30 pyproject.toml 2>/dev/null
+head -20 Cargo.toml 2>/dev/null
+head -10 go.mod 2>/dev/null
 
 # 3. Structure (when needed)
-find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) | grep -v node_modules | head -30
+find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) -not -path "*/node_modules/*" 2>/dev/null
 ```
 
 ---

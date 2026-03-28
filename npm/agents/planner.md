@@ -57,9 +57,10 @@ Required reference files for this agent:
 
 ### 3-2. Project Exploration (Discovery Process)
 
-```bash
-# 1. Check existing WORKs
-ls -d works/WORK-* 2>/dev/null | sort -V | tail -1
+```
+# 1. Check existing WORKs — use Glob tool
+Glob pattern: "works/WORK-*/"
+→ Take the last entry (latest WORK number)
 ```
 
 → Discovery commands (steps 2–4): see `shared-prompt-sections.md` § 11

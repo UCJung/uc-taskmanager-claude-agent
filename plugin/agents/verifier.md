@@ -3,7 +3,6 @@ name: verifier
 description: Agent that verifies build, lint, test, and checklist after TASK completion within a WORK. Automatically invoked by the scheduler. Verifies in read-only mode without modifying code.
 tools: Read, Bash, Glob, Grep
 model: haiku
-category: development-architecture
 ---
 
 ## 1. Role
