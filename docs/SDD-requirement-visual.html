@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SDD 통합 시스템 설계 명세 — UC TaskManager v1.4</title>
+<title>SDD 통합 시스템 설계 명세 — UC TaskManager v1.6</title>
 <style>
 :root {
   --bg: #0f172a;
@@ -570,7 +570,7 @@ body {
       <div class="card">
         <div style="font-size:1.8rem;margin-bottom:0.5rem;">⚡</div>
         <div style="font-weight:700;margin-bottom:0.4rem;color:var(--accent)">3단계 실행 모드</div>
-        <div style="font-size:0.82rem;color:var(--text-muted)">direct(Router 단독) / pipeline(B+V+C) / full(P+S+B+V+C). 복잡도에 따라 에이전트 호출 수를 최소화하여 토큰 비용을 절감한다.</div>
+        <div style="font-size:0.82rem;color:var(--text-muted)">direct(3 spawns) / pipeline(3 spawns) / full(2+2N spawns). Specifier+Planner 단일 spawn, Verifier+Committer 단일 spawn 결합으로 총 spawn 수 30% 감소.</div>
       </div>
       <div class="card">
         <div style="font-size:1.8rem;margin-bottom:0.5rem;">🔒</div>
@@ -765,34 +765,33 @@ body {
     <div class="mode-card direct">
       <div class="mode-title">direct</div>
       <div class="mode-desc">빌드/테스트 불필요 · 텍스트 수정 · 설정 변경</div>
-      <div class="mode-flow">Router 단독
-서브에이전트 없음
-코드 수정 + result.md
-+ git commit 직접 수행</div>
+      <div class="mode-flow">Builder (코드 수정)
+→ Verifier+Committer (단일 spawn)
+(Specifier+Planner 생략)</div>
       <div style="margin-top:0.8rem;font-size:0.78rem;color:var(--text-muted)">
-        에이전트 호출: <strong style="color:var(--direct-color)">3개</strong>
+        spawn 수: <strong style="color:var(--direct-color)">3개</strong>
       </div>
     </div>
     <div class="mode-card pipeline">
       <div class="mode-title">pipeline</div>
       <div class="mode-desc">빌드/테스트 필요 · 단일 도메인 · sequential DAG</div>
-      <div class="mode-flow">Router → Builder
-       → Verifier
-       → Committer
-(Planner/Scheduler 생략)</div>
+      <div class="mode-flow">Specifier+Planner (단일 spawn)
+→ Builder
+→ Verifier+Committer (단일 spawn)
+(Scheduler 생략)</div>
       <div style="margin-top:0.8rem;font-size:0.78rem;color:var(--text-muted)">
-        에이전트 호출: <strong style="color:var(--pipeline-color)">4개</strong>
+        spawn 수: <strong style="color:var(--pipeline-color)">3개</strong>
       </div>
     </div>
     <div class="mode-card full">
       <div class="mode-title">full</div>
       <div class="mode-desc">멀티도메인 / 복잡 DAG / 신규 모듈 / 5+ TASK</div>
-      <div class="mode-flow">Router → Planner
-       → Scheduler
-       → [B→V→C] × N
+      <div class="mode-flow">Specifier+Planner (단일 spawn)
+→ Scheduler
+→ [Builder → Verifier+Committer] × N
 (전체 파이프라인)</div>
       <div style="margin-top:0.8rem;font-size:0.78rem;color:var(--text-muted)">
-        에이전트 호출: <strong style="color:var(--full-color)">6+개</strong>
+        spawn 수: <strong style="color:var(--full-color)">2+2N개</strong>
       </div>
     </div>
   </div>
@@ -861,15 +860,15 @@ body {
       </tr>
       <tr>
         <td>Verifier</td>
-        <td style="color:var(--text-muted)">호출 안 됨 (self-check으로 완료)</td>
-        <td>7단계 검증 전체</td>
-        <td>기존과 동일</td>
+        <td>Verifier+Committer 단일 spawn 내 실행</td>
+        <td>Verifier+Committer 단일 spawn — 7단계 검증 후 Committer 역할 수행</td>
+        <td>기존과 동일 (단일 spawn 결합)</td>
       </tr>
       <tr>
         <td>Committer</td>
-        <td style="color:var(--text-muted)">호출 안 됨 (Router가 직접 수행)</td>
-        <td>result.md 전체 포맷. COMMITTER DONE 콜백</td>
-        <td>기존과 동일</td>
+        <td>Verifier+Committer 단일 spawn 내 실행</td>
+        <td>Verifier+Committer 단일 spawn — verifier 검증 후 result.md + COMMITTER DONE 콜백</td>
+        <td>기존과 동일 (단일 spawn 결합)</td>
       </tr>
     </table>
   </div>
@@ -923,13 +922,8 @@ body {
       </div>
       <div class="timeline-item">
         <div class="timeline-dot" style="background:var(--haiku);"></div>
-        <div class="tl-title">4b. Verifier dispatch</div>
-        <div class="tl-desc">Step 0: progress.md Gate 검사 → 7단계 검증 (빌드/린트/테스트/인수조건) → FAIL 시 Builder 재시도 (최대 3회)</div>
-      </div>
-      <div class="timeline-item">
-        <div class="timeline-dot" style="background:var(--haiku);"></div>
-        <div class="tl-title">4c. Committer dispatch</div>
-        <div class="tl-desc">Step 0: progress.md Gate 검사 → TASK-XX_result.md 생성 → PROGRESS.md 업데이트 → git add -A && git commit → 커밋 해시 백필 → TaskCallback 전송 → 다음 READY TASK 보고</div>
+        <div class="tl-title">4b. Verifier+Committer dispatch (단일 spawn — v1.6)</div>
+        <div class="tl-desc">[Verifier] Step 0: progress.md Gate 검사 → 7단계 검증 (빌드/린트/테스트/인수조건) → FAIL 시 Builder 재시도 (최대 3회) | [Committer] TASK-XX_result.md 생성 → PROGRESS.md 업데이트 → git add -A && git commit → 커밋 해시 백필 → TaskCallback 전송 → 다음 READY TASK 보고</div>
       </div>
       <div class="timeline-item">
         <div class="timeline-dot" style="background:var(--success);"></div>
@@ -985,17 +979,17 @@ body {
   </div>
 
   <div class="subsection">
-    <div class="subsection-title">Dispatcher → Receiver 매핑</div>
+    <div class="subsection-title">Dispatcher → Receiver 매핑 <span class="ver-tag">v1.6 갱신 — spawn 결합</span></div>
     <table class="tbl">
-      <tr><th>Dispatcher</th><th>Receiver</th><th>mode</th><th>설명</th></tr>
-      <tr><td>Router</td><td>(자기 자신)</td><td><span class="badge badge-direct">direct</span></td><td>서브에이전트 없음. Router가 직접 코드수정+result.md+commit+콜백</td></tr>
-      <tr><td>Router</td><td>Planner</td><td><span class="badge badge-full">full</span></td><td>복잡 WORK 계획 수립</td></tr>
-      <tr><td>Router</td><td>Builder</td><td><span class="badge badge-pipeline">pipeline</span></td><td>TASK 1개 구현 (PLAN.md 생성 후)</td></tr>
-      <tr><td>Router</td><td>Verifier</td><td><span class="badge badge-pipeline">pipeline</span></td><td>TASK 1개 검증 (Builder 완료 후)</td></tr>
-      <tr><td>Router</td><td>Committer</td><td><span class="badge badge-pipeline">pipeline</span></td><td>TASK 1개 커밋</td></tr>
-      <tr><td>Scheduler</td><td>Builder</td><td><span class="badge badge-full">full</span></td><td>TASK N개 순차 구현</td></tr>
-      <tr><td>Scheduler</td><td>Verifier</td><td><span class="badge badge-full">full</span></td><td>TASK N개 순차 검증</td></tr>
-      <tr><td>Scheduler</td><td>Committer</td><td><span class="badge badge-full">full</span></td><td>TASK N개 순차 커밋</td></tr>
+      <tr><th>Dispatcher</th><th>Receiver</th><th>mode</th><th>설명</th><th>Spawn</th></tr>
+      <tr><td>Main Claude</td><td>Builder</td><td><span class="badge badge-direct">direct</span></td><td>TASK 구현</td><td>1</td></tr>
+      <tr><td>Main Claude</td><td><strong>Verifier+Committer</strong></td><td><span class="badge badge-direct">direct</span></td><td>검증+커밋 단일 spawn</td><td>1</td></tr>
+      <tr><td>Main Claude</td><td><strong>Specifier+Planner</strong></td><td><span class="badge badge-pipeline">pipeline</span></td><td>PLAN+TASK 생성 단일 spawn</td><td>1</td></tr>
+      <tr><td>Specifier+Planner</td><td>Builder</td><td><span class="badge badge-pipeline">pipeline</span></td><td>TASK 1개 구현</td><td>1</td></tr>
+      <tr><td>Main Claude</td><td><strong>Verifier+Committer</strong></td><td><span class="badge badge-pipeline">pipeline</span></td><td>검증+커밋 단일 spawn</td><td>1</td></tr>
+      <tr><td>Main Claude</td><td><strong>Specifier+Planner</strong></td><td><span class="badge badge-full">full</span></td><td>PLAN+TASK 생성 + Scheduler dispatch</td><td>1</td></tr>
+      <tr><td>Scheduler</td><td>Builder</td><td><span class="badge badge-full">full</span></td><td>TASK N개 순차 구현</td><td>N</td></tr>
+      <tr><td>Scheduler</td><td><strong>Verifier+Committer</strong></td><td><span class="badge badge-full">full</span></td><td>TASK N개 순차 검증+커밋 단일 spawn</td><td>N</td></tr>
     </table>
   </div>
 

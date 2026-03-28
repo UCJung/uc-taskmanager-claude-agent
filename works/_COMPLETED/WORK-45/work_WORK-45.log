@@ -1,0 +1,3 @@
+[2026-03-28T00:00:00]_SPECIFIER_INIT_WORK-45 created — Execution-Mode: pipeline
+[2026-03-28T00:00:00]_SPECIFIER_REF_References: file-content-schema.md, shared-prompt-sections.md, xml-schema.md, work-activity-log.md, agent-flow.md, README.md, README_KO.md, plugin/README.md, docs/spec_pipeline-architecture_v1.3.md, docs/spec_SDD_with_ucagent_requirement.md
+[2026-03-28T00:00:00]_PLANNER_PLAN_Requirement.md, PLAN.md, TASK-00~03.md, TASK-00~03_progress.md created (Specifier+Planner combined)

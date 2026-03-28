@@ -827,38 +827,33 @@ body {
     <!-- Pipeline Mode -->
     <div id="mode-pipeline" class="mode-panel">
       <div class="card">
-        <div class="card-title" style="color:var(--accent2);">Pipeline Mode - Builder &rarr; Verifier &rarr; Committer</div>
+        <div class="card-title" style="color:var(--accent2);">Pipeline Mode - Builder &rarr; Verifier+Committer (단일 spawn — v1.6)</div>
         <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
-          Each agent runs in a separate session. Context-handoff transfers reasoning between them.
+          Builder는 별도 spawn. Verifier와 Committer는 <strong>단일 spawn</strong>으로 결합 실행되어 verifier→committer 컨텍스트 전달이 동일 세션 내에서 처리된다.
         </p>
         <div class="pipeline-v">
           <div class="pipeline-step">
-            <div class="pipeline-step-node" style="border-color:var(--accent3);color:var(--accent3);">Builder</div>
+            <div class="pipeline-step-node" style="border-color:var(--accent3);color:var(--accent3);">Builder (spawn 1)</div>
             <div class="pipeline-step-desc">Implements code. Outputs context-handoff with <span class="detail-badge full">FULL</span> detail.</div>
           </div>
-          <div class="pipeline-arrow-down">&darr; <span style="font-size:0.7rem;color:var(--full-color);">FULL handoff</span></div>
+          <div class="pipeline-arrow-down">&darr; <span style="font-size:0.7rem;color:var(--full-color);">FULL handoff via Main Claude</span></div>
           <div class="pipeline-step">
-            <div class="pipeline-step-node" style="border-color:var(--accent4);color:var(--accent4);">Verifier</div>
-            <div class="pipeline-step-desc">Receives builder's full context. Knows <em>why</em> code was written that way &rarr; targeted verification.</div>
-          </div>
-          <div class="pipeline-arrow-down">&darr; <span style="font-size:0.7rem;color:var(--full-color);">FULL</span> + <span style="font-size:0.7rem;color:var(--summary-color);">SUMMARY</span></div>
-          <div class="pipeline-step">
-            <div class="pipeline-step-node" style="border-color:var(--accent5);color:var(--accent5);">Committer</div>
+            <div class="pipeline-step-node" style="border-color:var(--accent4);color:var(--accent5);background:rgba(248,113,113,0.05);border-style:dashed;">Verifier+Committer (spawn 2 — 단일)</div>
             <div class="pipeline-step-desc">
-              Receives: verifier context <span class="detail-badge full">FULL</span>,
-              builder context <span class="detail-badge summary">SUMMARY</span>.
-              Writes result.md.
+              Receives builder's full context.<br>
+              <strong>[Verifier]</strong> Knows <em>why</em> code was written &rarr; targeted verification.<br>
+              <strong>[Committer]</strong> Uses same session context (no separate handoff needed) &rarr; writes result.md + git commit.
             </div>
           </div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title">Committer's Context Window</div>
+        <div class="card-title">Verifier+Committer spawn Context Window</div>
         <table class="handoff-table">
           <tr><th>Source</th><th>Detail Level</th><th>Content</th></tr>
-          <tr><td>Verifier (1 step)</td><td><span class="detail-badge full">FULL</span></td><td>what + why + caution + incomplete</td></tr>
-          <tr><td>Builder (2 steps)</td><td><span class="detail-badge summary">SUMMARY</span></td><td>what only (1-2 lines)</td></tr>
+          <tr><td>Builder (직전 — via Main Claude)</td><td><span class="detail-badge full">FULL</span></td><td>what + why + caution + incomplete</td></tr>
+          <tr><td>Verifier (동일 spawn 내)</td><td colspan="2" style="font-size:0.8rem;color:var(--accent3);">단일 세션 컨텍스트 공유 — 별도 handoff 불필요</td></tr>
           <tr><td>Planner/Scheduler</td><td><span class="detail-badge drop">DROP</span></td><td>N/A in pipeline mode</td></tr>
         </table>
       </div>
@@ -871,11 +866,12 @@ body {
         <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
           When TASK-N completes and TASK-N+1 starts, the new builder gets a fresh session.
           Scheduler automatically includes context-handoff from preceding TASKs based on sliding window rules.
+          Verifier+Committer는 각 TASK마다 단일 spawn으로 결합 실행된다.
         </p>
         <div class="pipeline-v">
           <div class="pipeline-step">
             <div class="pipeline-step-node" style="border-color:var(--accent6);color:var(--accent6);width:220px;">TASK-N Pipeline</div>
-            <div class="pipeline-step-desc">Builder &rarr; Verifier &rarr; Committer &rarr; result.md created</div>
+            <div class="pipeline-step-desc">Builder &rarr; Verifier+Committer (단일 spawn) &rarr; result.md created</div>
           </div>
           <div class="pipeline-arrow-down">&darr; <span style="font-size:0.7rem;color:var(--accent6);">result context-handoff</span></div>
           <div class="pipeline-step">

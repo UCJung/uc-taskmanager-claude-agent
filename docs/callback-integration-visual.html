@@ -706,7 +706,7 @@ body {
     <div class="card">
       <div class="card-title" style="color: var(--accent4);">pipeline / full 모드 — 서브에이전트 수행</div>
       <div style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1.2rem;">
-        Builder가 ProgressCallback을, Committer가 TaskCallback을 전송한다. pipeline에서 Dispatcher는 Specifier, full에서는 Scheduler.
+        Builder가 ProgressCallback을, Committer가 TaskCallback을 전송한다. v1.6.0부터 Verifier와 Committer는 <strong>단일 spawn</strong>으로 결합 실행된다. pipeline에서 Dispatcher는 Main Claude(Specifier+Planner spawn 완료 후), full에서는 Scheduler.
       </div>
       <div class="callback-flow-wrap">
         <svg viewBox="0 0 820 540" style="min-width:760px; width:100%; height:auto; display:block;">
@@ -739,8 +739,9 @@ body {
           <rect x="200" y="10" width="110" height="36" rx="6" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5"/>
           <text x="255" y="33" text-anchor="middle" fill="#34d399" font-family="Segoe UI" font-weight="600" font-size="12">Builder</text>
 
-          <rect x="380" y="10" width="110" height="36" rx="6" fill="rgba(244,114,182,0.15)" stroke="#f472b6" stroke-width="1.5"/>
-          <text x="435" y="33" text-anchor="middle" fill="#f472b6" font-family="Segoe UI" font-weight="600" font-size="12">Committer</text>
+          <rect x="360" y="10" width="150" height="36" rx="6" fill="rgba(244,114,182,0.15)" stroke="#f472b6" stroke-width="1.5"/>
+          <text x="435" y="27" text-anchor="middle" fill="#f472b6" font-family="Segoe UI" font-weight="600" font-size="11">Verifier+Committer</text>
+          <text x="435" y="42" text-anchor="middle" fill="#f472b6" font-size="9">(단일 spawn — v1.6)</text>
 
           <rect x="580" y="10" width="130" height="36" rx="6" fill="rgba(251,146,60,0.15)" stroke="#fb923c" stroke-width="1.5"/>
           <text x="645" y="33" text-anchor="middle" fill="#fb923c" font-family="Segoe UI" font-weight="600" font-size="12">External System</text>
@@ -813,24 +814,19 @@ body {
     </div>
 
     <div class="card">
-      <div class="card-title">Phase별 타임라인</div>
+      <div class="card-title">Phase별 타임라인 <span style="font-size:0.75rem;color:var(--accent3);font-weight:400;">v1.6: Verifier+Committer 단일 spawn 결합</span></div>
       <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 0.5rem;">
         <div style="display: flex; gap: 1rem; align-items: flex-start; padding: 1rem; background: rgba(52,211,153,0.05); border-radius: 8px; border: 1px solid rgba(52,211,153,0.2);">
-          <div style="width: 90px; font-weight: 700; color: var(--node-builder); flex-shrink: 0; font-size: 0.9rem;">Builder</div>
+          <div style="width: 90px; font-weight: 700; color: var(--node-builder); flex-shrink: 0; font-size: 0.9rem;">Builder<br><span style="font-weight:400;font-size:0.75rem;color:var(--text-muted);">(spawn 1)</span></div>
           <div style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.7;">
             파일 수정 후 progress.md 갱신 → ProgressCallback 설정 시 curl POST → 실패 시 WARNING 출력 후 계속 → task-result 반환
           </div>
         </div>
-        <div style="display: flex; gap: 1rem; align-items: flex-start; padding: 1rem; background: rgba(251,146,60,0.05); border-radius: 8px; border: 1px solid rgba(251,146,60,0.2);">
-          <div style="width: 90px; font-weight: 700; color: var(--accent4); flex-shrink: 0; font-size: 0.9rem;">Verifier</div>
+        <div style="display: flex; gap: 1rem; align-items: flex-start; padding: 1rem; background: rgba(244,114,182,0.08); border-radius: 8px; border: 1px dashed rgba(244,114,182,0.4);">
+          <div style="width: 90px; font-weight: 700; color: var(--node-committer); flex-shrink: 0; font-size: 0.9rem;">Verifier+<br>Committer<br><span style="font-weight:400;font-size:0.75rem;color:var(--text-muted);">(spawn 2)</span></div>
           <div style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.7;">
-            Builder 결과 검증 → Acceptance Criteria 확인 → <strong>콜백 없음</strong>
-          </div>
-        </div>
-        <div style="display: flex; gap: 1rem; align-items: flex-start; padding: 1rem; background: rgba(244,114,182,0.05); border-radius: 8px; border: 1px solid rgba(244,114,182,0.2);">
-          <div style="width: 90px; font-weight: 700; color: var(--node-committer); flex-shrink: 0; font-size: 0.9rem;">Committer</div>
-          <div style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.7;">
-            result.md 생성 → git commit → TaskCallback 설정 시 curl POST (with commit result) → 실패 시 WARNING 후 계속 → task-result + commitHash 반환
+            <strong style="color:var(--accent4);">[Verifier]</strong> Builder 결과 검증 → Acceptance Criteria 확인 → <strong>콜백 없음</strong><br>
+            <strong style="color:var(--node-committer);">[Committer]</strong> (동일 spawn — verifier 완료 후) result.md 생성 → git commit → TaskCallback 설정 시 curl POST → 실패 시 WARNING 후 계속 → task-result + commitHash 반환
           </div>
         </div>
       </div>

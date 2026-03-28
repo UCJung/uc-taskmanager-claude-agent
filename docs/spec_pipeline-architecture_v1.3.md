@@ -47,12 +47,28 @@ uc-taskmanager는 Claude Code CLI 위에서 동작하는 **멀티 에이전트 �
     ┌─────────────┼─────────────┐
     ▼             ▼             ▼
   direct       pipeline        full
- (specifier    specifier      specifier
-  Planner     →planner       →planner
-  겸임)       →builder       →scheduler
-             →verifier    →[B→V→C]×N
-             →committer
+ (1 spawn)    (1 spawn)      (1 spawn)
+ specifier+   specifier+     specifier+
+ planner      planner        planner
+ 겸임          →builder      →scheduler
+  │           →verifier+    →[builder→
+  ▼            committer      verifier+
+ builder       (1 spawn)      committer]
+  │                           (1 spawn)
+  ▼                            ×N
+ verifier+
+ committer
+ (1 spawn)
 ```
+
+**Spawn 수 요약:**
+
+| 모드 | Spawn 구성 | 총 Spawn 수 |
+|------|-----------|:----------:|
+| direct | specifier(1) + builder(1) + verifier+committer(1) | **3** |
+| pipeline | specifier+planner(1) + builder(1) + verifier+committer(1) | **3** |
+| full (N TASK) | specifier+planner(1) + scheduler(1) + [builder(1) + verifier+committer(1)] × N | **2 + 2N** |
+| full (6 TASK 예시) | 2 + 2×6 | **14** |
 
 ---
 
@@ -100,69 +116,72 @@ Main Claude: builder 호출 → verifier 호출 → committer 호출
 ```
 
 - Specifier가 Planner 겸임 (PLAN.md + TASK 파일 직접 생성)
-- builder → verifier → committer 순차 실행 (Main Claude 수행)
+- builder → verifier+committer 순차 실행 (Main Claude 수행, verifier+committer는 단일 spawn)
 - ProgressCallback: builder가 직접 전송
 - TaskCallback: committer가 전송
+- **Spawn 수: 3** (specifier(Planner 겸임) 1 + builder 1 + verifier+committer 1)
 
 ### 3.2 pipeline 모드
 
-Specifier가 Requirement.md를 생성하고 Planner에 계획 수립을 위임한다.
-Planner가 PLAN + TASK 파일을 생성하면, Main Claude가 builder → verifier → committer를 순차 실행한다.
+Specifier와 Planner가 **단일 spawn**으로 결합되어 실행된다.
+specifier+planner spawn이 Requirement.md + PLAN + TASK 파일을 생성하면,
+Main Claude가 builder → verifier+committer를 순차 실행한다.
+verifier와 committer 역시 **단일 spawn**으로 결합된다.
 
 ```
-Specifier: Requirement.md 생성 → planner dispatch XML 반환
-Main Claude: planner 호출 → builder 호출 → verifier 호출 → committer 호출
+specifier+planner (1 spawn): Requirement.md + PLAN.md + TASK 생성
+Main Claude: builder 호출 → verifier+committer 호출 (1 spawn)
 ```
 
 **실행 순서:**
 
 ```
-1. specifier: Requirement.md 생성, WORK ID 결정, mkdir
-2. specifier: WORK-LIST.md IN_PROGRESS 추가 + LAST_WORK_ID 갱신
-3. specifier: planner dispatch XML 반환
-4. Main Claude: planner 호출 → PLAN.md, TASK-00.md, TASK-00_progress.md 생성
-5. Main Claude: builder 서브에이전트 호출
-6. Main Claude: verifier 서브에이전트 호출 (builder context-handoff 전달)
-7. Main Claude: committer 서브에이전트 호출 (verifier + builder context-handoff 전달)
+1. specifier+planner: Requirement.md 생성, WORK ID 결정, mkdir
+2. specifier+planner: WORK-LIST.md IN_PROGRESS 추가 + LAST_WORK_ID 갱신
+3. specifier+planner: PLAN.md, TASK-00.md, TASK-00_progress.md 생성 (사용자 승인 후)
+4. Main Claude: builder 서브에이전트 호출
+5. Main Claude: verifier+committer 서브에이전트 호출 (builder context-handoff 전달)
 ```
 
 - TASK 1개 단순 구조
 - `execution-mode="pipeline"` 속성을 dispatch XML에 포함
+- **Spawn 수: 3** (specifier+planner 1 + builder 1 + verifier+committer 1)
 
 ### 3.3 full 모드
 
-Specifier가 Requirement.md를 생성하고 Planner에 계획 수립을 위임한다.
-Planner가 PLAN + TASK 파일을 생성하고 Scheduler를 dispatch한다.
-Scheduler가 DAG 기반으로 [builder → verifier → committer] × N을 반복 실행한다.
+specifier와 planner가 **단일 spawn**으로 결합되어 실행된다.
+specifier+planner spawn이 PLAN + TASK 파일을 생성하고, Scheduler를 dispatch한다.
+Scheduler가 DAG 기반으로 [builder → verifier+committer] × N을 반복 실행한다.
+verifier와 committer는 각 TASK마다 **단일 spawn**으로 결합된다.
 
 ```
-specifier → (Main Claude) → planner → (Main Claude) → scheduler
-→ (Main Claude) → [builder → verifier → committer] × N
+specifier+planner (1 spawn) → (Main Claude) → scheduler
+→ (Main Claude) → [builder → verifier+committer (1 spawn)] × N
 ```
 
 **실행 순서:**
 
 ```
 신규 WORK:
-1. specifier: Requirement.md 생성, WORK ID 결정, mkdir
-2. specifier: WORK-LIST.md IN_PROGRESS 추가 + LAST_WORK_ID 갱신
-3. specifier: planner dispatch XML 반환
-4. Main Claude: planner 호출 → PLAN.md + TASK 파일 생성 (사용자 승인 후)
-5. Main Claude: scheduler 호출
+1. specifier+planner: Requirement.md 생성, WORK ID 결정, mkdir
+2. specifier+planner: WORK-LIST.md IN_PROGRESS 추가 + LAST_WORK_ID 갱신
+3. specifier+planner: PLAN.md + TASK 파일 생성 (사용자 승인 후)
+4. Main Claude: scheduler 호출
 
 기존 WORK 실행:
 1. Main Claude: scheduler 호출
 
 scheduler 루프:
-6. scheduler: DAG 분석 → READY TASK 선별 → builder dispatch XML 반환
-7. Main Claude: builder 호출
-8. Main Claude: verifier 호출
-9. Main Claude: committer 호출
-10. 미완료 TASK 있으면 6번으로 돌아감
+5. scheduler: DAG 분석 → READY TASK 선별 → builder dispatch XML 반환
+6. Main Claude: builder 호출
+7. Main Claude: verifier+committer 호출 (단일 spawn)
+8. 미완료 TASK 있으면 5번으로 돌아감
 ```
 
 - 병렬 실행: scheduler가 복수의 READY TASK를 반환하면 builder를 동시에 호출 가능
 - PLAN.md에 `Execution-Mode: full` 기록
+- **Spawn 수 (N TASK):** 2 + 2N (specifier+planner 1 + scheduler 1 + (builder + verifier+committer) × N)
+- **6 TASK 예시:** 2 + 12 = **14 spawns** (기존 20 대비 30% 감소)
 
 ### 3.4 Routing 기준표
 
@@ -276,7 +295,7 @@ LAST_WORK_ID: WORK-XX
 
 ### 5.2 Planner
 
-**모델:** opus | **트리거:** pipeline/full 모드 specifier dispatch
+**모델:** opus | **트리거:** pipeline/full 모드 — specifier와 단일 spawn으로 결합 실행
 
 주요 역할:
 - 프로젝트 탐색 (CLAUDE.md, README, package.json, 디렉토리 구조)
@@ -294,7 +313,7 @@ LAST_WORK_ID: WORK-XX
 주요 역할:
 - DAG Resolution: `result file 존재 → DONE`, `ALL deps DONE → READY`, 그 외 `BLOCKED`
 - READY TASK를 번호 낮은 순 실행
-- builder → verifier → committer 순차 호출을 위한 dispatch XML 반환 (Main Claude가 각각 호출)
+- builder → verifier+committer 순차 호출을 위한 dispatch XML 반환 (Main Claude가 각각 호출, verifier+committer는 단일 spawn)
 - FAIL 시 최대 3회 builder 재dispatch
 - PROGRESS.md 업데이트 및 진행 보고
 - Pipeline Stage Callbacks (BUILDER/VERIFIER/COMMITTER START/DONE)
@@ -376,7 +395,7 @@ fi
 각 TASK는 다음 순서로 실행된다:
 
 ```
-dispatcher (Specifier 또는 Scheduler)
+dispatcher (specifier+planner 또는 Scheduler)
   │
   ├─ [1] builder dispatch
   │       └─ 구현 수행 (Serena MCP 코드 탐색)
@@ -384,18 +403,14 @@ dispatcher (Specifier 또는 Scheduler)
   │       └─ ProgressCallback 전송 (체크포인트마다)
   │       └─ task-result XML + context-handoff 반환
   │
-  ├─ [2] verifier dispatch
-  │       └─ builder context-handoff(FULL) 수신
-  │       └─ progress.md Gate 확인 (CRITICAL)
-  │       └─ build / lint / test / AC 검증
-  │       └─ task-result XML + context-handoff 반환
-  │
-  └─ [3] committer dispatch
-          └─ verifier context-handoff(FULL) + builder context-handoff(SUMMARY) 수신
-          └─ Gate Check (progress.md + COMPLETED + Files changed)
-          └─ Gate 실패 → dispatcher에 FAIL 반환 → builder 재dispatch (최대 3회)
-          └─ Gate 통과 → result.md 작성 → git commit → TaskCallback 전송
-          └─ 마지막 TASK이면 WORK-LIST.md IN_PROGRESS → DONE 전환
+  └─ [2] verifier+committer dispatch (단일 spawn)
+          └─ [verifier] builder context-handoff(FULL) 수신
+          └─ [verifier] progress.md Gate 확인 (CRITICAL)
+          └─ [verifier] build / lint / test / AC 검증
+          └─ [committer] Gate Check (progress.md + COMPLETED + Files changed)
+          └─ [committer] Gate 실패 → dispatcher에 FAIL 반환 → builder 재dispatch (최대 3회)
+          └─ [committer] Gate 통과 → result.md 작성 → git commit → TaskCallback 전송
+          └─ [committer] 마지막 TASK이면 WORK-LIST.md IN_PROGRESS → DONE 전환
 ```
 
 ---
@@ -470,14 +485,13 @@ dispatcher (Specifier 또는 Scheduler)
 
 | Dispatcher | Receiver | execution-mode | 설명 |
 |------------|----------|:--------------:|------|
-| Specifier | Planner | `direct` | Planner 겸임 — PLAN.md + TASK 직접 생성 후 builder dispatch |
-| Specifier | Builder | `direct` | TASK 1개 구현 (Planner 겸임 후 바로 builder dispatch) |
-| Specifier | Planner | `pipeline` | 단순 WORK 계획 수립 위임 |
-| Specifier | Planner | `full` | 복잡 WORK 계획 수립 위임 |
-| Planner | Scheduler | `full` | 계획 완료 후 실행 위임 |
+| Specifier (겸임) | Builder | `direct` | Planner 겸임 — PLAN.md + TASK 직접 생성 후 builder dispatch |
+| Main Claude | Verifier+Committer | `direct` | builder 완료 후 단일 spawn dispatch |
+| Specifier+Planner | Builder | `pipeline` | 단일 spawn — PLAN + TASK 생성 후 builder dispatch |
+| Main Claude | Verifier+Committer | `pipeline` | builder 완료 후 단일 spawn dispatch |
+| Specifier+Planner | Scheduler | `full` | 단일 spawn — PLAN + TASK 생성 후 scheduler dispatch |
 | Scheduler | Builder | `full` | TASK N개 구현 |
-| Scheduler | Verifier | `full` | TASK N개 검증 |
-| Scheduler | Committer | `full` | TASK N개 커밋 |
+| Main Claude | Verifier+Committer | `full` | builder 완료 후 단일 spawn dispatch (TASK당) |
 
 ---
 
@@ -824,6 +838,19 @@ Main Claude가 파이프라인 시작 시 참조 파일을 한 번 읽고, 에�
 ---
 
 ## 변경사항
+
+### v1.4 (2026-03-28, WORK-45)
+
+1. **에이전트 간 호출 구조 다이어그램 갱신 (§2)**: specifier+planner 단일 spawn, verifier+committer 단일 spawn 반영. Spawn 수 요약 테이블 추가.
+2. **Spawn 수 갱신 (§2, §3)**: direct 3 spawns / pipeline 3 spawns / full 2+2N spawns (6 TASK = 14, 기존 20 대비 30% 감소).
+3. **pipeline 모드 (§3.2)**: specifier+planner 단일 spawn 결합 설명 반영. verifier+committer 단일 spawn 반영.
+4. **full 모드 (§3.3)**: specifier+planner 단일 spawn 결합. verifier+committer 단일 spawn. scheduler 루프 단계 단순화.
+5. **direct 모드 (§3.1)**: verifier+committer 단일 spawn 반영. spawn 수 명시.
+6. **Planner 역할 (§5.2)**: 트리거 설명을 "specifier와 단일 spawn으로 결합"으로 변경.
+7. **Scheduler 역할 (§5.3)**: verifier+committer 단일 spawn dispatch 반영.
+8. **TASK 파이프라인 흐름 (§6)**: verifier+committer 단일 spawn 구조로 재작성. dispatcher 주체 갱신.
+9. **Dispatcher-Receiver 매핑 (§7)**: spawn 결합 구조 반영. 행 재편성.
+10. **v1.4.0/v1.5.0 변경사항**: 자동 권한 설정 (`uctm init` 시 settings.local.json Bash 권한 자동 설정), pipe 명령어 제거 (Windows 호환성), plugin 리소스 npm 패키지 포함 (.claude-plugin, skills/).
 
 ### v1.3 (2026-03-22, WORK-41)
 

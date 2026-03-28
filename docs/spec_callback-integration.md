@@ -226,11 +226,14 @@ sequenceDiagram
 
 ### pipeline / full 모드 — 서브에이전트 수행
 
+v1.6.0부터 Verifier와 Committer는 **단일 spawn**으로 결합 실행된다.
+Committer는 verifier+committer spawn 내에서 verifier 검증 완료 후 TaskCallback을 전송한다.
+
 ```mermaid
 sequenceDiagram
     participant Dispatcher
     participant Builder
-    participant Committer
+    participant VerifierCommitter as Verifier+Committer (단일 spawn)
     participant External System
 
     Dispatcher->>Builder: dispatch (implement TASK)
@@ -245,35 +248,35 @@ sequenceDiagram
 
     Builder->>Dispatcher: return task-result (PASS/FAIL)
 
-    Dispatcher->>Committer: dispatch (commit TASK)
-    Committer->>Committer: Generate result.md
-    Committer->>Committer: Git commit
-    Committer->>External System: POST TaskCallback (if configured)
-    External System-->>Committer: 200 OK or error
-    Note over Committer: Continue regardless of callback result
-    Committer->>Dispatcher: return task-result with commit hash
+    Dispatcher->>VerifierCommitter: dispatch (verify + commit TASK, 단일 spawn)
+    VerifierCommitter->>VerifierCommitter: Verifier: 검증 수행
+    VerifierCommitter->>VerifierCommitter: Committer: Generate result.md
+    VerifierCommitter->>VerifierCommitter: Committer: Git commit
+    VerifierCommitter->>External System: POST TaskCallback (if configured)
+    External System-->>VerifierCommitter: 200 OK or error
+    Note over VerifierCommitter: Continue regardless of callback result
+    VerifierCommitter->>Dispatcher: return task-result with commit hash
 ```
 
-*pipeline 모드의 Dispatcher는 Specifier, full 모드의 Dispatcher는 Scheduler.*
+*pipeline 모드의 Dispatcher는 Main Claude(Specifier+Planner spawn 완료 후), full 모드의 Dispatcher는 Scheduler.*
 
 ### Timeline (pipeline / full 공통)
 
-1. **Builder Phase**:
+1. **Builder Phase** (독립 spawn):
    - Modifies files and updates progress.md
    - After each checkpoint: if ProgressCallback configured → curl POST
    - If curl fails: print WARNING and continue
    - Returns task-result (PASS/FAIL)
 
-2. **Verifier Phase**:
-   - Reviews builder's work and progress.md
-   - No callbacks triggered
-
-3. **Committer Phase**:
-   - Creates result.md report
-   - Performs git commit
-   - After commit succeeds: if TaskCallback configured → curl POST with result summary
-   - If curl fails: print WARNING and continue
-   - Returns task-result with commit hash
+2. **Verifier+Committer Phase** (단일 spawn — v1.6.0):
+   - **Verifier 역할**: Reviews builder's work and progress.md
+   - No callbacks triggered during verification
+   - **Committer 역할** (동일 spawn 내, verifier 완료 후):
+     - Creates result.md report
+     - Performs git commit
+     - After commit succeeds: if TaskCallback configured → curl POST with result summary
+     - If curl fails: print WARNING and continue
+     - Returns task-result with commit hash
 
 ---
 
@@ -514,6 +517,7 @@ curl -X POST "http://127.0.0.1:3000/task-result" \
   - 불변 보장: 모든 모드에서 COMMITTER DONE 콜백(TaskCallback) 전송 보장
   - Sequence diagram을 direct 모드 / pipeline+full 모드로 분리
 - **Updated**: 2026-03-15 — WORK-19: Related Documents 갱신 (file-content-schema.md 추가, 섹션 참조 현행화)
+- **Updated**: 2026-03-28 — WORK-45: verifier+committer 단일 spawn 결합 반영. pipeline/full 모드 Sequence diagram 갱신 (Verifier+Committer 단일 참여자로 통합). Timeline 섹션에 단일 spawn 구분 명시.
 - **Referenced by**: CLAUDE.md, agents/builder.md (ProgressCallback), agents/committer.md, agents/specifier.md (direct 모드 콜백)
 
 ---

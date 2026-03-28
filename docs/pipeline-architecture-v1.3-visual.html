@@ -612,26 +612,28 @@ tr:hover td { background: var(--bg-card-hover); }
     </div>
     <div class="flow-branch">
       <div class="flow-branch-col">
-        <div class="flow-branch-title badge-direct" style="background:rgba(251,191,36,0.12); color:var(--mode-direct)">direct</div>
-        <div class="flow-branch-box" style="background:rgba(251,191,36,0.08); border-color:var(--mode-direct); color:var(--mode-direct)">Specifier 겸임 수행</div>
+        <div class="flow-branch-title badge-direct" style="background:rgba(251,191,36,0.12); color:var(--mode-direct)">direct <span style="font-weight:400; font-size:0.65rem;">3 spawns</span></div>
+        <div class="flow-branch-box" style="background:rgba(251,191,36,0.08); border-color:var(--mode-direct); color:var(--mode-direct)">Specifier (Planner 겸임)</div>
         <div class="flow-branch-arrow">↓</div>
-        <div class="flow-branch-box" style="background:rgba(251,191,36,0.06); border-color:rgba(251,191,36,0.3); color:var(--text-muted)">구현 + commit + 콜백</div>
-      </div>
-      <div class="flow-branch-col">
-        <div class="flow-branch-title badge-pipeline" style="background:rgba(52,211,153,0.12); color:var(--mode-pipeline)">pipeline</div>
         <div class="flow-branch-box" style="background:rgba(52,211,153,0.08); border-color:var(--node-builder); color:var(--node-builder)">Builder</div>
         <div class="flow-branch-arrow">↓</div>
-        <div class="flow-branch-box" style="background:rgba(251,146,60,0.08); border-color:var(--node-verifier); color:var(--node-verifier)">Verifier</div>
-        <div class="flow-branch-arrow">↓</div>
-        <div class="flow-branch-box" style="background:rgba(244,114,182,0.08); border-color:var(--node-committer); color:var(--node-committer)">Committer</div>
+        <div class="flow-branch-box" style="background:rgba(251,146,60,0.06); border-color:rgba(244,114,182,0.5); color:var(--text-muted)">Verifier + Committer</div>
       </div>
       <div class="flow-branch-col">
-        <div class="flow-branch-title badge-full" style="background:rgba(129,140,248,0.12); color:var(--mode-full)">full</div>
-        <div class="flow-branch-box" style="background:rgba(129,140,248,0.08); border-color:var(--node-planner); color:var(--node-planner)">Planner</div>
+        <div class="flow-branch-title badge-pipeline" style="background:rgba(52,211,153,0.12); color:var(--mode-pipeline)">pipeline <span style="font-weight:400; font-size:0.65rem;">3 spawns</span></div>
+        <div class="flow-branch-box" style="background:rgba(56,189,248,0.06); border-color:rgba(129,140,248,0.5); color:var(--text-muted)">Specifier + Planner</div>
+        <div class="flow-branch-arrow">↓</div>
+        <div class="flow-branch-box" style="background:rgba(52,211,153,0.08); border-color:var(--node-builder); color:var(--node-builder)">Builder</div>
+        <div class="flow-branch-arrow">↓</div>
+        <div class="flow-branch-box" style="background:rgba(251,146,60,0.06); border-color:rgba(244,114,182,0.5); color:var(--text-muted)">Verifier + Committer</div>
+      </div>
+      <div class="flow-branch-col">
+        <div class="flow-branch-title badge-full" style="background:rgba(129,140,248,0.12); color:var(--mode-full)">full <span style="font-weight:400; font-size:0.65rem;">2+2N spawns</span></div>
+        <div class="flow-branch-box" style="background:rgba(56,189,248,0.06); border-color:rgba(129,140,248,0.5); color:var(--text-muted)">Specifier + Planner</div>
         <div class="flow-branch-arrow">↓</div>
         <div class="flow-branch-box" style="background:rgba(167,139,250,0.08); border-color:var(--node-scheduler); color:var(--node-scheduler)">Scheduler</div>
         <div class="flow-branch-arrow">↓</div>
-        <div class="flow-branch-box" style="background:rgba(52,211,153,0.06); border-color:rgba(52,211,153,0.3); color:var(--text-muted)">[Builder→Verifier→Committer] × N</div>
+        <div class="flow-branch-box" style="background:rgba(52,211,153,0.06); border-color:rgba(52,211,153,0.3); color:var(--text-muted)">[Builder → Verifier+Committer] × N</div>
       </div>
     </div>
   </div>
@@ -680,6 +682,7 @@ tr:hover td { background: var(--bg-card-hover); }
         <span class="badge badge-model">opus</span>
         <span class="badge badge-pipeline">pipeline</span>
         <span class="badge badge-full">full</span>
+        <span class="badge" style="background:rgba(56,189,248,0.1); color:var(--node-specifier); border:1px solid rgba(56,189,248,0.3);">Specifier와 단일 spawn</span>
       </div>
       <div style="margin-top: 0.7rem; font-size: 0.8rem; color: var(--text-muted);">
         Requirement.md 기반 설계 · TASK ~30분~2시간 단위 분해 · 의존성 DAG 설계 · 사용자 승인 후 파일 생성
@@ -715,6 +718,7 @@ tr:hover td { background: var(--bg-card-hover); }
         <span class="badge badge-model">haiku</span>
         <span class="badge badge-pipeline">pipeline</span>
         <span class="badge badge-full">full</span>
+        <span class="badge" style="background:rgba(244,114,182,0.1); color:var(--node-committer); border:1px solid rgba(244,114,182,0.3);">Committer와 단일 spawn</span>
       </div>
       <div style="margin-top: 0.7rem; font-size: 0.8rem; color: var(--text-muted);">
         Step 0~6: progress.md Gate → 빌드 → 린트 → 테스트 → AC 검증 → 파일 존재 → 컨벤션. 소스 수정 금지.
@@ -727,6 +731,7 @@ tr:hover td { background: var(--bg-card-hover); }
         <span class="badge badge-model">haiku</span>
         <span class="badge badge-pipeline">pipeline</span>
         <span class="badge badge-full">full</span>
+        <span class="badge" style="background:rgba(251,146,60,0.1); color:var(--node-verifier); border:1px solid rgba(251,146,60,0.3);">Verifier와 단일 spawn</span>
       </div>
       <div style="margin-top: 0.7rem; font-size: 0.8rem; color: var(--text-muted);">
         Gate Check (3조건) → result.md → git commit → 커밋 해시 백필 → TaskCallback 전송
@@ -778,8 +783,25 @@ tr:hover td { background: var(--bg-card-hover); }
     <div class="flow-header">
       <div class="flow-title">3.1 direct 모드</div>
       <div class="flow-badge" style="background:rgba(251,191,36,0.12); color:var(--mode-direct)">Specifier 겸임</div>
+      <div class="flow-badge" style="background:rgba(56,189,248,0.1); color:var(--accent)">3 spawns</div>
     </div>
-    <div class="section-desc" style="margin-bottom: 1rem;">Specifier가 Planner를 겸임하여 Requirement.md + PLAN.md + TASK-00.md를 생성한 후 Builder에 dispatch한다.</div>
+    <div class="section-desc" style="margin-bottom: 1rem;">Specifier가 Planner를 겸임하여 Requirement.md + PLAN.md + TASK-00.md를 생성한 후 Builder에 dispatch한다. Verifier+Committer는 단일 spawn으로 결합된다.</div>
+    <div class="flow-nodes" style="justify-content:flex-start; flex-wrap:wrap; gap: 0.3rem; margin-bottom: 1rem;">
+      <div class="flow-node">
+        <div class="flow-box" style="background:rgba(251,191,36,0.08); border-color:var(--mode-direct); color:var(--mode-direct)">Specifier (Planner 겸임)</div>
+        <div class="flow-label">Requirement.md + PLAN + TASK</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="flow-box" style="background:rgba(52,211,153,0.08); border-color:var(--node-builder); color:var(--node-builder)">Builder</div>
+        <div class="flow-label">구현</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="flow-box" style="background:rgba(251,146,60,0.06); border-color:rgba(244,114,182,0.5); color:var(--text)">Verifier+Committer</div>
+        <div class="flow-label">검증 + commit + 콜백</div>
+      </div>
+    </div>
     <div class="steps">
       <div class="step"><div class="step-num">1</div><div class="step-text">WORK ID 결정 + <code>mkdir works/WORK-NN/</code></div></div>
       <div class="step"><div class="step-num">2</div><div class="step-text"><code>log_work INIT</code></div></div>
@@ -789,7 +811,7 @@ tr:hover td { background: var(--bg-card-hover); }
       <div class="step"><div class="step-num">6</div><div class="step-text"><code>TASK-00.md</code> + <code>TASK-00_progress.md</code> 생성</div></div>
       <div class="step"><div class="step-num">7</div><div class="step-text"><code>WORK-LIST.md</code> IN_PROGRESS 행 추가</div></div>
       <div class="step"><div class="step-num">8</div><div class="step-text"><code>log_work PLAN</code> → 사용자 승인 요청</div></div>
-      <div class="step"><div class="step-num">9</div><div class="step-text">Builder dispatch XML 반환 → Main Claude가 B→V→C 실행</div></div>
+      <div class="step"><div class="step-num">9</div><div class="step-text">Builder dispatch XML 반환 → Main Claude가 Builder → Verifier+Committer(단일 spawn) 실행</div></div>
     </div>
   </div>
 
@@ -798,17 +820,13 @@ tr:hover td { background: var(--bg-card-hover); }
     <div class="flow-header">
       <div class="flow-title">3.2 pipeline 모드</div>
       <div class="flow-badge" style="background:rgba(52,211,153,0.12); color:var(--mode-pipeline)">TASK 1개 단순 구조</div>
+      <div class="flow-badge" style="background:rgba(56,189,248,0.1); color:var(--accent)">3 spawns</div>
     </div>
-    <div class="section-desc" style="margin-bottom: 1rem;">Specifier가 Requirement.md를 생성하고 Planner에 위임한다. Planner가 PLAN + TASK를 생성한 후 Main Claude가 B→V→C를 순차 실행한다.</div>
+    <div class="section-desc" style="margin-bottom: 1rem;">Specifier+Planner가 단일 spawn으로 결합되어 Requirement.md + PLAN + TASK를 생성한다. Main Claude가 Builder → Verifier+Committer(단일 spawn)를 순차 실행한다.</div>
     <div class="flow-nodes" style="justify-content:flex-start; flex-wrap:wrap; gap: 0.3rem; margin-bottom: 1rem;">
       <div class="flow-node">
-        <div class="flow-box" style="background:rgba(56,189,248,0.08); border-color:var(--node-specifier); color:var(--node-specifier)">Specifier</div>
-        <div class="flow-label">Requirement.md</div>
-      </div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-node">
-        <div class="flow-box" style="background:rgba(129,140,248,0.08); border-color:var(--node-planner); color:var(--node-planner)">Planner</div>
-        <div class="flow-label">PLAN + TASK</div>
+        <div class="flow-box" style="background:rgba(56,189,248,0.06); border-color:rgba(129,140,248,0.6); color:var(--text)">Specifier+Planner</div>
+        <div class="flow-label">Requirement.md + PLAN + TASK</div>
       </div>
       <div class="flow-arrow">→</div>
       <div class="flow-node">
@@ -822,21 +840,18 @@ tr:hover td { background: var(--bg-card-hover); }
       </div>
       <div class="flow-arrow">→</div>
       <div class="flow-node">
-        <div class="flow-box" style="background:rgba(251,146,60,0.08); border-color:var(--node-verifier); color:var(--node-verifier)">Verifier</div>
-        <div class="flow-label">검증</div>
-      </div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-node">
-        <div class="flow-box" style="background:rgba(244,114,182,0.08); border-color:var(--node-committer); color:var(--node-committer)">Committer</div>
-        <div class="flow-label">commit + 콜백</div>
+        <div class="flow-box" style="background:rgba(251,146,60,0.06); border-color:rgba(244,114,182,0.5); color:var(--text)">Verifier+Committer</div>
+        <div class="flow-label">검증 + commit + 콜백</div>
       </div>
     </div>
     <div class="steps">
-      <div class="step"><div class="step-num">1</div><div class="step-text">specifier: WORK ID 결정, Requirement.md 생성, planner dispatch XML 반환</div></div>
-      <div class="step"><div class="step-num">2</div><div class="step-text">Main Claude: planner 호출 → PLAN.md + TASK 생성 (사용자 승인 후)</div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-text">Main Claude: builder 서브에이전트 호출</div></div>
-      <div class="step"><div class="step-num">4</div><div class="step-text">Main Claude: verifier 서브에이전트 호출 (builder context-handoff 전달)</div></div>
-      <div class="step"><div class="step-num">5</div><div class="step-text">Main Claude: committer 서브에이전트 호출 (verifier FULL + builder SUMMARY context-handoff 전달)</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-text">specifier+planner: WORK ID 결정, Requirement.md 생성, PLAN.md + TASK 파일 생성 (사용자 승인 후)</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Main Claude: builder 서브에이전트 호출</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Main Claude: verifier+committer 서브에이전트 호출 (builder context-handoff 전달)</div></div>
+    </div>
+    <div class="info-box info" style="margin-top:0.8rem;">
+      <span>ℹ️</span>
+      <span><strong>Spawn 결합 (v1.4.0):</strong> specifier+planner 단일 spawn, verifier+committer 단일 spawn. 총 3 spawns (기존 4 대비 25% 감소).</span>
     </div>
   </div>
 
@@ -845,17 +860,13 @@ tr:hover td { background: var(--bg-card-hover); }
     <div class="flow-header">
       <div class="flow-title">3.3 full 모드</div>
       <div class="flow-badge" style="background:rgba(129,140,248,0.12); color:var(--mode-full)">멀티 TASK / DAG</div>
+      <div class="flow-badge" style="background:rgba(56,189,248,0.1); color:var(--accent)">2+2N spawns</div>
     </div>
-    <div class="section-desc" style="margin-bottom: 1rem;">Specifier가 Requirement.md를 생성하고 Planner에 위임한다. Planner가 TASK를 분해하고, Scheduler가 DAG 기반으로 파이프라인을 반복 실행한다.</div>
+    <div class="section-desc" style="margin-bottom: 1rem;">Specifier+Planner가 단일 spawn으로 결합되어 PLAN + TASK를 분해한다. Scheduler가 DAG 기반으로 [Builder → Verifier+Committer(단일 spawn)] × N을 반복 실행한다.</div>
     <div class="flow-nodes" style="justify-content:flex-start; flex-wrap:wrap; gap: 0.3rem; margin-bottom: 1rem;">
       <div class="flow-node">
-        <div class="flow-box" style="background:rgba(56,189,248,0.08); border-color:var(--node-specifier); color:var(--node-specifier)">Specifier</div>
-        <div class="flow-label">Requirement.md</div>
-      </div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-node">
-        <div class="flow-box" style="background:rgba(129,140,248,0.08); border-color:var(--node-planner); color:var(--node-planner)">Planner</div>
-        <div class="flow-label">PLAN + TASK 분해 (승인 후)</div>
+        <div class="flow-box" style="background:rgba(56,189,248,0.06); border-color:rgba(129,140,248,0.6); color:var(--text)">Specifier+Planner</div>
+        <div class="flow-label">Requirement.md + PLAN + TASK 분해 (승인 후)</div>
       </div>
       <div class="flow-arrow">→</div>
       <div class="flow-node">
@@ -870,11 +881,7 @@ tr:hover td { background: var(--bg-card-hover); }
         </div>
         <div class="flow-arrow" style="width:20px">→</div>
         <div class="flow-node">
-          <div class="flow-box" style="background:rgba(251,146,60,0.08); border-color:var(--node-verifier); color:var(--node-verifier); font-size:0.75rem;">Verifier</div>
-        </div>
-        <div class="flow-arrow" style="width:20px">→</div>
-        <div class="flow-node">
-          <div class="flow-box" style="background:rgba(244,114,182,0.08); border-color:var(--node-committer); color:var(--node-committer); font-size:0.75rem;">Committer</div>
+          <div class="flow-box" style="background:rgba(251,146,60,0.06); border-color:rgba(244,114,182,0.5); color:var(--text); font-size:0.72rem;">Verifier+Committer</div>
         </div>
       </div>
     </div>
@@ -882,25 +889,27 @@ tr:hover td { background: var(--bg-card-hover); }
       <div>
         <div style="font-weight:600; margin-bottom:0.5rem; font-size:0.87rem; color:var(--text-muted)">신규 WORK</div>
         <div class="steps">
-          <div class="step"><div class="step-num">1</div><div class="step-text">specifier: WORK ID 결정, Requirement.md 생성, planner dispatch XML 반환</div></div>
-          <div class="step"><div class="step-num">2</div><div class="step-text">Main Claude: planner 호출 → PLAN.md + TASK 파일 생성 (사용자 승인 후)</div></div>
-          <div class="step"><div class="step-num">3</div><div class="step-text">Main Claude: scheduler 호출</div></div>
+          <div class="step"><div class="step-num">1</div><div class="step-text">specifier+planner: WORK ID 결정, Requirement.md 생성, PLAN.md + TASK 파일 생성 (사용자 승인 후)</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text">Main Claude: scheduler 호출</div></div>
         </div>
       </div>
       <div>
         <div style="font-weight:600; margin-bottom:0.5rem; font-size:0.87rem; color:var(--text-muted)">Scheduler 루프</div>
         <div class="steps">
-          <div class="step"><div class="step-num">4</div><div class="step-text">scheduler: DAG 분석 → READY TASK 선별 → builder dispatch XML 반환</div></div>
-          <div class="step"><div class="step-num">5</div><div class="step-text">Main Claude: builder 호출</div></div>
-          <div class="step"><div class="step-num">6</div><div class="step-text">Main Claude: verifier 호출</div></div>
-          <div class="step"><div class="step-num">7</div><div class="step-text">Main Claude: committer 호출</div></div>
-          <div class="step"><div class="step-num">8</div><div class="step-text">미완료 TASK 있으면 4번으로 돌아감</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text">scheduler: DAG 분석 → READY TASK 선별 → builder dispatch XML 반환</div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text">Main Claude: builder 호출</div></div>
+          <div class="step"><div class="step-num">5</div><div class="step-text">Main Claude: verifier+committer 호출 (단일 spawn)</div></div>
+          <div class="step"><div class="step-num">6</div><div class="step-text">미완료 TASK 있으면 3번으로 돌아감</div></div>
         </div>
       </div>
     </div>
     <div class="info-box success" style="margin-top:1rem;">
       <span>✅</span>
       <span><strong>병렬 실행:</strong> scheduler가 복수의 READY TASK를 반환하면 builder를 동시에 호출 가능</span>
+    </div>
+    <div class="info-box info" style="margin-top:0.5rem;">
+      <span>ℹ️</span>
+      <span><strong>Spawn 절감 (v1.4.0):</strong> 6 TASK 기준 14 spawns (기존 20 대비 <strong>30% 감소</strong>). 수식: 2 + 2N (N = TASK 수)</span>
     </div>
   </div>
 </div>
@@ -929,36 +938,42 @@ tr:hover td { background: var(--bg-card-hover); }
 
       <div style="text-align:center; color:var(--text-muted); margin:0.3rem 0;">↓ context-handoff(FULL) 전달</div>
 
-      <!-- Verifier block -->
-      <div style="background:rgba(251,146,60,0.06); border: 1px solid rgba(251,146,60,0.25); border-radius:10px; padding:1.2rem; margin-bottom:0.5rem;">
-        <div style="font-weight:700; color:var(--node-verifier); margin-bottom:0.6rem; font-size:0.95rem;">[2] Verifier</div>
-        <div class="steps">
-          <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">0</div><div class="step-text"><strong class="highlight">[CRITICAL]</strong> <code>progress.md</code> 존재 + <code>Status: COMPLETED</code> 확인</div></div>
-          <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">1</div><div class="step-text"><strong class="highlight">[CRITICAL]</strong> 빌드 실행 (exit ≠ 0 → FAIL)</div></div>
-          <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">2</div><div class="step-text">린트 실행 (실패 시 WARN, CRITICAL 아님)</div></div>
-          <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">3</div><div class="step-text">테스트 실행 (명령 없으면 N/A)</div></div>
-          <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">4</div><div class="step-text">TASK <code>## Verify</code> 섹션 명령 실행</div></div>
-          <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">5</div><div class="step-text">TASK <code>## Files</code> 섹션 파일 존재 확인</div></div>
-          <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">6</div><div class="step-text">컨벤션 준수 확인</div></div>
+      <!-- Verifier+Committer block (단일 spawn) -->
+      <div style="background:linear-gradient(135deg, rgba(251,146,60,0.04) 0%, rgba(244,114,182,0.04) 100%); border: 1px solid rgba(244,114,182,0.35); border-radius:10px; padding:1.2rem; position:relative;">
+        <div style="position:absolute; top:-0.6rem; right:0.8rem; background:var(--bg-card); padding:0 0.5rem; font-size:0.68rem; color:var(--accent); font-weight:700; border:1px solid rgba(56,189,248,0.3); border-radius:99px;">단일 spawn</div>
+        <div style="font-weight:700; margin-bottom:0.8rem; font-size:0.95rem;">
+          <span style="color:var(--node-verifier)">[2] Verifier</span>
+          <span style="color:var(--text-muted); font-size:0.8rem; font-weight:400; margin:0 0.5rem">+</span>
+          <span style="color:var(--node-committer)">[3] Committer</span>
         </div>
-        <div class="info-box fail" style="margin-top:0.7rem; padding:0.5rem 0.8rem;">
-          <span>🚫</span><span><strong>금지:</strong> 소스 코드 수정, 이슈 수정 (오직 보고만)</span>
+        <!-- Verifier section -->
+        <div style="background:rgba(251,146,60,0.06); border: 1px solid rgba(251,146,60,0.2); border-radius:8px; padding:1rem; margin-bottom:0.6rem;">
+          <div style="font-weight:600; color:var(--node-verifier); margin-bottom:0.5rem; font-size:0.88rem;">Verifier 단계</div>
+          <div class="steps">
+            <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">0</div><div class="step-text"><strong class="highlight">[CRITICAL]</strong> <code>progress.md</code> 존재 + <code>Status: COMPLETED</code> 확인</div></div>
+            <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">1</div><div class="step-text"><strong class="highlight">[CRITICAL]</strong> 빌드 실행 (exit ≠ 0 → FAIL)</div></div>
+            <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">2</div><div class="step-text">린트 실행 (실패 시 WARN, CRITICAL 아님)</div></div>
+            <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">3</div><div class="step-text">테스트 실행 (명령 없으면 N/A)</div></div>
+            <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">4</div><div class="step-text">TASK <code>## Verify</code> 섹션 명령 실행</div></div>
+            <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">5</div><div class="step-text">TASK <code>## Files</code> 섹션 파일 존재 확인</div></div>
+            <div class="step"><div class="step-num" style="background:rgba(251,146,60,0.15); color:var(--node-verifier)">6</div><div class="step-text">컨벤션 준수 확인</div></div>
+          </div>
+          <div class="info-box fail" style="margin-top:0.7rem; padding:0.5rem 0.8rem;">
+            <span>🚫</span><span><strong>금지:</strong> 소스 코드 수정, 이슈 수정 (오직 보고만)</span>
+          </div>
         </div>
-      </div>
-
-      <div style="text-align:center; color:var(--text-muted); margin:0.3rem 0;">↓ verifier context-handoff(FULL) + builder context-handoff(SUMMARY) 전달</div>
-
-      <!-- Committer block -->
-      <div style="background:rgba(244,114,182,0.06); border: 1px solid rgba(244,114,182,0.25); border-radius:10px; padding:1.2rem;">
-        <div style="font-weight:700; color:var(--node-committer); margin-bottom:0.6rem; font-size:0.95rem;">[3] Committer</div>
-        <div class="steps">
-          <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">1</div><div class="step-text"><strong>Gate Check:</strong> progress.md 존재 + Status=COMPLETED + Files changed 비어있지 않음</div></div>
-          <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">2</div><div class="step-text"><code>TASK-XX_result.md</code> 생성</div></div>
-          <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">3</div><div class="step-text"><code>PROGRESS.md</code> 갱신</div></div>
-          <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">4</div><div class="step-text"><code>git add -A &amp;&amp; git commit</code></div></div>
-          <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">5</div><div class="step-text">커밋 해시 백필: result.md에 commit hash 기록 후 amend</div></div>
-          <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">6</div><div class="step-text">TaskCallback 전송 (CLAUDE.md TaskCallback URL)</div></div>
-          <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">7</div><div class="step-text">task-result XML 반환</div></div>
+        <!-- Committer section -->
+        <div style="background:rgba(244,114,182,0.06); border: 1px solid rgba(244,114,182,0.2); border-radius:8px; padding:1rem;">
+          <div style="font-weight:600; color:var(--node-committer); margin-bottom:0.5rem; font-size:0.88rem;">Committer 단계</div>
+          <div class="steps">
+            <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">1</div><div class="step-text"><strong>Gate Check:</strong> progress.md 존재 + Status=COMPLETED + Files changed 비어있지 않음</div></div>
+            <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">2</div><div class="step-text"><code>TASK-XX_result.md</code> 생성</div></div>
+            <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">3</div><div class="step-text"><code>PROGRESS.md</code> 갱신</div></div>
+            <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">4</div><div class="step-text"><code>git add -A &amp;&amp; git commit</code></div></div>
+            <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">5</div><div class="step-text">커밋 해시 백필: result.md에 commit hash 기록 후 amend</div></div>
+            <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">6</div><div class="step-text">TaskCallback 전송 (CLAUDE.md TaskCallback URL)</div></div>
+            <div class="step"><div class="step-num" style="background:rgba(244,114,182,0.15); color:var(--node-committer)">7</div><div class="step-text">task-result XML 반환</div></div>
+          </div>
         </div>
       </div>
     </div>
