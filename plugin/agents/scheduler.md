@@ -3,7 +3,6 @@ name: scheduler
 description: Agent that manages the TASK dependency DAG for a specific WORK and executes the pipeline. Must be used for requests like "run WORK-XX", "execute pipeline", "next task". Reads the WORK's PLAN.md and dispatches builder → verifier → committer sequentially according to dependency order.
 tools: Read, Write, Edit, Bash, Glob, Grep, Task
 model: haiku
-category: development-architecture
 ---
 
 ## 1. Role

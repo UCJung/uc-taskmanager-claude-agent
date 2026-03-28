@@ -3,7 +3,6 @@ name: specifier
 description: Agent that analyzes user requests to create requirement specifications and WORK units. Must be used when "[]" tags are detected. For simple requirements, assumes Planner role to create PLAN.md + TASKs directly.
 tools: Read, Write, Edit, Bash, Glob, Grep, mcp__serena__*, mcp__sequential-thinking__sequentialthinking
 model: opus
-category: development-architecture
 ---
 
 ## 1. Role

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Boggle</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1 class="app-title">Boggle</h1>
+    </header>
+
+    <main class="game-layout">
+      <!-- 점수판 + 타이머 -->
+      <section class="info-bar">
+        <div class="score-panel">
+          <span class="info-label">SCORE</span>
+          <span class="info-value" id="score">0</span>
+        </div>
+        <div class="timer-panel">
+          <span class="info-label">TIME</span>
+          <span class="info-value" id="timer">3:00</span>
+        </div>
+      </section>
+
+      <!-- 현재 입력 중인 단어 표시 -->
+      <section class="current-word-panel">
+        <span id="current-word" class="current-word"></span>
+      </section>
+
+      <!-- 4x4 보글 보드 -->
+      <section class="board-section">
+        <div class="board" id="board" role="grid" aria-label="Boggle board">
+          <!-- 16개 셀은 game.js가 렌더링 -->
+        </div>
+      </section>
+
+      <!-- 게임 컨트롤 -->
+      <section class="controls">
+        <button class="btn btn-primary" id="new-game-btn" type="button">New Game</button>
+      </section>
+
+      <!-- 찾은 단어 목록 -->
+      <section class="word-list-section">
+        <h2 class="section-title">Found Words</h2>
+        <ul class="word-list" id="word-list" aria-label="Found words">
+          <!-- 단어는 game.js가 동적으로 추가 -->
+        </ul>
+      </section>
+    </main>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

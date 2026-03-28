@@ -1,6 +1,6 @@
 {
   "name": "uctm",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Universal Claude Task Manager — SDD-based task pipeline subagent system for Claude Code CLI",
   "type": "module",
   "bin": {
@@ -10,7 +10,9 @@
     "bin/",
     "lib/",
     "agents/",
-    ".agent/"
+    ".agent/",
+    ".claude-plugin/",
+    "skills/"
   ],
   "engines": {
     "node": ">=18"
@@ -31,5 +33,8 @@
     "type": "git",
     "url": "git+https://github.com/UCJung/uc-taskmanager-claude-agent.git"
   },
-  "homepage": "https://github.com/UCJung/uc-taskmanager-claude-agent#readme"
+  "homepage": "https://github.com/UCJung/uc-taskmanager-claude-agent#readme",
+  "dependencies": {
+    "uctm": "^1.5.0"
+  }
 }

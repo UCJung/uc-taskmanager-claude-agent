@@ -1,9 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Bash(wc:*)",
-      "Bash(echo === $agent ===:*)",
-      "Bash(cd:*)",
       "Read(/**)",
       "Edit(/**)",
       "Write(/**)",
@@ -15,6 +12,7 @@
       "Bash(mkdir:*)",
       "Bash(basename:*)",
       "Bash(find:*)",
+      "Bash(wc:*)",
       "Bash(sort:*)",
       "Bash(tail:*)",
       "Bash(head:*)",
@@ -35,17 +33,10 @@
       "Bash(python:*)",
       "Bash(ruff:*)",
       "Bash(make:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git log:*)",
-      "Bash(git rev-parse:*)",
+      "Bash(git:*)",
       "Bash(curl:*)",
-      "Read(//c/rnd/agent_npm_test/**)",
-      "Bash(env -u ANTHROPIC_API_KEY env -u CLAUDECODE claude -p \"[new-feature] Create a simple Space Invaders HTML5 game \\(space-invaders.html\\) - single player, canvas-based, minimal code. auto\" --output-format stream-json --verbose)",
-      "Bash(env -u ANTHROPIC_API_KEY env -u CLAUDECODE claude -p \"[new-feature] Create a simple Snake HTML5 game \\(snake-test.html\\) - canvas-based, minimal code, single file. auto\" --output-format stream-json --verbose)",
-      "Read(//c/rnd/test_init_temp/.claude/**)",
-      "Read(//c/rnd/test_init_temp/.claude/agents/**)",
-      "Bash(npm whoami:*)"
-    ]
+      "mcp__sequential-thinking__sequentialthinking"
+    ],
+    "deny": []
   }
 }
