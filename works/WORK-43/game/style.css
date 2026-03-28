@@ -1,0 +1,324 @@
+/* =============================================
+   Boggle Game — style.css
+   레이아웃: CSS Grid 기반 4x4 보드, 반응형
+   ============================================= */
+
+/* ── 리셋 & 기본 ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --color-bg: #1a1a2e;
+  --color-surface: #16213e;
+  --color-primary: #0f3460;
+  --color-accent: #e94560;
+  --color-accent-hover: #c73652;
+  --color-cell-bg: #0f3460;
+  --color-cell-border: #1a4a8a;
+  --color-cell-text: #e0e0ff;
+  --color-cell-selected: #e94560;
+  --color-cell-path: #5a7fbf;
+  --color-text: #e0e0ff;
+  --color-text-muted: #8888aa;
+  --color-score: #4ecdc4;
+  --cell-size: 80px;
+  --board-gap: 8px;
+  --border-radius: 8px;
+  --font-main: 'Segoe UI', system-ui, sans-serif;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-main);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+/* ── 앱 래퍼 ── */
+.app {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── 헤더 ── */
+.app-header {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.app-title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  text-shadow: 0 0 20px rgba(233, 69, 96, 0.4);
+}
+
+/* ── 게임 레이아웃 ── */
+.game-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── 정보 바 (점수 + 타이머) ── */
+.info-bar {
+  display: flex;
+  justify-content: space-around;
+  background-color: var(--color-surface);
+  border-radius: var(--border-radius);
+  padding: 12px 24px;
+  border: 1px solid var(--color-cell-border);
+}
+
+.score-panel,
+.timer-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.info-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--color-score);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 현재 입력 단어 ── */
+.current-word-panel {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-surface);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-cell-border);
+  padding: 6px 12px;
+}
+
+.current-word {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  min-height: 1.6em;
+}
+
+/* ── 보드 섹션 ── */
+.board-section {
+  display: flex;
+  justify-content: center;
+}
+
+/* 4x4 CSS Grid 보드 */
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, var(--cell-size));
+  grid-template-rows: repeat(4, var(--cell-size));
+  gap: var(--board-gap);
+  padding: 12px;
+  background-color: var(--color-surface);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-cell-border);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+/* 개별 셀 */
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  background-color: var(--color-cell-bg);
+  border: 2px solid var(--color-cell-border);
+  border-radius: var(--border-radius);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--color-cell-text);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.1s ease, border-color 0.1s ease, transform 0.1s ease;
+  position: relative;
+}
+
+.cell:hover {
+  border-color: var(--color-accent);
+}
+
+/* 경로상의 셀 (drag 중 지나간 셀) */
+.cell.on-path {
+  background-color: var(--color-cell-path);
+  border-color: #7a9fd0;
+}
+
+/* 현재 선택된 마지막 셀 */
+.cell.selected {
+  background-color: var(--color-cell-selected);
+  border-color: #ff6b85;
+  transform: scale(1.05);
+}
+
+/* Qu 특수 셀 — 글자 크기 줄임 */
+.cell.cell-qu {
+  font-size: 1.1rem;
+}
+
+/* ── 컨트롤 ── */
+.controls {
+  display: flex;
+  justify-content: center;
+}
+
+.btn {
+  padding: 10px 32px;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn-primary {
+  background-color: var(--color-accent);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* ── 찾은 단어 목록 ── */
+.word-list-section {
+  background-color: var(--color-surface);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-cell-border);
+  padding: 12px 16px;
+  min-height: 80px;
+}
+
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.word-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.word-list li {
+  background-color: var(--color-primary);
+  border: 1px solid var(--color-cell-border);
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.word-list li .word-score {
+  color: var(--color-score);
+  margin-left: 4px;
+  font-size: 0.75rem;
+}
+
+/* =============================================
+   반응형 — 모바일 (400px 이하)
+   ============================================= */
+@media (max-width: 400px) {
+  :root {
+    --cell-size: 64px;
+    --board-gap: 6px;
+  }
+
+  body {
+    padding: 8px;
+  }
+
+  .app-title {
+    font-size: 1.5rem;
+  }
+
+  .info-value {
+    font-size: 1.4rem;
+  }
+
+  .cell {
+    font-size: 1.3rem;
+  }
+
+  .cell.cell-qu {
+    font-size: 0.9rem;
+  }
+
+  .current-word {
+    font-size: 1.1rem;
+  }
+
+  .btn {
+    padding: 8px 24px;
+    font-size: 0.9rem;
+  }
+
+  .info-bar {
+    padding: 10px 16px;
+  }
+}
+
+/* =============================================
+   반응형 — 소형 (320px 이하 대응)
+   ============================================= */
+@media (max-width: 340px) {
+  :root {
+    --cell-size: 56px;
+    --board-gap: 4px;
+  }
+
+  .cell {
+    font-size: 1.1rem;
+  }
+}
