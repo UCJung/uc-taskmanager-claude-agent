@@ -1,0 +1,29 @@
+{
+  "name": "uc-taskmanager",
+  "version": "1.4.0",
+  "agents": [
+    "./agents/specifier.md",
+    "./agents/planner.md",
+    "./agents/scheduler.md",
+    "./agents/builder.md",
+    "./agents/verifier.md",
+    "./agents/committer.md"
+  ],
+  "description": "SDD WORK-PIPELINE Agent — Requirements analysis & development 6-agent full pipeline with DAG-based orchestration and sliding window context management",
+  "author": {
+    "name": "UCJung",
+    "url": "https://github.com/UCJung"
+  },
+  "homepage": "https://github.com/UCJung/uc-taskmanager-claude-agent",
+  "repository": "https://github.com/UCJung/uc-taskmanager-claude-agent",
+  "license": "GPL-3.0",
+  "keywords": [
+    "task-manager",
+    "pipeline",
+    "sub-agents",
+    "sdd",
+    "dag-orchestration",
+    "work-pipeline",
+    "automation"
+  ]
+}

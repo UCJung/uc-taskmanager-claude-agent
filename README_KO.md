@@ -18,16 +18,7 @@
 
 ## 빠른 시작
 
-### 옵션 1: Claude Marketplace Plugin (제출 준비 중)
-
-> Plugin 제출을 준비 중입니다. 출시 후에는 Marketplace에서 직접 설치할 수 있습니다 — npm이나 CLI 설정 불필요.
-
-1. [Claude Marketplace](https://claude.ai/marketplace) (또는 `platform.claude.com/plugins`) 접속
-2. **uc-taskmanager** 검색
-3. **Install Plugin** 클릭
-4. Claude Code를 열면 6개 파이프라인 에이전트가 바로 사용 가능
-
-### 옵션 2: npm CLI
+### npm CLI
 
 ```bash
 npm install -g uctm
@@ -41,7 +32,7 @@ uctm init             # 대화형 언어 선택
 
 ### 시작하기
 
-설치 완료 후 (두 방법 모두), Claude Code를 실행하고 파이프라인 태그를 사용하세요: []시작하는 지시를 내리면 Agent가 동작합니다.
+설치 완료 후 Claude Code를 실행하고 파이프라인 태그를 사용하세요: []시작하는 지시를 내리면 Agent가 동작합니다.
 
 ```
 claude
@@ -308,21 +299,7 @@ scheduler가 `PROGRESS.md`와 `result.md` 파일을 읽어 현재 상태를 보�
 
 ## 설치
 
-### Claude Marketplace Plugin (제출 준비 중)
-
-출시 후에는 터미널 없이 Claude Marketplace에서 직접 설치:
-
-1. [Claude Marketplace](https://claude.ai/marketplace) (또는 `platform.claude.com/plugins`) 접속
-2. **uc-taskmanager** 검색
-3. **Install Plugin** 클릭
-4. Claude Code가 plugin의 `agents/` 디렉토리에서 에이전트를 자동으로 인식
-5. Claude Code에서 `/uctm-init`을 실행하여 `works/`, `CLAUDE.md`, Bash 권한, `.claude-plugin`, `skills/` 설정
-
-Marketplace Plugin은 **영어 에이전트만 포함**합니다 (6개 핵심 에이전트 + 6개 참조 문서 + 3개 스킬 + `.claude-plugin` 매니페스트).
-
-> **Marketplace Plugin vs npm CLI**: Plugin은 설치 단계 없이 항상 최신 상태를 유지합니다. npm CLI는 한국어 에이전트(`--lang ko`)와 `CLAUDE.md`를 통한 프로젝트별 커스터마이징을 지원합니다. 양쪽 모두 권한 자동 설정을 포함합니다.
-
-### npm CLI (전체 언어 지원 + 커스터마이징) — v1.5.0
+### npm CLI — v1.5.0
 
 ```bash
 npm install -g uctm
@@ -353,7 +330,7 @@ git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
 ### 로컬 Plugin 테스트
 
 ```bash
-# Marketplace 제출 전 로컬에서 Plugin 테스트
+# 로컬에서 Plugin 테스트
 claude --plugin-dir ./
 ```
 
@@ -987,7 +964,7 @@ uc-taskmanager/
 │   ├── package.json         ← npm 패키지 설정
 │   ├── .npmignore
 │   └── LICENSE
-├── plugin/                  ← Claude Marketplace Plugin
+├── plugin/                  ← Claude Plugin (로컬 테스트)
 │   ├── agents/              ← agents/en/에서 동기화 (6개 핵심 에이전트)
 │   ├── skills/              ← Plugin skills (참조 문서)
 │   │   ├── sdd-pipeline/

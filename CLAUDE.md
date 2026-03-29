@@ -22,7 +22,8 @@
    - 해당 WORK 폴더(`works/WORK-NN/`)를 `works/_COMPLETED/`로 이동
    - 변경사항 스테이징 (`git add`)
 3. **README.md 업데이트** — 이번 작업에서 추가/변경된 내용이 README에 반영되어 있는지 확인하고, 누락된 내용이 있으면 업데이트한다
-4. **git push**
+4. **npm README 동기화** — `README.md` → `npm/README.md` 복사 (영문 README만, 한국어 제외)
+5. **git push**
 
 README 업데이트 범위:
 - 새로운 에이전트 또는 기능이 추가된 경우 해당 섹션 반영
