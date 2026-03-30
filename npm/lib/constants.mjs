@@ -7,28 +7,31 @@ const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8
 
 export const VERSION = pkg.version;
 
-export const SUPPORTED_LANGS = ['ko', 'en'];
-
 export const AGENT_FILES = [
-  'agent-flow.md',
   'builder.md',
   'committer.md',
-  'context-policy.md',
-  'file-content-schema.md',
   'planner.md',
   'scheduler.md',
-  'shared-prompt-sections.md',
   'specifier.md',
   'verifier.md',
+];
+
+export const REFERENCE_FILES = [
+  'agent-flow.md',
+  'context-policy.md',
+  'file-content-schema.md',
+  'ref-cache-protocol.md',
+  'shared-prompt-sections.md',
   'work-activity-log.md',
   'xml-schema.md',
 ];
 
-export function getAgentsSrcDir(lang) {
-  if (lang === 'en') {
-    return join(__dirname, '..', 'agents');
-  }
-  return join(__dirname, '..', 'agents', lang);
+export function getAgentsSrcDir() {
+  return join(__dirname, '..', 'agents');
+}
+
+export function getReferencesSrcDir() {
+  return join(__dirname, '..', 'references');
 }
 
 

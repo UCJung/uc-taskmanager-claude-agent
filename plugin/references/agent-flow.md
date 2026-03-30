@@ -86,17 +86,26 @@ When invoking specifier in pipeline/full mode, include both agent definitions:
 
 ```
 Prompt to agent:
-  "You will perform two roles in sequence.
+  "You will perform two roles in sequence. Each role has its own callback and activity log — execute ALL of them.
 
    Role 1 — Specifier: Read specifier.md and create Requirement.md.
-   Role 2 — Planner: Read planner.md and create PLAN.md + TASK files.
+   - Send SPECIFIER START callback + write SPECIFIER_START to activity log
+   - Create Requirement.md
+   - Send SPECIFIER DONE callback (with requirementContent) + write SPECIFIER_DONE to activity log
 
-   Execute Role 1 first, then Role 2. Return the combined result."
+   Role 2 — Planner: Read planner.md and create PLAN.md + TASK files.
+   - Send PLANNER START callback + write PLANNER_START to activity log
+   - Create PLAN.md + TASK files
+   - Send PLANNER DONE callback (with planContent) + write PLANNER_DONE to activity log
+
+   Execute Role 1 first, then Role 2. Return the combined result.
+
+   CRITICAL: Each role's callback and activity log are independent. You must send 4 callbacks and write 4 log entries."
 ```
 
 - Use specifier's model (opus) for the spawn
 - Agent reads both specifier.md and planner.md from REFERENCES_DIR
-- Returns: Requirement.md + PLAN.md + TASK files + execution-mode
+- Returns: Requirement.md + PLAN.md + TASK files + execution-mode (4 callbacks + 4 log entries)
 
 ### Verifier+Committer (single spawn)
 
@@ -104,19 +113,28 @@ When invoking verification after builder completes:
 
 ```
 Prompt to agent:
-  "You will perform two roles in sequence.
+  "You will perform two roles in sequence. Each role has its own callback and activity log — execute ALL of them.
 
    Role 1 — Verifier: Read verifier.md and verify build/lint/test.
+   - Send VERIFIER START callback + write VERIFIER_START to activity log
+   - Perform verification
+   - Send VERIFIER DONE/FAILED callback + write VERIFIER_DONE/FAILED to activity log
+
    Role 2 — Committer: Read committer.md and create result.md + git commit.
+   - Send COMMITTER START callback + write COMMITTER_START to activity log
+   - Create result.md, update PROGRESS.md, git commit
+   - Send COMMITTER DONE callback (with resultContent) + write COMMITTER_DONE to activity log
 
    Execute Role 1 first. If verification PASSES, execute Role 2.
-   If verification FAILS, skip Role 2 and return FAIL result."
+   If verification FAILS, skip Role 2 and return FAIL result.
+
+   CRITICAL: Each role's callback and activity log are independent. You must send 4 callbacks (VERIFIER START, VERIFIER DONE, COMMITTER START, COMMITTER DONE) and write 4 log entries."
 ```
 
 - Use verifier's model (haiku) for the spawn
 - Agent reads both verifier.md and committer.md from REFERENCES_DIR
-- On PASS: returns verification result + commit hash
-- On FAIL: returns verification failure only (no commit)
+- On PASS: returns verification result + commit hash (4 callbacks + 4 log entries)
+- On FAIL: returns verification failure only (2 callbacks + 2 log entries, no commit)
 
 ---
 
@@ -206,19 +224,19 @@ This allows sub-agents to locate their reference files regardless of installatio
 
 **How to pass:**
 - Prepend `REFERENCES_DIR={absolute_path}` at the top of the prompt for every Task tool call
-- For npm installations: use `.claude/agents` (default, resolved from project root)
-- For plugin installations: derive from the skill's "Base directory" (`{base_dir}/../sdd-pipeline/references`)
+- For npm installations: use `.claude/references` (default, resolved from project root)
+- For plugin installations: derive from the skill's "Base directory" (`{base_dir}/../../references`)
 
 **Example:**
 ```
-REFERENCES_DIR=C:/Users/me/.claude/plugins/cache/uc-taskmanager/abc123/skills/sdd-pipeline/references
+REFERENCES_DIR=C:/Users/me/.claude/plugins/cache/uc-taskmanager/abc123/references
 
 <dispatch to="builder" ...>
   ...
 </dispatch>
 ```
 
-If REFERENCES_DIR is not available (e.g., npm installation without plugin), sub-agents fall back to `.claude/agents/`.
+If REFERENCES_DIR is not available (e.g., npm installation without plugin), sub-agents fall back to `.claude/references/`.
 
 ---
 
@@ -258,22 +276,8 @@ builder (ref-cache in) → skips file reads → returns task-result with <ref-ca
 verifier+committer (ref-cache in) → skips file reads → commit
 ```
 
-### Phase 2: Selective Section Delivery
-
-Instead of passing full reference files, Main Claude extracts only the sections each agent needs. This reduces dispatch token size by 50-70%.
-
-**Main Claude reads reference files once at pipeline start**, then delivers condensed `<ref-cache>` per agent using this mapping:
-
-| Agent | shared-prompt-sections | file-content-schema | xml-schema | context-policy | work-activity-log |
-|-------|:---:|:---:|:---:|:---:|:---:|
-| **specifier+planner** | §1,§2,§7,§8,§9,§11 | §0,§1,§2,§3 | §1,§3 | — | full |
-| **scheduler** | §4,§8,§10 | §1,§6 | §1,§3,§4,§5 | full | full |
-| **builder** | §1,§2,§10,§12 | §2,§3 | §1,§2,§4 | Builder section | full |
-| **verifier+committer** | §1,§2,§8,§10,§12 | §3,§4,§5,§6,§7 | §1,§2,§4 | Verifier+Committer | full |
-
-**Delivery format**: Condense each `<ref key="">` to contain only the needed sections, not the full file. Use one-line summaries for simple rules, keep full content only for templates and code blocks.
-
 ### Constraints
 
 - **ref-cache does not replace REFERENCES_DIR** — always pass `REFERENCES_DIR` (or `<references-dir>`) in every dispatch regardless of ref-cache presence, for backward compatibility.
 - **Agents may still read files** — if ref-cache content is insufficient, agents fall back to reading from disk.
+- **Main Claude does NOT read reference files** — only sub-agents read their own references. Main Claude only reads `agent-flow.md`.

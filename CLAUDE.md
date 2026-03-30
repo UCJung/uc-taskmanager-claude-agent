@@ -10,13 +10,12 @@
 
 사용자가 "push"를 요청하면 다음 순서로 실행한다:
 
-1. **에이전트 동기화** — agents/ 원본을 npm/agents, plugin/agents로 복사
-   - agents/en/*.md → npm/agents/*.md
-   - agents/ko/*.md → npm/agents/ko/*.md
-   - 에이전트 6개(specifier, planner, scheduler, builder, verifier, committer):
-     agents/en/*.md → plugin/agents/*.md (경로 치환 불필요 — `{REFERENCES_DIR}/`이 그대로 사용됨)
-   - 참조 문서 6개(agent-flow, file-content-schema, shared-prompt-sections, context-policy, xml-schema, work-activity-log):
-     agents/en/*.md → plugin/skills/sdd-pipeline/references/*.md (경로 치환 불필요)
+1. **develop/ 동기화** — develop/ 원본을 plugin/, npm/으로 복사
+   - develop/agents/*.md → plugin/agents/*.md, npm/agents/*.md
+   - develop/references/*.md → plugin/references/*.md, npm/references/*.md
+   - develop/hooks/*.sh → plugin/hooks/*.sh
+   - develop/skills/*/SKILL.md → plugin/skills/*/SKILL.md, npm/skills/*/SKILL.md
+   - develop/.claude-plugin/plugin.json → plugin/.claude-plugin/, npm/.claude-plugin/
 2. **DONE WORK 일괄 완료 처리** — WORK-LIST.md에서 DONE 상태인 WORK를 찾아 COMPLETED로 전환한다
    - WORK-LIST.md에서 `DONE` 상태인 행을 모두 찾아 제거
    - 해당 WORK 폴더(`works/WORK-NN/`)를 `works/_COMPLETED/`로 이동
@@ -35,10 +34,7 @@ README 업데이트 범위:
 
 사용자가 npm 버전업을 요청하면 다음을 추가로 수행한다:
 
-1. **플러그인 리소스 복사** — plugin 폴더의 아래 항목을 npm/ 하위로 복사
-   - `plugin/.claude-plugin` → `npm/.claude-plugin`
-   - `plugin/skills/` → `npm/skills/`
-2. 에이전트 동기화 (Push 절차 1단계와 동일)
+1. develop/ 동기화 (Push 절차 1단계와 동일)
 3. `npm version patch|minor|major` 실행
 4. `npm publish`
 

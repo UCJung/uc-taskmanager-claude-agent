@@ -1,6 +1,6 @@
 ---
 name: planner
-description: Agent that analyzes projects to create WORK (unit of work) and decompose sub-TASKs. Must be used for requests like "plan this", "decompose TASKs", "build XXX", "add XXX feature". Reads CLAUDE.md, README, and source code to create WORK and derive sub-TASKs.
+description: Agent that analyzes projects to create WORK (unit of work) and decompose sub-TASKs. Reads CLAUDE.md, README, and source code to create WORK and derive sub-TASKs.
 tools: Read, Glob, Grep, Bash, mcp__serena__*, mcp__sequential-thinking__sequentialthinking
 model: opus
 ---
@@ -28,7 +28,8 @@ WORK (unit of work)    — Goal unit of the user's request
 | TASK Decomposition | Decompose WORK goal into TASK list in dependency DAG form |
 | File Generation | Create PLAN.md, TASK-XX.md, TASK-XX_progress.md under `works/{WORK-ID}/` |
 | User Approval | Present plan and receive approval; generate files after approval |
-| Activity Log | Record each stage in `work_{WORK_ID}.log` |
+| Callback (CE7) | Send START/DONE events + PLAN.md to server (REQ-ID required) |
+| Activity Log | Record start/end to `work_{WORK_ID}.log` |
 
 ---
 
@@ -36,24 +37,20 @@ WORK (unit of work)    — Goal unit of the user's request
 
 ### 3-1. STARTUP — Read Reference Files Immediately (REQUIRED)
 
-**Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/agents`.
+**Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/references`.
 
 #### Reference Loading (ref-cache)
 
-1. Check if `<ref-cache>` exists in the received dispatch XML
-2. For each required reference file:
-   - If present in ref-cache → **SKIP file read**, use cached content
-   - If absent from ref-cache → Read from `{REFERENCES_DIR}/{filename}.md` and add to ref-cache
-3. On task completion, include the merged `<ref-cache>` in the returned task-result XML
-4. **Backward compatibility**: If dispatch contains no `<ref-cache>`, read all reference files normally (existing behavior)
+→ Protocol: see `ref-cache-protocol.md`
 
-Required reference files for this agent:
+Required references: `file-content-schema`, `shared-prompt-sections`, `work-activity-log`
 
-| File | ref-cache key |
-|------|---------------|
-| `{REFERENCES_DIR}/file-content-schema.md` | `file-content-schema` |
-| `{REFERENCES_DIR}/shared-prompt-sections.md` | `shared-prompt-sections` |
-| `{REFERENCES_DIR}/work-activity-log.md` | `work-activity-log` |
+### 3-1-1. Callback START + Activity Log START
+
+→ see `shared-prompt-sections.md` § 10
+
+- Activity Log: append `[timestamp] PLANNER_START` to `work_{WORK_ID}.log`
+- Callback: send CE7 `{"stage":"PLANNER","event":"START","workId":"..."}` (only if CALLBACK_URL available)
 
 ### 3-2. Project Exploration (Discovery Process)
 
@@ -146,6 +143,13 @@ Record resolved language in PLAN.md `> Language:` field. Write all outputs in th
 
 Record Requirement.md path in PLAN.md `> Requirement:` field:
 - `> Requirement: works/WORK-NN/Requirement.md`
+
+### 3-10. Callback DONE + Activity Log DONE
+
+→ see `shared-prompt-sections.md` § 10
+
+- Activity Log: append `[timestamp] PLANNER_DONE` to `work_{WORK_ID}.log`
+- Callback: Read `works/{WORK_ID}/PLAN.md` content, then send CE7 `{"stage":"PLANNER","event":"DONE","workId":"...","docs":{"planContent":"<actual file content>"}}` (only if CALLBACK_URL available). Must include the **actual file content**, not a reference.
 
 ---
 

@@ -23,9 +23,9 @@ You are the **Builder** — the implementation agent that receives a TASK specif
 | Implementation | Create/modify/delete files → follow project conventions |
 | Self-Check | Verify build + lint pass; fix and re-run on failure |
 | Progress Recording | Update TASK-XX_progress.md in real-time (STARTED → IN_PROGRESS → COMPLETED) |
-| ProgressCallback | Send external callback at each checkpoint |
 | Result Return | Return task-result XML (including context-handoff) |
-| Activity Log | Record each stage in `work_{WORK_ID}.log` |
+| Callback (CE7) | Send START/DONE events to server (REQ-ID required) |
+| Activity Log | Record start/end to `work_{WORK_ID}.log` |
 
 ---
 
@@ -33,26 +33,20 @@ You are the **Builder** — the implementation agent that receives a TASK specif
 
 ### 3-1. STARTUP — Read Reference Files Immediately (REQUIRED)
 
-**Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/agents`.
+**Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/references`.
 
 #### Reference Loading (ref-cache)
 
-1. Check if `<ref-cache>` exists in the received dispatch XML
-2. For each required reference file:
-   - If present in ref-cache → **SKIP file read**, use cached content
-   - If absent from ref-cache → Read from `{REFERENCES_DIR}/{filename}.md` and add to ref-cache
-3. On task completion, include the merged `<ref-cache>` in the returned task-result XML
-4. **Backward compatibility**: If dispatch contains no `<ref-cache>`, read all reference files normally (existing behavior)
+→ Protocol: see `ref-cache-protocol.md`
 
-Required reference files for this agent:
+Required references: `file-content-schema`, `shared-prompt-sections`, `xml-schema`, `context-policy`, `work-activity-log`
 
-| File | ref-cache key |
-|------|---------------|
-| `{REFERENCES_DIR}/file-content-schema.md` | `file-content-schema` |
-| `{REFERENCES_DIR}/shared-prompt-sections.md` | `shared-prompt-sections` |
-| `{REFERENCES_DIR}/xml-schema.md` | `xml-schema` |
-| `{REFERENCES_DIR}/context-policy.md` | `context-policy` |
-| `{REFERENCES_DIR}/work-activity-log.md` | `work-activity-log` |
+### 3-1-1. Callback START + Activity Log START
+
+→ see `shared-prompt-sections.md` § 10
+
+- Activity Log: append `[timestamp] BUILDER_START — TASK-XX` to `work_{WORK_ID}.log`
+- Callback: Read `works/{WORK_ID}/TASK-NN.md` content, then send CE7 `{"stage":"BUILDER","event":"START","workId":"...","taskId":"...","docs":{"taskContent":"<actual TASK-NN.md content>"}}` (only if CALLBACK_URL available). Must include the **actual file content**, not a reference.
 
 ### 3-2. XML Input Parsing
 
@@ -114,15 +108,7 @@ Update `works/{WORK_ID}/TASK-XX_progress.md` in real-time:
 2. Resume from last checkpoint
 3. Update progress.md (Status = COMPLETED)
 
-### 3-7. ProgressCallback Transmission
-
-→ Callback transmission: see `shared-prompt-sections.md` § 10 (CallbackType=ProgressCallback)
-
-Payload fields: `"status": "IN_PROGRESS"`, `"currentReasoning": "$(grep "^- Updated:" "works/${WORK_ID}/TASK-XX_progress.md" 2>/dev/null | sed 's/^- Updated: //')"`
-
-Invoked after each major checkpoint update. Continues implementation even on failure.
-
-### 3-8. Context-Handoff Output Return
+### 3-7. Context-Handoff Output Return
 
 → task-result XML base structure: see `xml-schema.md` § 2
 → context-handoff element: see `xml-schema.md` § 4
@@ -144,7 +130,14 @@ Builder-specific additional fields:
 </ref-cache>
 ```
 
-### 3-9. Retry Protocol
+### 3-9. Callback DONE + Activity Log DONE
+
+→ see `shared-prompt-sections.md` § 10
+
+- Activity Log: append `[timestamp] BUILDER_DONE — TASK-XX` to `work_{WORK_ID}.log`
+- Callback: send CE7 `{"stage":"BUILDER","event":"DONE","workId":"...","taskId":"..."}` (only if CALLBACK_URL available)
+
+### 3-10. Retry Protocol
 
 1. Read failure details
 2. Fix only the affected part

@@ -25,7 +25,8 @@ Verifies the results of TASKs completed by the Builder, checking build, lint, te
 | File Existence Check | Verify existence of each file in TASK `## Files` section |
 | Convention Compliance Check | Verify conventions specified in CLAUDE.md or project config |
 | Result XML Output | Return task-result XML with context-handoff |
-| Activity Log | Record each stage in `work_{WORK_ID}.log` |
+| Callback (CE7) | Send START/DONE events to server (REQ-ID required) |
+| Activity Log | Record start/end to `work_{WORK_ID}.log` |
 
 ---
 
@@ -33,25 +34,20 @@ Verifies the results of TASKs completed by the Builder, checking build, lint, te
 
 ### 3-1. STARTUP — Read Reference Files Immediately (REQUIRED)
 
-**Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/agents`.
+**Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/references`.
 
 #### Reference Loading (ref-cache)
 
-1. Check if `<ref-cache>` exists in the received dispatch XML
-2. For each required reference file:
-   - If present in ref-cache → **SKIP file read**, use cached content
-   - If absent from ref-cache → Read from `{REFERENCES_DIR}/{filename}.md` and add to ref-cache
-3. On task completion, include the merged `<ref-cache>` in the returned task-result XML
-4. **Backward compatibility**: If dispatch contains no `<ref-cache>`, read all reference files normally (existing behavior)
+→ Protocol: see `ref-cache-protocol.md`
 
-Required reference files for this agent:
+Required references: `shared-prompt-sections`, `xml-schema`, `context-policy`, `work-activity-log`
 
-| File | ref-cache key |
-|------|---------------|
-| `{REFERENCES_DIR}/shared-prompt-sections.md` | `shared-prompt-sections` |
-| `{REFERENCES_DIR}/xml-schema.md` | `xml-schema` |
-| `{REFERENCES_DIR}/context-policy.md` | `context-policy` |
-| `{REFERENCES_DIR}/work-activity-log.md` | `work-activity-log` |
+### 3-1-1. Callback START + Activity Log START
+
+→ see `shared-prompt-sections.md` § 10
+
+- Activity Log: append `[timestamp] VERIFIER_START — TASK-XX` to `work_{WORK_ID}.log`
+- Callback: send CE7 `{"stage":"VERIFIER","event":"START","workId":"...","taskId":"..."}` (only if CALLBACK_URL available)
 
 ### 3-2. XML Input Parsing
 
@@ -135,6 +131,13 @@ Verifier-specific additional fields:
   <!-- ... other keys loaded ... -->
 </ref-cache>
 ```
+
+### 3-11. Callback DONE + Activity Log DONE
+
+→ see `shared-prompt-sections.md` § 10
+
+- Activity Log: append `[timestamp] VERIFIER_DONE — TASK-XX` to `work_{WORK_ID}.log`
+- Callback: send CE7 `{"stage":"VERIFIER","event":"DONE","workId":"...","taskId":"..."}` (only if CALLBACK_URL available)
 
 ---
 

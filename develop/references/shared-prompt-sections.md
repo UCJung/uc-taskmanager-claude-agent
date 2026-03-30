@@ -160,24 +160,74 @@ Rules:
 
 ---
 
-## § 10. Callback Transmission Template
+## § 10. Callback & Activity Log
 
-→ **Bash command rules: see § 13** — each step below is a separate tool call.
+### 10-1. Callback (CE7)
 
-Replace `{CallbackType}` with the actual key name (e.g., `ProgressCallback`, `TaskCallback`).
+Each agent sends START/DONE/FAILED events to the server via CE7 API.
 
-**Step 1.** Use `Grep` tool to find `{CallbackType}:` line in CLAUDE.md. If not found, skip callback entirely.
+**Activation condition:** Only when `CALLBACK_URL` is available. Check in order:
+1. Dispatch XML `<callback-url>` element (passed from Main Claude)
+2. Prompt text containing `CALLBACK_URL=...` line
+3. If neither found → **skip all callbacks**
 
-**Step 2.** Use `Grep` tool to find `CallbackToken:` line in CLAUDE.md (optional).
+**How to resolve CALLBACK_URL and CALLBACK_TOKEN:**
 
-**Step 3.** Send callback with a single `curl` command:
+The runner injects callback info directly into the prompt:
+```
+POST {CALLBACK_URL}
+Authorization: Bearer {CALLBACK_TOKEN}
+```
+The first agent (specifier) extracts these and passes them via dispatch XML to subsequent agents.
+
+**When to send:**
+- **START**: At the very beginning of agent execution (after STARTUP)
+- **DONE**: At the very end, before returning task-result XML
+- **FAILED**: On unrecoverable failure, before returning FAIL task-result
+
+**How to send** (single curl command):
 ```bash
-curl -s -X POST "CALLBACK_URL" -H "Content-Type: application/json" -H "X-Runner-Api-Key: TOKEN" -d '{"workId":"WORK-01","taskId":"TASK-00",...}'
+curl -s --connect-timeout 3 --max-time 5 -X POST "$CALLBACK_URL" \
+  -H "Authorization: Bearer $CALLBACK_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"stage":"BUILDER","event":"START","workId":"WORK-09","taskId":"TASK-01"}' \
+  2>/dev/null || true
 ```
 
-Agent-specific payload fields:
-- **ProgressCallback** (builder): `"status": "IN_PROGRESS"`, `"currentReasoning": "..."`
-- **TaskCallback** (committer): `"status": "SUCCESS"`, `"commitHash": "${COMMIT_HASH}"`
+- `--connect-timeout 3`: 연결 대기 최대 3초
+- `--max-time 5`: 전체 요청 최대 5초
+- `|| true`: 실패해도 agent 실행 계속
+
+**Include docs (actual file content, not references):**
+- specifier DONE: `"docs": {"requirementContent": "<Requirement.md content>"}`
+- planner DONE: `"docs": {"planContent": "<PLAN.md content>"}`
+- builder START: `"docs": {"taskContent": "<TASK-NN.md content>"}`
+- committer DONE: `"docs": {"resultContent": "<TASK-NN_result.md content>"}`
+
+**Token usage** (DONE event only, optional):
+```json
+{"inputTokens": 1234, "outputTokens": 567, "cacheCreationTokens": 890, "cacheReadTokens": 456}
+```
+
+Callback failure must NOT block agent execution. Always continue.
+
+### 10-2. Activity Log
+
+Each agent records start/end to `works/{WORK_ID}/work_{WORK_ID}.log`.
+
+**All WORKs** — no REQ-ID condition.
+
+**Format:**
+```
+[YYYY-MM-DDTHH:MM:SSZ] AGENT_START — description
+[YYYY-MM-DDTHH:MM:SSZ] AGENT_DONE — description
+```
+
+**How to write:** Use `Edit` tool to append (NOT Bash). Example:
+```
+[2026-03-30T14:30:00Z] BUILDER_START — TASK-01 implement
+[2026-03-30T14:35:00Z] BUILDER_DONE — TASK-01 complete
+```
 
 ---
 
