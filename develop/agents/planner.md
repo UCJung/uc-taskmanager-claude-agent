@@ -39,11 +39,9 @@ WORK (unit of work)    — Goal unit of the user's request
 
 **Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/references`.
 
-#### Reference Loading (ref-cache)
+#### Reference Loading
 
-→ Protocol: see `ref-cache-protocol.md`
-
-Required references: `file-content-schema`, `shared-prompt-sections`, `work-activity-log`
+Read the following from `{REFERENCES_DIR}/`: `file-content-schema.md`, `shared-prompt-sections.md`, `work-activity-log.md`
 
 ### 3-1-1. Callback START + Activity Log START
 
@@ -107,7 +105,6 @@ Record the determined mode in PLAN.md's `> Execution-Mode:` field.
 4. Completion report: "{WORK-ID} plan created. Start with `Run {WORK-ID} pipeline`."
 ```
 
-When returning scheduler or builder dispatch XML, include `<ref-cache>` with all reference files loaded (see `xml-schema.md` § 6).
 
 ### 3-6. Output Structure
 

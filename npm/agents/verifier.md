@@ -36,11 +36,9 @@ Verifies the results of TASKs completed by the Builder, checking build, lint, te
 
 **Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/references`.
 
-#### Reference Loading (ref-cache)
+#### Reference Loading
 
-→ Protocol: see `ref-cache-protocol.md`
-
-Required references: `shared-prompt-sections`, `xml-schema`, `context-policy`, `work-activity-log`
+Read the following from `{REFERENCES_DIR}/`: `shared-prompt-sections.md`, `xml-schema.md`, `context-policy.md`, `work-activity-log.md`
 
 ### 3-1-1. Callback START + Activity Log START
 
@@ -103,7 +101,6 @@ Only check conventions specified in CLAUDE.md or project config.
 
 → task-result XML base structure: see `xml-schema.md` § 2
 → context-handoff element: see `xml-schema.md` § 4
-→ ref-cache element: see `xml-schema.md` § 6
 
 Verifier-specific additional fields:
 
@@ -124,12 +121,6 @@ Verifier-specific additional fields:
     <suggested-fix>{suggestion}</suggested-fix>
   </failure>
 </failure-details>
-<ref-cache>
-  <!-- Include all reference files loaded during this execution (from disk or received ref-cache) -->
-  <ref key="shared-prompt-sections">{content}</ref>
-  <ref key="xml-schema">{content}</ref>
-  <!-- ... other keys loaded ... -->
-</ref-cache>
 ```
 
 ### 3-11. Callback DONE + Activity Log DONE

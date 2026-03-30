@@ -250,34 +250,6 @@ If REFERENCES_DIR is not available (e.g., npm installation without plugin), sub-
 
 ---
 
-## ref-cache Chain Propagation
+## Reference Loading
 
-`<ref-cache>` carries pre-loaded reference file contents through the pipeline, eliminating redundant disk reads in each sub-agent.
-
-### Rules
-
-1. **First agent (typically specifier)** — no ref-cache available on dispatch. Reads reference files from `REFERENCES_DIR` normally.
-
-2. **Agent returns task-result** — if the agent supports ref-cache, it includes `<ref-cache>` in its task-result XML containing all reference files it loaded.
-
-3. **Main Claude propagates ref-cache** — when dispatching the next agent, copy the `<ref-cache>` block from the previous task-result into the new dispatch XML unchanged.
-
-4. **Receiving agent skips file reads** — when `<ref-cache>` is present in the dispatch XML, the agent reads reference content from `<ref>` elements instead of reading files from disk.
-
-5. **Missing ref-cache** — if a task-result does not contain `<ref-cache>` (agent does not support it yet), omit `<ref-cache>` from the next dispatch. The receiving agent falls back to reading files from disk.
-
-### Flow Example
-
-```
-specifier+planner (no ref-cache in) → reads files → returns task-result with <ref-cache>
-  ↓ Main Claude copies <ref-cache> into dispatch
-builder (ref-cache in) → skips file reads → returns task-result with <ref-cache>
-  ↓ Main Claude copies <ref-cache> into dispatch
-verifier+committer (ref-cache in) → skips file reads → commit
-```
-
-### Constraints
-
-- **ref-cache does not replace REFERENCES_DIR** — always pass `REFERENCES_DIR` (or `<references-dir>`) in every dispatch regardless of ref-cache presence, for backward compatibility.
-- **Agents may still read files** — if ref-cache content is insufficient, agents fall back to reading from disk.
-- **Main Claude does NOT read reference files** — only sub-agents read their own references. Main Claude only reads `agent-flow.md`.
+Each sub-agent reads its own reference files from `{REFERENCES_DIR}/` at startup. Main Claude does NOT read reference files — only `agent-flow.md`.

@@ -34,11 +34,9 @@ You are the **Committer** — the agent that generates the result report for a v
 
 **Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/references`.
 
-#### Reference Loading (ref-cache)
+#### Reference Loading
 
-→ Protocol: see `ref-cache-protocol.md`
-
-Required references: `file-content-schema`, `shared-prompt-sections`, `xml-schema`, `context-policy`, `work-activity-log`
+Read the following from `{REFERENCES_DIR}/`: `file-content-schema.md`, `shared-prompt-sections.md`, `xml-schema.md`, `context-policy.md`, `work-activity-log.md`
 
 ### 3-1-1. Callback START + Activity Log START
 
@@ -139,7 +137,6 @@ Result: works/WORK-01/TASK-00_result.md"
 ### 3-8. Result Report
 
 → task-result XML base structure: see `xml-schema.md` § 2
-→ ref-cache element: see `xml-schema.md` § 6
 
 Committer-specific additional fields:
 
@@ -157,12 +154,6 @@ Committer-specific additional fields:
 <next-tasks>
   <task id="TASK-YY" status="READY">{title}</task>
 </next-tasks>
-<ref-cache>
-  <!-- Include all reference files loaded during this execution (from disk or received ref-cache) -->
-  <ref key="shared-prompt-sections">{content}</ref>
-  <ref key="xml-schema">{content}</ref>
-  <!-- ... other keys loaded ... -->
-</ref-cache>
 ```
 
 → see `{REFERENCES_DIR}/shared-prompt-sections.md` § 8

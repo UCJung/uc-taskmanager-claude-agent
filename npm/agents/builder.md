@@ -35,11 +35,9 @@ You are the **Builder** — the implementation agent that receives a TASK specif
 
 **Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/references`.
 
-#### Reference Loading (ref-cache)
+#### Reference Loading
 
-→ Protocol: see `ref-cache-protocol.md`
-
-Required references: `file-content-schema`, `shared-prompt-sections`, `xml-schema`, `context-policy`, `work-activity-log`
+Read the following from `{REFERENCES_DIR}/`: `file-content-schema.md`, `shared-prompt-sections.md`, `xml-schema.md`, `context-policy.md`, `work-activity-log.md`
 
 ### 3-1-1. Callback START + Activity Log START
 
@@ -112,7 +110,6 @@ Update `works/{WORK_ID}/TASK-XX_progress.md` in real-time:
 
 → task-result XML base structure: see `xml-schema.md` § 2
 → context-handoff element: see `xml-schema.md` § 4
-→ ref-cache element: see `xml-schema.md` § 6
 
 Builder-specific additional fields:
 
@@ -122,12 +119,6 @@ Builder-specific additional fields:
   <check name="lint" status="PASS" />
 </self-check>
 <notes>{items for verifier to check}</notes>
-<ref-cache>
-  <!-- Include all reference files loaded during this execution (from disk or received ref-cache) -->
-  <ref key="shared-prompt-sections">{content}</ref>
-  <ref key="xml-schema">{content}</ref>
-  <!-- ... other keys loaded ... -->
-</ref-cache>
 ```
 
 ### 3-9. Callback DONE + Activity Log DONE

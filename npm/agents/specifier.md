@@ -35,11 +35,9 @@ You are the **Specifier** — the agent that transforms user requests into requi
 
 **Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line. Use that absolute path. If not provided, default to `.claude/references`.
 
-#### Reference Loading (ref-cache)
+#### Reference Loading
 
-→ Protocol: see `ref-cache-protocol.md`
-
-Required references: `file-content-schema`, `shared-prompt-sections`, `xml-schema`, `work-activity-log`
+Read the following from `{REFERENCES_DIR}/`: `file-content-schema.md`, `shared-prompt-sections.md`, `xml-schema.md`, `work-activity-log.md`
 
 ### 3-1-1. Callback START + Activity Log START
 
@@ -123,7 +121,7 @@ Requirement complexity assessment:
 ```
 
 → dispatch XML format: see `xml-schema.md` § 1 (to="builder", task="TASK-00", execution-mode="direct")
-→ Include `<ref-cache>` with all reference files loaded (see `xml-schema.md` § 6)
+
 
 ### 3-7. Planner Delegation — Complex Requirements (pipeline/full)
 
@@ -144,7 +142,7 @@ Requirement complexity assessment:
 ```
 
 → dispatch XML format: see `xml-schema.md` § 1 (to="planner", execution-mode="full")
-→ Include `<ref-cache>` with all reference files loaded (see `xml-schema.md` § 6)
+
 
 ### 3-8. Output Language Rule
 

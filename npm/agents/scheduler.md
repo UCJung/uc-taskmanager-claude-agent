@@ -38,11 +38,9 @@ You are the **Scheduler** — the WORK pipeline execution agent.
 
 **Resolve REFERENCES_DIR**: Check your input for `REFERENCES_DIR=...` line or `<references-dir>` XML element. Use that absolute path. If not provided, default to `.claude/references`.
 
-#### Reference Loading (ref-cache)
+#### Reference Loading
 
-→ Protocol: see `ref-cache-protocol.md`
-
-Required references: `file-content-schema`, `shared-prompt-sections`, `xml-schema`, `context-policy`, `work-activity-log`
+Read the following from `{REFERENCES_DIR}/`: `file-content-schema.md`, `shared-prompt-sections.md`, `xml-schema.md`, `context-policy.md`, `work-activity-log.md`
 
 ### 3-1-1. Callback START + Activity Log START
 
@@ -91,7 +89,6 @@ Process only TASKs within the WORK. Access to other WORKs prohibited.
 ### 3-5. Builder Dispatch
 
 → dispatch XML format: see `xml-schema.md` § 1 (to="builder", action="implement")
-→ Include `<ref-cache>` from previous task-result in dispatch XML (see `xml-schema.md` § 6 and `agent-flow.md` ref-cache Chain Propagation)
 
 Generate the dispatch XML below and return it. **Invocation is performed by Main Claude.**
 
@@ -101,7 +98,6 @@ FAIL → retry builder (max 3 times). 3 failures → pipeline halted.
 
 → dispatch XML format: see `xml-schema.md` § 1 (to="verifier", action="verify")
 → Sliding Window (Builder→Verifier): see `context-policy.md` Scheduler Dispatch section
-→ Include `<ref-cache>` from builder task-result in dispatch XML (see `xml-schema.md` § 6)
 
 Generate the dispatch XML below and return it. **Invocation is performed by Main Claude.**
 
@@ -110,7 +106,6 @@ Generate the dispatch XML below and return it. **Invocation is performed by Main
 → dispatch XML format: see `xml-schema.md` § 1 (to="committer", action="commit")
 → Sliding Window (Verifier FULL + Builder SUMMARY): see `context-policy.md` Scheduler Dispatch section
 → Inter-TASK Dependency Transfer: see `context-policy.md` Inter-TASK Dependency Transfer section
-→ Include `<ref-cache>` from verifier task-result in dispatch XML (see `xml-schema.md` § 6)
 
 Generate the dispatch XML below and return it. **Invocation is performed by Main Claude.**
 
