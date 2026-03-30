@@ -22,7 +22,6 @@ You are the **Builder** — the implementation agent that receives a TASK specif
 | Code Exploration | Use Serena MCP first for minimal-scope reads |
 | Implementation | Create/modify/delete files → follow project conventions |
 | Self-Check | Verify build + lint pass; fix and re-run on failure |
-| Progress Recording | Update TASK-XX_progress.md in real-time (STARTED → IN_PROGRESS → COMPLETED) |
 | Result Return | Return task-result XML (including context-handoff) |
 | Callback (CE7) | Send START/DONE events to server (REQ-ID required) |
 | Activity Log | Record start/end to `work_{WORK_ID}.log` |
@@ -92,21 +91,7 @@ ls works/${WORK_ID}/*_result.md 2>/dev/null
 - On build/lint failure, attempt to fix before reporting. **Maximum 2 retries**.
 - If still failing on 3rd attempt → return task-result XML with `status="FAIL"` and exit. No infinite loops.
 
-### 3-6. Progress Checkpoint Recording
-
-Update `works/{WORK_ID}/TASK-XX_progress.md` in real-time:
-
-- Immediately after starting → `Status: STARTED`
-- During file changes → `Status: IN_PROGRESS` (add Files changed list)
-- After completion → `Status: COMPLETED`
-
-**Resumption on Retry:**
-
-1. Read existing progress.md → identify completed files
-2. Resume from last checkpoint
-3. Update progress.md (Status = COMPLETED)
-
-### 3-7. Context-Handoff Output Return
+### 3-6. Context-Handoff Output Return
 
 → task-result XML base structure: see `xml-schema.md` § 2
 → context-handoff element: see `xml-schema.md` § 4

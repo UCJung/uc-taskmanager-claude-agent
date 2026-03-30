@@ -111,8 +111,8 @@ Generate the dispatch XML below and return it. **Invocation is performed by Main
 
 Committer FAIL retry:
 
-1. Read `<reason>`: `progress.md not found | status not COMPLETED | no files changed`
-2. Re-dispatch to builder including existing progress.md
+1. Read `<reason>` from FAIL task-result
+2. Re-dispatch to builder
 3. Maximum 2 retries (3 attempts total). 3 failures → mark TASK FAILED, halt pipeline
 
 ### 3-8. Progress Report

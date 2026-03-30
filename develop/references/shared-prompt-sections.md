@@ -260,18 +260,7 @@ find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \
 
 ---
 
-## § 12. Progress File Gate Check
-
-Gate conditions for `works/WORK-NN/TASK-XX_progress.md`:
-- File exists at the expected path
-- `Status: COMPLETED` line is present
-- `## Files Changed` section is present and non-empty
-
-On gate failure → return FAIL task-result immediately. Do not proceed to subsequent steps.
-
----
-
-## § 13. Bash Command Rules
+## § 12. Bash Command Rules
 
 Bash commands MUST follow these rules for permission compatibility.
 

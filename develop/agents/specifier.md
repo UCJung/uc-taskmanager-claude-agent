@@ -112,8 +112,7 @@ Requirement complexity assessment:
 4.  Project exploration (detect Tech Stack) → § 3-3
 5.  Create PLAN.md (Execution-Mode: direct) → file-content-schema.md § 1
 6.  Create TASK-00.md → file-content-schema.md § 2
-7.  Create TASK-00_progress.md (Status: PENDING) → file-content-schema.md § 3
-8.  Add IN_PROGRESS row to WORK-LIST.md + update LAST_WORK_ID
+7.  Add IN_PROGRESS row to WORK-LIST.md + update LAST_WORK_ID
 9.  log_work PLAN "Requirement.md, PLAN.md, TASK-00.md created (assumed)"
 10. Present deliverable summary to user and request approval (integrated requirement + design review)
 11. Return dispatch XML. **Invocation is performed by Main Claude.**

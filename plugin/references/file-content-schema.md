@@ -8,10 +8,9 @@ Single source of truth for pipeline artifact file formats.
 |----------------|-------------------|----------------------|
 | `PLAN.md` | § 1 | `parsePlanMd()` parsing failure, scheduler inoperable |
 | `TASK-XX.md` | § 2 | `parseTaskFilename()` DB registration missed |
-| `TASK-XX_progress.md` | § 3 | committer gate FAIL |
-| `TASK-XX_result.md` | § 4 | context-handoff missing |
-| `TASK-XX_result.md` (direct) | § 5 | result.md recognition failure |
-| `PROGRESS.md` | § 6 | scheduler progress tracking inoperable |
+| `TASK-XX_result.md` | § 3 | context-handoff missing |
+| `TASK-XX_result.md` (direct) | § 4 | result.md recognition failure |
+| `PROGRESS.md` | § 5 | scheduler progress tracking inoperable |
 
 ---
 
@@ -111,32 +110,7 @@ Path: `works/{WORK_ID}/TASK-XX.md`
 
 ---
 
-## § 3. TASK-XX_progress.md
-
-Path: `works/{WORK_ID}/TASK-XX_progress.md`
-
-```markdown
-# TASK-XX Progress
-
-- Status: {PENDING | STARTED | IN_PROGRESS | COMPLETED}
-- Started: {ISO 8601}
-- Updated: {ISO 8601}
-- Files changed:
-  - `path/to/file` — {CREATE | MODIFY | DELETE}
-```
-
-| Timing | Status |
-|--------|--------|
-| planner template | `PENDING` |
-| builder starts | `STARTED` |
-| file changes in progress | `IN_PROGRESS` |
-| completed | `COMPLETED` |
-
-committer gate: file exists + `Status: COMPLETED` + Files changed is not empty
-
----
-
-## § 4. TASK-XX_result.md (full / pipeline)
+## § 3. TASK-XX_result.md (full / pipeline)
 
 Path: `works/{WORK_ID}/TASK-XX_result.md`
 
@@ -189,7 +163,7 @@ None
 
 ---
 
-## § 5. TASK-XX_result.md (direct mode)
+## § 4. TASK-XX_result.md (direct mode)
 
 ```markdown
 # TASK-00 Result
@@ -212,7 +186,7 @@ None
 
 ---
 
-## § 6. PROGRESS.md
+## § 5. PROGRESS.md
 
 Path: `works/{WORK_ID}/PROGRESS.md`
 
@@ -235,7 +209,7 @@ Path: `works/{WORK_ID}/PROGRESS.md`
 
 ---
 
-## § 7. File Naming Rules
+## § 6. File Naming Rules
 
 | Type | Format | Created By |
 |------|--------|------------|

@@ -17,7 +17,6 @@ Verifies the results of TASKs completed by the Builder, checking build, lint, te
 
 | Duty | Description |
 |------|-------------|
-| Progress Gate Check | Verify TASK_progress.md existence and Status=COMPLETED |
 | Build Verification | Execute project build command and check exit code |
 | Lint Verification | Execute lint command and check results |
 | Test Execution | Execute test commands and aggregate results |
@@ -51,25 +50,19 @@ Read the following from `{REFERENCES_DIR}/`: `shared-prompt-sections.md`, `xml-s
 
 → dispatch XML format: see `xml-schema.md` § 1
 
-### 3-3. Step 0: Progress File Gate (CRITICAL)
-
-→ Gate conditions: see `shared-prompt-sections.md` § 12
-
-On CRITICAL failure, halt immediately. Cannot proceed to subsequent steps.
-
-### 3-4. Step 1: Build (CRITICAL)
+### 3-3. Step 1: Build (CRITICAL)
 
 → Build command: see `shared-prompt-sections.md` § 2
 
 Exit ≠ 0 → CRITICAL FAIL.
 
-### 3-5. Step 2: Lint
+### 3-4. Step 2: Lint
 
 → Lint command: see `shared-prompt-sections.md` § 2
 
 On failure: WARN (not CRITICAL). If no command exists: N/A.
 
-### 3-6. Step 3: Tests
+### 3-5. Step 3: Tests
 
 ```bash
 if [ -f "package.json" ]; then
@@ -85,19 +78,19 @@ fi
 
 If no command exists: N/A.
 
-### 3-7. Step 4: TASK-Specific Verification
+### 3-6. Step 4: TASK-Specific Verification
 
 Execute commands from the TASK file `## Verify` section as-is and record results.
 
-### 3-8. Step 5: File Existence Check
+### 3-7. Step 5: File Existence Check
 
 Verify existence of each file listed in the TASK `## Files` section.
 
-### 3-9. Step 6: Convention Compliance Check
+### 3-8. Step 6: Convention Compliance Check
 
 Only check conventions specified in CLAUDE.md or project config.
 
-### 3-10. Result XML Output
+### 3-9. Result XML Output
 
 → task-result XML base structure: see `xml-schema.md` § 2
 → context-handoff element: see `xml-schema.md` § 4
@@ -123,7 +116,7 @@ Verifier-specific additional fields:
 </failure-details>
 ```
 
-### 3-11. Callback DONE + Activity Log DONE
+### 3-10. Callback DONE + Activity Log DONE
 
 → see `shared-prompt-sections.md` § 10
 

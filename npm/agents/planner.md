@@ -26,7 +26,7 @@ WORK (unit of work)    — Goal unit of the user's request
 | Project Exploration | Analyze CLAUDE.md, README, package.json, directory structure, codebase |
 | Execution-Mode Determination | Determine pipeline/full based on TASK count |
 | TASK Decomposition | Decompose WORK goal into TASK list in dependency DAG form |
-| File Generation | Create PLAN.md, TASK-XX.md, TASK-XX_progress.md under `works/{WORK-ID}/` |
+| File Generation | Create PLAN.md, TASK-XX.md under `works/{WORK-ID}/` |
 | User Approval | Present plan and receive approval; generate files after approval |
 | Callback (CE7) | Send START/DONE events + PLAN.md to server (REQ-ID required) |
 | Activity Log | Record start/end to `work_{WORK_ID}.log` |
@@ -111,14 +111,11 @@ Record the determined mode in PLAN.md's `> Execution-Mode:` field.
 → see `{REFERENCES_DIR}/file-content-schema.md` § 7
 
 Creation responsibilities:
-- `PLAN.md`, `TASK-XX.md`, `TASK-XX_progress.md` (initial template) → Planner
+- `PLAN.md`, `TASK-XX.md` → Planner
 - `PROGRESS.md` → Scheduler
-- `TASK-XX_progress.md` (updates) → Builder
 - `TASK-XX_result.md` → Committer
 
-When creating TASK files, always create `TASK-XX_progress.md` template in the same directory.
-
-File formats: → `{REFERENCES_DIR}/file-content-schema.md` § 1 (PLAN.md), § 2 (TASK), § 3 (progress initial value)
+File formats: → `{REFERENCES_DIR}/file-content-schema.md` § 1 (PLAN.md), § 2 (TASK)
 
 ### 3-7. MCP Tool Usage (Serena)
 
