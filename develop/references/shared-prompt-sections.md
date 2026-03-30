@@ -215,19 +215,30 @@ Callback failure must NOT block agent execution. Always continue.
 
 Each agent records start/end to `works/{WORK_ID}/work_{WORK_ID}.log`.
 
-**All WORKs** — no REQ-ID condition.
+**All WORKs** — no CALLBACK_URL condition.
+
+**Timestamp:** Run `date -u +"%Y-%m-%dT%H:%M:%SZ"` via Bash tool to get the real UTC time. Do NOT use dummy/placeholder timestamps.
 
 **Format:**
 ```
-[YYYY-MM-DDTHH:MM:SSZ] AGENT_START — description
-[YYYY-MM-DDTHH:MM:SSZ] AGENT_DONE — description
+[2026-03-30T14:30:00Z] AGENT_EVENT — description
 ```
 
-**How to write:** Use `Edit` tool to append (NOT Bash). Example:
+**How to write:** Use `Edit` tool to append (NOT Bash).
+
+**Required entries per agent (START and DONE only):**
 ```
-[2026-03-30T14:30:00Z] BUILDER_START — TASK-01 implement
-[2026-03-30T14:35:00Z] BUILDER_DONE — TASK-01 complete
+[{timestamp}] SPECIFIER_START — WORK-NN specifier started
+[{timestamp}] SPECIFIER_DONE — WORK-NN specifier completed
+[{timestamp}] BUILDER_START — TASK-NN implement
+[{timestamp}] BUILDER_DONE — TASK-NN complete
+[{timestamp}] VERIFIER_START — TASK-NN verification
+[{timestamp}] VERIFIER_DONE — TASK-NN verified
+[{timestamp}] COMMITTER_START — TASK-NN commit
+[{timestamp}] COMMITTER_DONE — TASK-NN committed
 ```
+
+Do NOT write INIT, REF, PLAN, DISPATCH or other intermediate entries. Only START and DONE per agent role.
 
 ---
 

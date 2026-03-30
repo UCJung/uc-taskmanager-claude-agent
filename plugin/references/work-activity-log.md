@@ -1,47 +1,26 @@
 # Work Activity Log
 
-Defines the rules for each agent to record WORK progress in the `works/{WORK_ID}/work_{WORK_ID}.log` file.
+Records agent start/end events in `works/{WORK_ID}/work_{WORK_ID}.log`.
 
----
+## Rules
 
-# 1. Stages and Log Content
-* On first execution: The received prompt message** Content of the prompt message received at agent startup (Required)
-* On Callback invocation: Called Callback URL, success status, Payload, Response (Required)
-* During work: Work items and work content
-* On task completion: The prompt message sent to other agents** Content of the prompt message received at agent startup (Required)
+1. **Timestamp**: Run `date -u +"%Y-%m-%dT%H:%M:%SZ"` via Bash to get real UTC time. Never use dummy values.
+2. **Write method**: Use `Edit` tool to append. Do NOT use Bash for log writes.
+3. **Entries**: Only START and DONE per agent role. No intermediate stages.
 
-## log_work Method
+## Format
 
-**Do NOT use Bash** for activity log writes. Use the `Write` tool (or `Edit` tool to append).
-
-Format each log entry as:
 ```
-[YYYY-MM-DDTHH:MM:SS]_AGENT_STAGE_description
+[YYYY-MM-DDTHH:MM:SSZ] AGENT_EVENT — description
 ```
 
-Example: to log an INIT stage, use the **Write** tool to append to `works/{WORK_ID}/work_{WORK_ID}.log`:
-```
-[2026-03-28T14:30:00]_SPECIFIER_INIT_WORK-09 created — Execution-Mode: direct
-```
+## Required Entries
 
-→ **Bash command rules: see `shared-prompt-sections.md` § 13**
-
----
-
-## STAGE Table
-
-| STAGE | Timing | Description Example |
-|-------|--------|---------------------|
-| `INIT` | After WORK_ID determined | `WORK-NN created — Execution-Mode: direct/pipeline/full` |
-| `REF` | After STARTUP references | `References: CLAUDE.md, .agent/router_rule_config.json, agents/file-content-schema.md` |
-| `PLAN` | After PLAN.md + TASK files created | `PLAN.md, TASK-00.md created` |
-| `IMPL` | When direct mode code implementation starts | `Code implementation started — References: {modified file list}` |
-| `BUILD` | After self-check passes | `Build/lint passed` |
-| `COMMIT` | After git commit completed | `commit {hash}` |
-| `DISPATCH` | On pipeline/full dispatch | `Builder dispatch` or `Planner dispatch` |
-
----
-
-## Reference Collection Rules
-
-Cumulatively track files read during STARTUP and subsequent exploration, recording them all at once during the `REF` stage.
+| Agent | START | DONE |
+|-------|-------|------|
+| specifier | `SPECIFIER_START — WORK-NN specifier started` | `SPECIFIER_DONE — WORK-NN specifier completed` |
+| planner | `PLANNER_START — WORK-NN planner started` | `PLANNER_DONE — WORK-NN planner completed` |
+| scheduler | `SCHEDULER_START — WORK-NN scheduler started` | `SCHEDULER_DONE — WORK-NN scheduler completed` |
+| builder | `BUILDER_START — TASK-NN implement` | `BUILDER_DONE — TASK-NN complete` |
+| verifier | `VERIFIER_START — TASK-NN verification` | `VERIFIER_DONE — TASK-NN verified` |
+| committer | `COMMITTER_START — TASK-NN commit` | `COMMITTER_DONE — TASK-NN committed` |
