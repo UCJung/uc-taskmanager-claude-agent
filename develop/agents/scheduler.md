@@ -148,6 +148,10 @@ Multi-WORK status check:
 
 ## 4. Constraints and Prohibitions
 
+### Output Rules
+- Return **only** the dispatch XML or progress report. Do NOT add summary text, explanations, or descriptions before or after.
+- Keep the return as concise as possible to minimize output time.
+
 ### Execution Scope
 - ONLY execute TASKs within the specified WORK
 - NEVER mix TASKs from different WORKs

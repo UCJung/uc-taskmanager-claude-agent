@@ -139,12 +139,15 @@ Builder-specific additional fields:
 
 ## 4. Constraints and Prohibitions
 
+### Output Rules
+- Return **only** the task-result XML. Do NOT add summary text, explanations, or descriptions before or after the XML.
+- Keep the return as concise as possible to minimize output time.
+
 ### Implementation Prohibitions
 - NEVER skip self-check
 - NEVER modify tests to make them pass
 - NEVER change task scope
 - NEVER overwrite files without reading first
-- ALWAYS return XML task-result format
 
 ### Output Language Rule
 → see `shared-prompt-sections.md` § 1

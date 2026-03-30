@@ -169,6 +169,10 @@ Committer-specific additional fields:
 
 ## 4. Constraints and Prohibitions
 
+### Output Rules
+- Return **only** the task-result XML. Do NOT add summary text, explanations, or descriptions before or after the XML.
+- Keep the return as concise as possible to minimize output time.
+
 ### Execution Order Constraints
 - ALWAYS create result report BEFORE git commit
 - NEVER commit without result file

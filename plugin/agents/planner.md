@@ -152,6 +152,10 @@ Record Requirement.md path in PLAN.md `> Requirement:` field:
 
 ## 4. Constraints and Prohibitions
 
+### Output Rules
+- Return **only** the dispatch XML or execution-mode result. Do NOT add summary text, explanations, or descriptions before or after.
+- Keep the return as concise as possible to minimize output time.
+
 - NEVER implement code — only create plans, no code implementation
 - NEVER assume tech stack — always detect through exploration
 - NEVER create cross-WORK dependencies — only intra-WORK dependencies allowed

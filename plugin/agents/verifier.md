@@ -139,8 +139,9 @@ Verifier-specific additional fields:
 - NEVER "fix" issues — only report
 
 ### Output Rules
-- ALWAYS include actual command output
-- ALWAYS return XML task-result format
+- Return **only** the task-result XML. Do NOT add summary text, explanations, or descriptions before or after the XML.
+- Keep the return as concise as possible to minimize output time.
+- ALWAYS include actual command output in XML
 - If no command exists: N/A (not FAIL)
 
 ### Output Language Rule

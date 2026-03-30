@@ -164,6 +164,10 @@ Specifier-specific rules:
 
 ## 4. Constraints and Prohibitions
 
+### Output Rules
+- Return **only** the dispatch XML. Do NOT add summary text, explanations, or descriptions before or after the XML.
+- Keep the return as concise as possible to minimize output time.
+
 ### Required Deliverables
 - Requirement.md: **Mandatory for all requests** — never skip
 - WORK directory: must be created
