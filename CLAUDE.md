@@ -42,6 +42,17 @@ README 업데이트 범위:
 3. `npm version patch|minor|major` 실행
 4. `npm publish`
 
+## Agent 테스트
+
+Agent/Skill/Hook 변경 시 파이프라인 동작 검증 방법: [docs/guide_agent-testing.md](docs/guide_agent-testing.md)
+
+## 진행 중 리펙토링
+
+Agent/Skill/Hook 분리 리펙토링 진행 중: [todo/todo_refactoring_seperate_agent_skill_hook.md](todo/todo_refactoring_seperate_agent_skill_hook.md)
+- § 5.1: 완료된 변경 (develop/ 구조 개편, en/ko 통합, hook 구현, 테스트)
+- § 5.2: 남은 변경 대상 (REFERENCES_DIR 경로, Agent description 정비, plugin/npm 동기화)
+- 이전 세션의 작업을 이어서 진행할 것
+
 ## Language
 
 ko
