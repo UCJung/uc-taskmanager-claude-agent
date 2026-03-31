@@ -99,59 +99,16 @@ Resume pipeline for a WORK that already has PLAN.md + TASKs:
 
 ### Specifier+Planner (single spawn)
 
-When invoking specifier in pipeline/full mode, include both agent definitions:
-
-```
-Prompt to agent:
-  "You will perform two roles in sequence. Each role has its own callback and activity log — execute ALL of them.
-
-   Role 1 — Specifier: Read specifier.md and create Requirement.md.
-   - Send SPECIFIER START callback + write SPECIFIER_START to activity log
-   - Create Requirement.md
-   - Send SPECIFIER DONE callback (with requirementContent) + write SPECIFIER_DONE to activity log
-
-   Role 2 — Planner: Read planner.md and create PLAN.md + TASK files.
-   - Send PLANNER START callback + write PLANNER_START to activity log
-   - Create PLAN.md + TASK files
-   - Send PLANNER DONE callback (with planContent) + write PLANNER_DONE to activity log
-
-   Execute Role 1 first, then Role 2. Return the combined result.
-
-   CRITICAL: Each role's callback and activity log are independent. You must send 4 callbacks and write 4 log entries."
-```
-
-- Use specifier's model (opus) for the spawn
-- Agent reads both specifier.md and planner.md from REFERENCES_DIR
-- Returns: Requirement.md + PLAN.md + TASK files + execution-mode (4 callbacks + 4 log entries)
+- Model: opus
+- Prompt: "Role 1 — Specifier (specifier.md): create Requirement.md. Role 2 — Planner (planner.md): create PLAN.md + TASKs. Execute sequentially. Each role sends its own START/DONE callback + activity log."
+- Returns: Requirement.md + PLAN.md + TASK files + execution-mode
 
 ### Verifier+Committer (single spawn)
 
-When invoking verification after builder completes:
-
-```
-Prompt to agent:
-  "You will perform two roles in sequence. Each role has its own callback and activity log — execute ALL of them.
-
-   Role 1 — Verifier: Read verifier.md and verify build/lint/test.
-   - Send VERIFIER START callback + write VERIFIER_START to activity log
-   - Perform verification
-   - Send VERIFIER DONE/FAILED callback + write VERIFIER_DONE/FAILED to activity log
-
-   Role 2 — Committer: Read committer.md and create result.md + git commit.
-   - Send COMMITTER START callback + write COMMITTER_START to activity log
-   - Create result.md, git commit
-   - Send COMMITTER DONE callback (with resultContent) + write COMMITTER_DONE to activity log
-
-   Execute Role 1 first. If verification PASSES, execute Role 2.
-   If verification FAILS, skip Role 2 and return FAIL result.
-
-   CRITICAL: Each role's callback and activity log are independent. You must send 4 callbacks (VERIFIER START, VERIFIER DONE, COMMITTER START, COMMITTER DONE) and write 4 log entries."
-```
-
-- Use verifier's model (haiku) for the spawn
-- Agent reads both verifier.md and committer.md from REFERENCES_DIR
-- On PASS: returns verification result + commit hash (4 callbacks + 4 log entries)
-- On FAIL: returns verification failure only (2 callbacks + 2 log entries, no commit)
+- Model: haiku
+- Prompt: "Role 1 — Verifier (verifier.md): verify build/lint/test. Role 2 — Committer (committer.md): create result.md + git commit. If verification FAILS, skip Role 2. Each role sends its own START/DONE callback + activity log."
+- On PASS: verification result + commit hash
+- On FAIL: verification failure only (no commit)
 
 ---
 
@@ -202,35 +159,6 @@ Prompt to agent:
 1. Present a summary of what the specifier+planner created (files, scope, execution-mode)
 2. Ask: "Proceed?" or equivalent
 3. **WAIT for user response** — do NOT invoke builder until approved
-
----
-
-## Bash CLI Execution (Server Automation)
-
-Run the pipeline independently without a conversation session. `claude -p` acts as Main Claude.
-
-```bash
-env -u CLAUDECODE -u ANTHROPIC_API_KEY claude -p \
-  "[new-work] {task description}" \
-  --dangerously-skip-permissions \
-  --output-format stream-json \
-  --verbose \
-  2>&1 | tee /tmp/pipeline.log
-```
-
-| Option | Purpose |
-|--------|---------|
-| `env -u CLAUDECODE` | Bypass nested execution block |
-| `env -u ANTHROPIC_API_KEY` | Use subscription auth (Max) instead of API key |
-| `--dangerously-skip-permissions` | Skip permission prompts for unattended execution |
-| `--output-format stream-json --verbose` | Streaming for real-time monitoring |
-
-Resume interrupted pipeline:
-```bash
-env -u CLAUDECODE -u ANTHROPIC_API_KEY claude -p \
-  "Resume WORK-XX pipeline." \
-  --dangerously-skip-permissions
-```
 
 ---
 

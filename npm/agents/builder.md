@@ -56,8 +56,8 @@ Read the following from `{REFERENCES_DIR}/`: `file-content-schema.md`, `shared-p
 
 ### 3-3. Pre-Implementation Context Collection
 
-```bash
-ls works/${WORK_ID}/*_result.md 2>/dev/null
+```
+Use Glob tool: pattern "works/${WORK_ID}/*_result.md"
 ```
 
 **Serena Code Exploration Priority:**
@@ -90,11 +90,12 @@ ls works/${WORK_ID}/*_result.md 2>/dev/null
 - If build/lint scripts do not exist, treat that check as **N/A** (do not attempt to fix).
 - On build/lint failure, attempt to fix before reporting. **Maximum 2 retries**.
 - If still failing on 3rd attempt → return task-result XML with `status="FAIL"` and exit. No infinite loops.
+- After self-check passes, update TASK file Acceptance Criteria checkboxes (`[ ]` → `[x]`) for completed items.
 
 ### 3-6. Context-Handoff Output Return
 
 → task-result XML base structure: see `xml-schema.md` § 2
-→ context-handoff element: see `xml-schema.md` § 4
+→ context-handoff element: see `xml-schema.md` § 3
 
 Builder-specific additional fields:
 
@@ -136,8 +137,4 @@ Builder-specific additional fields:
 
 ### Output Language Rule
 → see `shared-prompt-sections.md` § 1
-
-Builder-specific rules:
-- Code comments: resolved language (overridable via `CommentLanguage:` in CLAUDE.md)
-- If existing code has comments in a specific language, follow that language
-- File names, paths, commands → always English
+- Code comments: follow existing language; overridable via `CommentLanguage:` in CLAUDE.md

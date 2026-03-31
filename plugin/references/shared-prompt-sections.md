@@ -162,11 +162,11 @@ Rules:
 ## § 9. Locale Detection
 
 ```
-1. CLAUDE.md → check "Language: xx"
+1. Use Grep tool: pattern "Language:\s*[a-z]{2}" path="CLAUDE.md" → extract language code
 2. If not found, ask user for language
-3. If not found, auto-detect system locale
+3. If not found, auto-detect system locale via Bash:
    - Windows: powershell -c "[CultureInfo]::CurrentCulture.TwoLetterISOLanguageName"
-   - Linux/Mac: locale | grep LANG | grep -oP '[a-z]{2}' | head -1
+   - Linux/Mac: locale | grep LANG
    - Fallback: "en"
 ```
 
@@ -236,7 +236,7 @@ Each agent records start/end to `works/{WORK_ID}/work_{WORK_ID}.log`.
 [2026-03-30T14:30:00Z] AGENT_EVENT — description
 ```
 
-**How to write:** Use `Edit` tool to append (NOT Bash).
+**How to write:** Use Bash `echo "[timestamp] EVENT — description" >> works/{WORK_ID}/work_{WORK_ID}.log`
 
 **Required entries per agent (START and DONE only):**
 ```
@@ -256,18 +256,18 @@ Do NOT write INIT, REF, PLAN, DISPATCH or other intermediate entries. Only START
 
 ## § 11. Project Discovery
 
-```bash
+```
 # 1. Check CLAUDE.md language setting
-grep -oP '(?<=Language:\s?)[a-z]{2}' CLAUDE.md 2>/dev/null
+Use Grep tool: pattern "Language:\s*[a-z]{2}" path="CLAUDE.md"
 
-# 2. Tech stack
-head -50 package.json 2>/dev/null
-head -30 pyproject.toml 2>/dev/null
-head -20 Cargo.toml 2>/dev/null
-head -10 go.mod 2>/dev/null
+# 2. Tech stack (read first 50/30/20/10 lines if file exists)
+Use Read tool: "package.json" (limit=50)
+Use Read tool: "pyproject.toml" (limit=30)
+Use Read tool: "Cargo.toml" (limit=20)
+Use Read tool: "go.mod" (limit=10)
 
 # 3. Structure (when needed)
-find . -maxdepth 3 -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) -not -path "*/node_modules/*" 2>/dev/null
+Use Glob tool: pattern "**/*.{md,json,toml}" (exclude node_modules)
 ```
 
 ---
@@ -278,7 +278,7 @@ Bash commands MUST follow these rules for permission compatibility.
 
 **MANDATORY:**
 - One simple command per Bash call — NO compound commands (`&&`, `||`, `;`, `|`)
-- NO `cd dir && command` — you are already in the project root
+- NO `cd` — Bash tool cwd is always the project root. Never use `cd dir &&`, `cd dir ;`, or `cd dir` in any form. Use relative paths from project root
 - NO multi-line scripts — split into separate Bash calls
 - NO sub-shell expansions in arguments — e.g., `$(date ...)` inside `printf`
 - Use relative paths from project root (e.g., `works/WORK-01/`) — NO absolute paths

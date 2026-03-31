@@ -227,68 +227,30 @@ grep -E '"Agent"|"subagent_type"' "$LOG"
 # builder → verifier → committer → builder 순이면 → 순차 실행
 ```
 
-## 3. 모니터링
+## 3. 완료 후 결과 확인
 
-### 3.1 파이프라인 진행 상태 (파일 기반)
-
-```bash
-# WORK 생성 확인
-cat "$TEST_DIR/works/WORK-LIST.md"
-
-# PLAN 확인 (실행 모드, TASK 목록)
-cat "$TEST_DIR/works/WORK-01/PLAN.md"
-
-# TASK별 진행 상태
-for f in "$TEST_DIR/works/WORK-01"/TASK-*_progress.md; do
-  echo "--- $(basename $f) ---"
-  head -3 "$f"
-done
-
-# result 파일 존재 확인
-ls "$TEST_DIR/works/WORK-01"/TASK-*_result.md
-
-# git commit 이력
-cd "$TEST_DIR" && git log --oneline
-```
-
-### 3.2 실행 이벤트 분석 (stream-json 로그)
+> ⚠️ 실행 중에는 테스트 디렉토리의 파일을 읽지 말 것. 실행 완료 후에만 확인.
 
 ```bash
 LOG="/tmp/logs/agent_test_NN.jsonl"
+TEST_DIR="/tmp/agent_test_NN"
 
-# 1. Agent spawn 여부 + 순서
-grep -oE '"subagent_type":"[^"]*"' "$LOG" | cat -n
+# 1. 파이프라인 완료 여부
+grep "WORK-01" "$TEST_DIR/works/WORK-LIST.md"        # DONE이면 완주
 
-# 2. Skill 호출 확인
-grep -oE '"skill":"[^"]*"' "$LOG"
+# 2. TASK result 존재
+ls "$TEST_DIR/works/WORK-01"/TASK-*_result.md         # TASK 수와 동일
 
-# 3. 전체 tool call 종류별 횟수
-grep -oE '"tool_name":"[^"]*"' "$LOG" | sort | uniq -c | sort -rn
+# 3. git commit 수
+cd "$TEST_DIR" && git log --oneline                   # TASK 수 + 1 (init)
 
-# 4. git commit 실행 내역
-grep -oE '"command":"git commit[^"]*"' "$LOG"
-
-# 5. 파일 생성/수정 내역
-grep -oE '"file_path":"[^"]*"' "$LOG" | sort -u
-
-# 6. 모델별 사용량 (최종 result 이벤트)
+# 4. 모델별 사용량 (파이프라인 정상 동작 여부)
 grep '"modelUsage"' "$LOG" | grep -oE '"claude-[^"]*":\{[^}]*\}'
+# opus + sonnet + haiku 3개 모두 → 정상 | opus만 → 파이프라인 우회
 
-# 7. 병렬 spawn 여부 (builder 연속 호출 확인)
-grep -E '"Agent"|"subagent_type"' "$LOG"
+# 5. Agent spawn 순서
+grep -oE '"subagent_type":"[^"]*"' "$LOG" | cat -n
 ```
-
-### 3.3 최종 검증 체크리스트
-
-| 확인 항목 | 명령어 | 기대값 |
-|----------|--------|--------|
-| WORK-LIST 상태 | `grep "WORK-01" works/WORK-LIST.md` | `DONE` |
-| 전체 TASK result 존재 | `ls works/WORK-01/TASK-*_result.md \| wc -l` | TASK 수와 동일 |
-| git commit 수 | `git log --oneline \| wc -l` | TASK 수 + 1 (init) |
-| 산출물 존재 | `ls *.html` or `ls src/` | 파일 존재 |
-| Agent spawn 확인 | `grep "subagent_type" *.jsonl` | specifier, builder 등 |
-| 모델 사용 확인 | `grep "modelUsage" *.jsonl` | opus + sonnet + haiku 3개 모두 |
-| 최종 결과 | `grep '"subtype":"success"' *.jsonl` | 존재 |
 
 ## 4. 트러블슈팅
 

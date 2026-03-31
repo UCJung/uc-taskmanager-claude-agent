@@ -16,7 +16,7 @@ Reference files are passed between agents via `<ref-cache>` XML elements instead
 
 ## ref-cache XML Format
 
-See `xml-schema.md` § 6 for the full schema.
+See `xml-schema.md` § 4 for the full schema.
 
 ```xml
 <ref-cache>

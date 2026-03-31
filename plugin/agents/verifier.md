@@ -64,17 +64,7 @@ On failure: WARN (not CRITICAL). If no command exists: N/A.
 
 ### 3-5. Step 3: Tests
 
-```bash
-if [ -f "package.json" ]; then
-  npm test 2>&1 || bun run test 2>&1 || echo "No test script"
-elif [ -f "Cargo.toml" ]; then
-  cargo test 2>&1
-elif [ -f "go.mod" ]; then
-  go test ./... 2>&1
-elif [ -f "pyproject.toml" ]; then
-  python -m pytest 2>&1 || echo "No tests"
-fi
-```
+→ Test commands: see `shared-prompt-sections.md` § 2 (auto-detect pattern)
 
 If no command exists: N/A.
 
@@ -93,7 +83,7 @@ Only check conventions specified in CLAUDE.md or project config.
 ### 3-9. Result XML Output
 
 → task-result XML base structure: see `xml-schema.md` § 2
-→ context-handoff element: see `xml-schema.md` § 4
+→ context-handoff element: see `xml-schema.md` § 3
 
 Verifier-specific additional fields:
 
@@ -138,6 +128,4 @@ Verifier-specific additional fields:
 
 ### Output Language Rule
 → see `shared-prompt-sections.md` § 1
-
-Verifier-specific rules:
-- Command output must be kept as-is (no translation)
+- Command output: keep as-is (no translation)

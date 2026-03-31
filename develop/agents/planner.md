@@ -65,10 +65,10 @@ Glob pattern: "works/WORK-*/"
 Specifier has already created the WORK directory and written Requirement.md.
 Check the WORK ID from the dispatch XML's `work` attribute, and read Requirement.md from that directory.
 
-```bash
+```
 # Check WORK ID from dispatch XML
 WORK_ID="WORK-NN"  # work attribute from dispatch XML
-cat "works/${WORK_ID}/Requirement.md"
+Use Read tool: "works/${WORK_ID}/Requirement.md"
 ```
 
 ### 3-4. TASK Decomposition
@@ -127,11 +127,8 @@ File formats: → `{REFERENCES_DIR}/file-content-schema.md` § 1 (PLAN.md), § 2
 | 4 | `mcp__serena__search_for_pattern` | Pattern location |
 
 ### 3-8. Output Language Rule
-
-→ Priority rules: see `shared-prompt-sections.md` § 1
-→ Locale detection: see `shared-prompt-sections.md` § 9
-
-Record resolved language in PLAN.md `> Language:` field. Write all outputs in that language.
+→ see `shared-prompt-sections.md` § 1, § 9
+- Record resolved language in PLAN.md `> Language:` field
 
 ### 3-9. Requirement Recording
 

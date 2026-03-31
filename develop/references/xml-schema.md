@@ -66,21 +66,7 @@ XML communication format definition for uc-taskmanager agents.
 
 ---
 
-## 3. Dispatcher-Receiver Mapping
-
-| Dispatcher | Receiver | execution-mode | Description |
-|------------|----------|:--------------:|-------------|
-| Specifier | Builder | `direct` | Assumed: single TASK implementation (Verifier skipped) |
-| Specifier | Planner | `pipeline/full` | Delegated: complex WORK planning |
-| Planner | Builder | `pipeline` | TASK implementation |
-| Planner | Scheduler | `full` | DAG management + execution |
-| Scheduler | Builder | `full` | N TASK implementation |
-| Scheduler | Verifier | `full` | N TASK verification |
-| Scheduler | Committer | `full` | N TASK commit |
-
----
-
-## 4. Context-Handoff Element
+## 3. Context-Handoff Element
 
 ```xml
 <context-handoff from="{agent}" detail-level="{FULL|SUMMARY|DROP}">
@@ -99,32 +85,7 @@ XML communication format definition for uc-taskmanager agents.
 
 ---
 
-## 5. Agent Behavior by execution-mode
-
-| Agent | direct | pipeline | full |
-|-------|--------|----------|------|
-| Specifier | Requirement.md + PLAN.md + TASK (assumed) | Requirement.md only → delegate to Planner | Requirement.md only → delegate to Planner |
-| Planner | Not invoked (Specifier assumed) | PLAN.md + TASK + execution-mode | PLAN.md + TASK + execution-mode |
-| Scheduler | Not invoked | Not invoked | DAG management + [B→V→C]×N |
-| Builder | Normal execution (self-check) | Normal execution | Normal execution |
-| Verifier | Not invoked | Normal execution | Normal execution |
-| Committer | result.md+commit+callback | result.md+commit+callback | result.md+commit+callback |
-
-Invariants (regardless of mode):
-
-| Item | direct | pipeline/full |
-|------|:---:|:---:|
-| `works/WORK-NN/` directory | Specifier | Specifier |
-| `Requirement.md` | Specifier | Specifier |
-| `PLAN.md` | Specifier (assumed) | Planner |
-| `TASK-XX.md` | Specifier (assumed) | Planner |
-| `TASK-XX_result.md` | Committer | Committer |
-| COMMITTER DONE callback | Committer | Committer |
-| `WORK-LIST.md` IN_PROGRESS | Specifier | Specifier |
-
----
-
-## 6. ref-cache Element Definition
+## 4. ref-cache Element Definition
 
 `<ref-cache>` is an optional container element that carries pre-loaded reference file contents within dispatch and task-result XML. When present, receiving agents MUST use these contents instead of reading files from disk.
 

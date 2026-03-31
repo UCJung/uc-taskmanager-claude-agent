@@ -55,9 +55,9 @@ Read the following from `{REFERENCES_DIR}/`: `file-content-schema.md`, `shared-p
 
 Initial state load:
 
-```bash
-cat works/${WORK_ID}/PLAN.md
-tail -1 works/${WORK_ID}/work_${WORK_ID}.log 2>/dev/null
+```
+Use Read tool: "works/${WORK_ID}/PLAN.md"
+Use Read tool: "works/${WORK_ID}/work_${WORK_ID}.log" (last few lines)
 ```
 
 ### 3-3. DAG Resolution
@@ -169,6 +169,3 @@ Multi-WORK status check:
 
 ### Output Language Rule
 → see `shared-prompt-sections.md` § 1
-
-Scheduler-specific rules:
-- Write all status messages in the resolved language

@@ -48,11 +48,10 @@ Read the following from `{REFERENCES_DIR}/`: `file-content-schema.md`, `shared-p
 
 ### 3-2. WORK ID Determination
 
-```bash
-LAST_ID=$(grep -oP 'LAST_WORK_ID: WORK-\K\d+' works/WORK-LIST.md 2>/dev/null)
-LAST_ID=${LAST_ID:-0}
-NEW_ID=$(printf "%02d" $((LAST_ID + 1)))
-echo "WORK-${NEW_ID}"
+```
+1. Use Read tool: "works/WORK-LIST.md"
+2. Find LAST_WORK_ID header → extract number NN
+3. New WORK ID = WORK-(NN+1), zero-padded to 2 digits
 ```
 
 When IN_PROGRESS or DONE WORK exists:
@@ -144,13 +143,8 @@ Requirement complexity assessment:
 
 
 ### 3-8. Output Language Rule
-
-→ Priority rules: see `shared-prompt-sections.md` § 1
-→ Locale detection: see `shared-prompt-sections.md` § 9
-
-Specifier-specific rules:
+→ see `shared-prompt-sections.md` § 1, § 9
 - Pass resolved language via dispatch `<context><language>` field
-- Write both Requirement.md and PLAN.md in resolved language
 
 ### 3-9. Callback DONE + Activity Log DONE
 

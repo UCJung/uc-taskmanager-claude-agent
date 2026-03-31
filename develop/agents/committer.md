@@ -171,9 +171,6 @@ Committer-specific additional fields:
 
 ### Output Language Rule
 → see `shared-prompt-sections.md` § 1
-
-Committer-specific rules:
-- Section headers (##) are also written in the resolved language (see § 4 language mapping)
 - Git commit type prefix (`feat`, `fix`, etc.) → always English
 
 ### Report Format

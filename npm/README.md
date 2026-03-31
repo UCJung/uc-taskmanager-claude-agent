@@ -315,7 +315,7 @@ This ensures Claude automatically delegates `[]`-tagged requests to the specifie
 
 ## Installation
 
-### npm CLI — v1.5.0
+### npm CLI
 
 ```bash
 npm install -g uctm
@@ -338,7 +338,7 @@ uctm update --lang en
 ```bash
 git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
 mkdir -p .claude/agents
-cp /tmp/uc-tm/agents/en/*.md .claude/agents/   # or agents/ko/ for Korean
+cp /tmp/uc-tm/npm/agents/*.md .claude/agents/
 rm -rf /tmp/uc-tm
 git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
 ```
@@ -486,7 +486,7 @@ Six agents work together in a clean, isolated pipeline:
 ### Support Files (included in Plugin)
 
 In addition to the 6 pipeline agents, the plugin includes 6 support files that agents reference at startup.
-These are located in `plugin/skills/sdd-pipeline/references/` (synced from `agents/en/`):
+These are located in `plugin/skills/sdd-pipeline/references/` (synced from `develop/references/`):
 
 | File | Purpose |
 |------|---------|
@@ -550,7 +550,7 @@ The specifier maintains `works/WORK-LIST.md` as the master index:
 When you ask Claude to push (`"push this"`, `"git push"`), Claude handles the full sequence automatically:
 
 ```
-1. Agent sync — copy agents/ source to npm/agents/ and plugin/agents/
+1. Agent sync — copy develop/ source to npm/ and plugin/
 2. DONE WORK batch completion — remove DONE rows from WORK-LIST, move folders to _COMPLETED/
 3. Check README.md — update if changes are missing
 4. git push
@@ -993,24 +993,25 @@ Auto-detected from project files. No configuration needed.
 
 ```
 uc-taskmanager/
-├── agents/                  ← Agent source (edit here — authoritative)
-│   ├── en/                  ← English agent prompts (12 files)
+├── develop/                 ← Source of truth (edit here)
+│   ├── agents/              ← 6 agent prompts (language-agnostic)
 │   │   ├── specifier.md     ← [] tag detection + execution-mode routing
 │   │   ├── planner.md       ← WORK creation + TASK decomposition
 │   │   ├── scheduler.md     ← DAG management + pipeline orchestration
 │   │   ├── builder.md       ← Code implementation
 │   │   ├── verifier.md      ← Build/lint/test verification
-│   │   ├── committer.md     ← git commit + result.md
+│   │   └── committer.md     ← git commit + result.md
+│   ├── references/          ← 6 support files (shared across agents)
 │   │   ├── agent-flow.md    ← Pipeline orchestration rules
 │   │   ├── file-content-schema.md  ← File format definitions
 │   │   ├── shared-prompt-sections.md  ← Cacheable shared sections
 │   │   ├── context-policy.md    ← Sliding window context rules
 │   │   ├── work-activity-log.md ← Activity log format
 │   │   └── xml-schema.md    ← XML communication format
-│   └── ko/                  ← Korean agent prompts (12 files)
+│   ├── skills/              ← Skill definitions
+│   └── hooks/               ← Hook scripts
 ├── npm/                     ← npm package (published as `uctm`)
-│   ├── agents/              ← Synced from agents/en/ (+ ko/ subfolder)
-│   │   └── ko/              ← Synced from agents/ko/
+│   ├── agents/              ← Synced from develop/agents/ + develop/references/
 │   ├── bin/cli.mjs          ← CLI entry point (uctm init/update)
 │   ├── lib/                 ← CLI implementation (constants.mjs, init.mjs, update.mjs)
 │   ├── .agent/              ← Default router config bundled with npm
@@ -1018,12 +1019,13 @@ uc-taskmanager/
 │   ├── package.json         ← npm package config
 │   ├── .npmignore
 │   └── LICENSE
-├── plugin/                  ← Claude Plugin (local testing)
-│   ├── agents/              ← Synced from agents/en/ (6 core agents)
-│   ├── skills/              ← Plugin skills (reference docs)
+├── plugin/                  ← Claude Plugin (Marketplace)
+│   ├── agents/              ← Synced from develop/agents/
+│   ├── references/          ← Synced from develop/references/
+│   ├── skills/              ← Plugin skills
 │   │   ├── sdd-pipeline/
 │   │   │   ├── SKILL.md     ← Skill manifest
-│   │   │   └── references/  ← Synced from agents/en/ (6 support files)
+│   │   │   └── references/  ← Synced from develop/references/
 │   │   ├── work-pipeline/
 │   │   │   └── SKILL.md
 │   │   ├── work-status/
