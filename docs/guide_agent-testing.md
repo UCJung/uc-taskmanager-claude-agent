@@ -92,7 +92,7 @@ cd "$TEST_DIR" && git init && git add -A && git commit -m "init"
 cd "$TEST_DIR" && env -u ANTHROPIC_API_KEY claude -p \
   "[new-feature] HTML과 JavaScript로 블럭깨기 게임을 만들어줘. Canvas 기반, 키보드 조작, 점수 표시. auto" \
   --dangerously-skip-permissions \
-  --output-format stream-json \
+  --verbose --output-format stream-json \
   >> /tmp/logs/agent_test_NN.jsonl 2>&1 &
 ```
 
@@ -109,7 +109,7 @@ cd "$TEST_DIR" && env -u ANTHROPIC_API_KEY claude -p \
 
 auto" \
   --dangerously-skip-permissions \
-  --output-format stream-json \
+  --verbose --output-format stream-json \
   >> /tmp/logs/agent_test_NN.jsonl 2>&1 &
 ```
 
@@ -129,7 +129,7 @@ cd "$TEST_DIR" && env -u ANTHROPIC_API_KEY claude -p \
 
 auto" \
   --dangerously-skip-permissions \
-  --output-format stream-json \
+  --verbose --output-format stream-json \
   >> /tmp/logs/agent_test_NN.jsonl 2>&1 &
 ```
 
@@ -144,8 +144,8 @@ auto" \
 cd "$TEST_DIR" && env -u ANTHROPIC_API_KEY claude -p \
   "WORK-01 계속 실행해줘. auto" \
   --dangerously-skip-permissions \
-  --output-format stream-json \
-  > /tmp/logs/agent_test_NN_resume.json 2>&1 &
+  --verbose --output-format stream-json \
+  > /tmp/logs/agent_test_NN_resume.jsonl 2>&1 &
 ```
 
 ### 주요 옵션
@@ -155,8 +155,8 @@ cd "$TEST_DIR" && env -u ANTHROPIC_API_KEY claude -p \
 | `env -u ANTHROPIC_API_KEY` | API 키 환경변수 제거 → 로그인 세션 사용 (크레딧 우회) |
 | `claude -p "..."` | 프롬프트 직접 전달, 비대화형 실행 |
 | `--dangerously-skip-permissions` | 권한 확인 없이 자동 실행 |
+| `--verbose` | 상세 로그 활성화. `--output-format stream-json`과 `-p` 병용 시 **필수** |
 | `--output-format json` | 전체 실행 이벤트(tool call, agent spawn 등) JSON 로그 출력 |
-| `--verbose` | 상세 로그 활성화 |
 | `auto` (프롬프트 끝) | 파이프라인 승인 게이트 자동 통과 |
 | `> ... 2>&1 &` | 백그라운드 실행 + 로그 파일 기록 |
 

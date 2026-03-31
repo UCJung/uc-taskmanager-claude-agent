@@ -42,11 +42,14 @@
 ```
 1. Invoke specifier+planner (single spawn) → creates Requirement.md + PLAN.md + TASK-NN + determines execution-mode
 2. ⛔ STOP — Present Requirement.md + PLAN.md + TASK list and WAIT for approval
-3. Invoke builder (per-TASK dispatch XML as prompt)
-4. Invoke verifier+committer (builder result as prompt) — verify then commit in one spawn
+3. For each TASK (ascending order):
+   a. Invoke builder (per-TASK dispatch XML as prompt)
+   b. Invoke verifier+committer (builder result as prompt) — verify then commit in one spawn
+   c. If incomplete TASKs remain, continue to next TASK
 ```
 
 > Specifier+Planner combined: specifier.md role first (Requirement.md), then planner.md role (PLAN.md + TASKs) in one spawn.
+> Each TASK must complete the full builder → verifier+committer cycle before the next TASK starts.
 
 ---
 
@@ -70,10 +73,24 @@ Parallel execution: When scheduler returns multiple READY TASKs, invoke builders
 Resume pipeline for a WORK that already has PLAN.md + TASKs:
 
 ```
-1. Invoke scheduler → check READY TASKs + return builder dispatch XML
-2. Invoke builder → implementation
-3. Invoke verifier+committer → verify then commit in one spawn
-4. If incomplete TASKs remain, return to step 1
+1. Read last line of works/{WORK_ID}/work_{WORK_ID}.log to determine current state
+   Key rule: *_START = interrupted (redo that step), *_DONE = completed (move to next)
+
+   - COMMITTER_DONE — TASK-NN  → TASK-NN completed, resume from next TASK
+   - COMMITTER_START — TASK-NN → interrupted, redo verifier+committer for TASK-NN
+   - VERIFIER_DONE — TASK-NN   → verified, resume with committer for TASK-NN
+   - VERIFIER_START — TASK-NN  → interrupted, redo verifier+committer for TASK-NN
+   - BUILDER_DONE — TASK-NN    → built, resume with verifier+committer for TASK-NN
+   - BUILDER_START — TASK-NN   → interrupted, redo builder for TASK-NN
+   - PLANNER_DONE              → planning done, start first TASK
+   - PLANNER_START             → interrupted, redo specifier+planner
+   - SPECIFIER_DONE            → specifier done, redo planner
+   - SPECIFIER_START           → interrupted, redo specifier+planner
+   - No log file               → start from scratch
+
+2. For each remaining TASK:
+   a. Invoke builder → implementation
+   b. Invoke verifier+committer → verify then commit in one spawn
 ```
 
 ---
@@ -122,7 +139,7 @@ Prompt to agent:
 
    Role 2 — Committer: Read committer.md and create result.md + git commit.
    - Send COMMITTER START callback + write COMMITTER_START to activity log
-   - Create result.md, update PROGRESS.md, git commit
+   - Create result.md, git commit
    - Send COMMITTER DONE callback (with resultContent) + write COMMITTER_DONE to activity log
 
    Execute Role 1 first. If verification PASSES, execute Role 2.
@@ -156,7 +173,7 @@ Prompt to agent:
 | Mode | Spec+Plan | Scheduler | Builder | Veri+Commit | Total |
 |------|:---------:|:---------:|:-------:|:-----------:|:-----:|
 | direct | 1 (assumed) | — | 1 | 1 | **3** |
-| pipeline | 1 (combined) | — | 1 | 1 | **3** |
+| pipeline (N TASKs) | 1 (combined) | — | N | N | **1 + 2N** |
 | full (N TASKs) | 1 (combined) | 1 | N | N | **2 + 2N** |
 
 **Before vs After (6 TASKs):**
