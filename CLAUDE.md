@@ -44,10 +44,17 @@ Agent/Skill/Hook 변경 시 파이프라인 동작 검증 방법: [docs/guide_ag
 
 ## 진행 중 리펙토링
 
-Agent/Skill/Hook 분리 리펙토링 진행 중: [todo/todo_refactoring_seperate_agent_skill_hook.md](todo/todo_refactoring_seperate_agent_skill_hook.md)
+Agent/Skill/Hook 분리 리펙토링 진행 중: [TODO/todo_refactoring_seperate_agent_skill_hook.md](TODO/todo_refactoring_seperate_agent_skill_hook.md)
 - § 5.1: 완료된 변경 (develop/ 구조 개편, en/ko 통합, hook 구현, 테스트)
 - § 5.2: 남은 변경 대상 (REFERENCES_DIR 경로, Agent description 정비, plugin/npm 동기화)
 - 이전 세션의 작업을 이어서 진행할 것
+
+## 다음 작업: ref-cache 정상화
+
+ref-cache가 설계만 되어있고 실제 동작하지 않음 (3회 테스트 실패 확인): [TODO/todo_ref-cache-fix.md](TODO/todo_ref-cache-fix.md)
+- 문제점: specifier가 ref-cache XML 미반환, Main Claude가 다음 agent에 미전달, agent 정의의 간접 참조(`see protocol.md`)를 LLM이 무시
+- 개선 방향: Combined Agent Invocation 프롬프트 템플릿에 ref-cache 생성/반환을 직접 명시
+- `test/with-ref-cache` 브랜치에서 작업 후 dev에 머지 여부 결정
 
 ## Language
 
