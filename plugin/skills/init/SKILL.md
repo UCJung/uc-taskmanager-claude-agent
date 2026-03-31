@@ -3,29 +3,29 @@ name: uctm-init
 description: Initialize uc-taskmanager for the current project. Creates works/ directory and configures Bash permissions in .claude/settings.local.json. Use when the user says "uctm init", "initialize uctm", "uctm 초기화", or "초기화".
 ---
 
-# uc-taskmanager Init
+# uc-taskmanager 초기화
 
-Initialize the current project for uc-taskmanager pipeline execution.
+현재 프로젝트를 uc-taskmanager 파이프라인 실행을 위해 초기화합니다.
 
-## Steps
+## 단계
 
-### 1. Create works/ directory
+### 1. works/ 디렉토리 생성
 
 ```
-if works/ does not exist:
-  create works/
-  report: ✓ works/ directory created
-else:
-  report: - works/ already exists
+works/가 없으면:
+  works/ 생성
+  보고: ✓ works/ 디렉토리 생성됨
+아니면:
+  보고: - works/ 이미 존재
 ```
 
-### 2. Configure Bash Permissions
+### 2. Bash 권한 설정
 
-**Ask the user first:** "에이전트에 필요한 Bash 권한을 .claude/settings.local.json에 자동 설정할까요? (recommended) [Y/n]"
+**먼저 사용자에게 확인:** "에이전트에 필요한 Bash 권한을 .claude/settings.local.json에 자동 설정할까요? (recommended) [Y/n]"
 
-If the user approves (or says yes/Y/확인):
+사용자가 승인하면 (yes/Y/확인):
 
-Read `.claude/settings.local.json` (create if not exists). Merge the following permissions into `permissions.allow` array — **skip any that already exist** (do not duplicate):
+`.claude/settings.local.json` 읽기 (없으면 생성). 다음 권한을 `permissions.allow` 배열에 병합 — **이미 있는 것은 건너뛰기** (중복 금지):
 
 ```json
 [
@@ -66,28 +66,28 @@ Read `.claude/settings.local.json` (create if not exists). Merge the following p
 ]
 ```
 
-Preserve any existing entries in `permissions.allow` and `permissions.deny` — only add missing ones.
+기존 `permissions.allow` 및 `permissions.deny` 항목을 보존하고 누락된 것만 추가.
 
 ```
-if permissions added:
-  report: ✓ {N} permissions added to .claude/settings.local.json (total: {T})
-else if skipped by user:
-  report: - Skipped permission setup
-else:
-  report: - All permissions already configured
+권한 추가됨:
+  보고: ✓ {N}개 권한이 .claude/settings.local.json에 추가됨 (총: {T})
+사용자가 건너뛰면:
+  보고: - 권한 설정 건너뜀
+이미 모두 설정됨:
+  보고: - 모든 권한이 이미 설정됨
 ```
 
-### 3. Summary
+### 3. 요약
 
-After all steps, show a summary:
+모든 단계 완료 후 요약 표시:
 
 ```
-uc-taskmanager initialized!
+uc-taskmanager 초기화 완료!
 
-  ✓ works/ directory ready
-  ✓ Bash permissions configured
+  ✓ works/ 디렉토리 준비됨
+  ✓ Bash 권한 설정됨
 
-  Next: Type [new-feature] Add a hello world feature
+  다음: [new-feature] Add a hello world feature 입력
 ```
 
 ## Arguments

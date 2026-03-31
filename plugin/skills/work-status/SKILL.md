@@ -1,33 +1,33 @@
 ---
 name: work-status
-description: Shows WORK progress and TASK status. Use when the user asks about WORK list, WORK progress, TASK status, or pipeline status (e.g., "WORK list", "WORK-01 progress", "show status").
+description: Shows WORK status (read-only). Use ONLY when the user asks to VIEW status — not to execute or resume. Matches queries like "WORK 목록", "상태 확인", "WORK-01 상태", "show status". Do NOT use for "실행", "계속", "resume" — those go to work-pipeline.
 ---
 
-# WORK Status
+# WORK 상태
 
-Check and report the current status of WORKs and TASKs.
+WORK 및 TASK의 현재 상태를 확인하고 보고합니다.
 
-## How to Check
+## 확인 방법
 
-1. Read `works/WORK-LIST.md` for the master index of all WORKs
-2. For a specific WORK, read `works/WORK-NN/PROGRESS.md` for TASK-level progress
-3. For a specific TASK, read `works/WORK-NN/TASK-NN_result.md` for completion details
+1. `works/WORK-LIST.md`를 읽어 모든 WORK의 마스터 인덱스 확인
+2. 특정 WORK의 경우 `works/WORK-NN/work_WORK-NN.log` 마지막 줄을 읽어 현재 진행 상황 확인
+3. 특정 TASK의 경우 `works/WORK-NN/TASK-NN_result.md`를 읽어 완료 상세 확인
 
-## Status Values
+## 상태 값
 
-| Status | Meaning |
-|--------|---------|
-| `IN_PROGRESS` | WORK created, TASKs being executed |
-| `DONE` | All TASKs committed — committer auto-sets on last TASK |
-| `COMPLETED` | Archived to `_COMPLETED/` — set during push |
+| 상태 | 의미 |
+|------|------|
+| `IN_PROGRESS` | WORK 생성됨, TASK 실행 중 |
+| `DONE` | 모든 TASK 커밋됨 — committer가 마지막 TASK에서 자동 설정 |
+| `COMPLETED` | `_COMPLETED/`로 아카이빙됨 — push 시 설정 |
 
-## Display Format
+## 표시 형식
 
 ```
-WORK Status
-  WORK-01: User Authentication    ✅ 5/5 completed
-  WORK-02: Payment Integration    🔄 2/4 in progress
-  WORK-03: Admin Dashboard        ⬜ 0/6 pending
+WORK 상태
+  WORK-01: 사용자 인증    ✅ 5/5 완료
+  WORK-02: 결제 연동      🔄 2/4 진행 중
+  WORK-03: 관리자 대시보드  ⬜ 0/6 대기
 ```
 
 ## Arguments

@@ -9,6 +9,12 @@
     "./agents/verifier.md",
     "./agents/committer.md"
   ],
+  "skills": [
+    "./skills/init",
+    "./skills/work-pipeline",
+    "./skills/work-status",
+    "./skills/sdd-pipeline"
+  ],
   "description": "SDD WORK-PIPELINE Agent — Requirements analysis & development 6-agent full pipeline with DAG-based orchestration and sliding window context management",
   "author": {
     "name": "UCJung",

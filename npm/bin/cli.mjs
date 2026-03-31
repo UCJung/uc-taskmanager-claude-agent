@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-import { createInterface } from 'node:readline';
-import { VERSION, SUPPORTED_LANGS } from '../lib/constants.mjs';
+import { VERSION } from '../lib/constants.mjs';
 
 const bold = (s) => `\x1b[1m${s}\x1b[0m`;
 const dim = (s) => `\x1b[2m${s}\x1b[0m`;
@@ -11,32 +10,24 @@ const HELP = `
   ${bold('uctm')} ${dim(`v${VERSION}`)} — Universal Claude Task Manager
 
   ${bold('Usage:')}
-    uctm init ${dim('[--global] [--lang ko|en]')}     Install agent files
-    uctm update ${dim('[--global] --lang ko|en')}   Update agent files (--lang required)
+    uctm init ${dim('[--global]')}     Install agent & reference files
+    uctm update ${dim('[--global]')}   Update agent & reference files
     uctm --version            Show version
     uctm --help               Show this help
 
   ${bold('Options:')}
-    --global    Install/update to ${dim('~/.claude/agents/')} (available across all projects)
-                Default installs to ${dim('.claude/agents/')} in the current directory
-    --lang      Select agent language: ${dim('ko')} (한국어) or ${dim('en')} (English)
-                If omitted during init, interactive selection is shown
+    --global    Install/update to ${dim('~/.claude/')} (available across all projects)
+                Default installs to ${dim('.claude/')} in the current directory
 
   ${bold('Examples:')}
-    ${dim('# English agents')}
-    ${cyan('$')} uctm init --lang en
-
-    ${dim('# Korean agents')}
-    ${cyan('$')} uctm init --lang ko
-
-    ${dim('# Interactive language selection')}
+    ${dim('# Project-local setup')}
     ${cyan('$')} uctm init
 
     ${dim('# Global setup')}
-    ${cyan('$')} uctm init --global --lang en
+    ${cyan('$')} uctm init --global
 
-    ${dim('# Update agents after uctm upgrade')}
-    ${cyan('$')} uctm update --lang en
+    ${dim('# Update after uctm upgrade')}
+    ${cyan('$')} uctm update
 
   ${bold('After init:')}
     1. Run ${dim("'claude'")} to start Claude Code
@@ -44,39 +35,6 @@ const HELP = `
 
   ${dim('https://github.com/UCJung/uc-taskmanager-claude-agent')}
 `;
-
-function parseLangArg(args) {
-  const langIdx = args.indexOf('--lang');
-  if (langIdx === -1) return null;
-  const lang = args[langIdx + 1];
-  if (!lang || !SUPPORTED_LANGS.includes(lang)) {
-    console.error(`\n  Error: --lang must be one of: ${SUPPORTED_LANGS.join(', ')}`);
-    console.error(`  Usage: uctm <command> --lang ko|en\n`);
-    process.exit(1);
-  }
-  return lang;
-}
-
-async function promptLang() {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => {
-    console.log(`\n  Select language:`);
-    console.log(`    1. English`);
-    console.log(`    2. 한국어`);
-    rl.question('  > ', (answer) => {
-      rl.close();
-      const choice = answer.trim();
-      if (choice === '1' || choice.toLowerCase() === 'en' || choice.toLowerCase() === 'english') {
-        resolve('en');
-      } else if (choice === '2' || choice.toLowerCase() === 'ko' || choice === '한국어') {
-        resolve('ko');
-      } else {
-        console.log(`  Defaulting to English.`);
-        resolve('en');
-      }
-    });
-  });
-}
 
 async function main() {
   const args = process.argv.slice(2);
@@ -95,20 +53,15 @@ async function main() {
 
   if (command === 'init') {
     console.log(`\n  ${bold('uctm')} ${dim(`v${VERSION}`)} — Universal Claude Task Manager`);
-    let lang = parseLangArg(args);
-    if (!lang) {
-      lang = await promptLang();
-    }
     const { init } = await import('../lib/init.mjs');
-    await init(isGlobal, lang);
+    await init(isGlobal);
     return;
   }
 
   if (command === 'update') {
     console.log(`\n  ${bold('uctm')} ${dim(`v${VERSION}`)} — Universal Claude Task Manager`);
-    const lang = parseLangArg(args);
     const { update } = await import('../lib/update.mjs');
-    update(isGlobal, lang);
+    update(isGlobal);
     return;
   }
 

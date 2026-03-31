@@ -10,13 +10,12 @@
 
 사용자가 "push"를 요청하면 다음 순서로 실행한다:
 
-1. **에이전트 동기화** — agents/ 원본을 npm/agents, plugin/agents로 복사
-   - agents/en/*.md → npm/agents/*.md
-   - agents/ko/*.md → npm/agents/ko/*.md
-   - 에이전트 6개(specifier, planner, scheduler, builder, verifier, committer):
-     agents/en/*.md → plugin/agents/*.md (경로 치환 불필요 — `{REFERENCES_DIR}/`이 그대로 사용됨)
-   - 참조 문서 6개(agent-flow, file-content-schema, shared-prompt-sections, context-policy, xml-schema, work-activity-log):
-     agents/en/*.md → plugin/skills/sdd-pipeline/references/*.md (경로 치환 불필요)
+1. **develop/ 동기화** — develop/ 원본을 plugin/, npm/으로 복사
+   - develop/agents/*.md → plugin/agents/*.md, npm/agents/*.md
+   - develop/references/*.md → plugin/references/*.md, npm/references/*.md
+   - develop/hooks/*.sh → plugin/hooks/*.sh
+   - develop/skills/*/SKILL.md → plugin/skills/*/SKILL.md, npm/skills/*/SKILL.md
+   - develop/.claude-plugin/plugin.json → plugin/.claude-plugin/, npm/.claude-plugin/
 2. **DONE WORK 일괄 완료 처리** — WORK-LIST.md에서 DONE 상태인 WORK를 찾아 COMPLETED로 전환한다
    - WORK-LIST.md에서 `DONE` 상태인 행을 모두 찾아 제거
    - 해당 WORK 폴더(`works/WORK-NN/`)를 `works/_COMPLETED/`로 이동
@@ -35,12 +34,27 @@ README 업데이트 범위:
 
 사용자가 npm 버전업을 요청하면 다음을 추가로 수행한다:
 
-1. **플러그인 리소스 복사** — plugin 폴더의 아래 항목을 npm/ 하위로 복사
-   - `plugin/.claude-plugin` → `npm/.claude-plugin`
-   - `plugin/skills/` → `npm/skills/`
-2. 에이전트 동기화 (Push 절차 1단계와 동일)
+1. develop/ 동기화 (Push 절차 1단계와 동일)
 3. `npm version patch|minor|major` 실행
 4. `npm publish`
+
+## Agent 테스트
+
+Agent/Skill/Hook 변경 시 파이프라인 동작 검증 방법: [docs/guide_agent-testing.md](docs/guide_agent-testing.md)
+
+## 진행 중 리펙토링
+
+Agent/Skill/Hook 분리 리펙토링 진행 중: [TODO/todo_refactoring_seperate_agent_skill_hook.md](TODO/todo_refactoring_seperate_agent_skill_hook.md)
+- § 5.1: 완료된 변경 (develop/ 구조 개편, en/ko 통합, hook 구현, 테스트)
+- § 5.2: 남은 변경 대상 (REFERENCES_DIR 경로, Agent description 정비, plugin/npm 동기화)
+- 이전 세션의 작업을 이어서 진행할 것
+
+## 다음 작업: ref-cache 정상화
+
+ref-cache가 설계만 되어있고 실제 동작하지 않음 (3회 테스트 실패 확인): [TODO/todo_ref-cache-fix.md](TODO/todo_ref-cache-fix.md)
+- 문제점: specifier가 ref-cache XML 미반환, Main Claude가 다음 agent에 미전달, agent 정의의 간접 참조(`see protocol.md`)를 LLM이 무시
+- 개선 방향: Combined Agent Invocation 프롬프트 템플릿에 ref-cache 생성/반환을 직접 명시
+- `test/with-ref-cache` 브랜치에서 작업 후 dev에 머지 여부 결정
 
 ## Language
 
