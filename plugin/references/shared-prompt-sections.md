@@ -1,24 +1,24 @@
-# Shared Prompt Sections
+# 공유 프롬프트 섹션
 
-Common reusable sections. Each agent references these via `cache_control` markers.
-
----
-
-## § 1. Output Language Rule
-
-```
-Priority: PLAN.md > Language: → CLAUDE.md ## Language → en (default)
-
-On dispatch: pass resolved language code in <context><language> field
-Section headers (##) are also written in the resolved language (refer to language mapping table)
-```
+각 에이전트가 `cache_control` 마커를 통해 참조하는 공통 재사용 섹션.
 
 ---
 
-## § 2. Build and Lint Commands
+## § 1. 출력 언어 규칙
+
+```
+우선순위: PLAN.md > Language: → CLAUDE.md ## Language → en (기본값)
+
+디스패치 시: <context><language> 필드에 결정된 언어 코드 전달
+섹션 헤더(##)도 결정된 언어로 작성 (언어 매핑 표 참조)
+```
+
+---
+
+## § 2. 빌드 및 린트 명령
 
 ```bash
-# Auto-detect Build (execute only if script exists)
+# 빌드 자동 감지 (스크립트가 있을 때만 실행)
 if [ -f "package.json" ]; then
   if node -e "const p=JSON.parse(require('fs').readFileSync('package.json','utf8')); process.exit(p.scripts&&p.scripts.build?0:1)" 2>/dev/null; then
     npm run build 2>&1 || bun run build 2>&1 || yarn build 2>&1
@@ -33,7 +33,7 @@ elif [ -f "Makefile" ]; then
   make build 2>&1 || make 2>&1
 fi
 
-# Auto-detect Lint (execute only if script exists)
+# 린트 자동 감지 (스크립트가 있을 때만 실행)
 if [ -f "package.json" ]; then
   if node -e "const p=JSON.parse(require('fs').readFileSync('package.json','utf8')); process.exit(p.scripts&&p.scripts.lint?0:1)" 2>/dev/null; then
     npm run lint 2>&1 || bun run lint 2>&1 || true
@@ -43,99 +43,99 @@ elif [ -f "pyproject.toml" ]; then
 fi
 ```
 
-- If build/lint scripts do not exist → **skip (treat as N/A)**.
-- On build/lint failure, always fix before reporting.
+- 빌드/린트 스크립트가 없으면 → **생략 (N/A로 처리)**.
+- 빌드/린트 실패 시 보고 전에 항상 수정.
 
 ---
 
-## § 3. WORK and TASK File Path Patterns
+## § 3. WORK 및 TASK 파일 경로 패턴
 
 ```
 works/{WORK_ID}/
-  ├─ Requirement.md                 # Created by Specifier (mandatory)
+  ├─ Requirement.md                 # Specifier가 생성 (필수)
   ├─ PLAN.md
-  ├─ TASK-00.md               # No WORK prefix
-  ├─ TASK-00_result.md        # Separator: underscore
+  ├─ TASK-00.md               # WORK 접두사 없음
+  ├─ TASK-00_result.md        # 구분자: 언더스코어
   └─ TASK-01.md ...
 ```
 
-- WORK ID: `WORK-NN` (e.g., `WORK-03`)
-- TASK ID: `TASK-NN` (e.g., `TASK-00`) — WORK prefix must NOT be included
+- WORK ID: `WORK-NN` (예: `WORK-03`)
+- TASK ID: `TASK-NN` (예: `TASK-00`) — WORK 접두사 포함 금지
 
 ---
 
-## § 4. File System Discovery Scripts
+## § 4. 파일 시스템 Discovery 스크립트
 
 ```
-# Find latest WORK with incomplete TASKs
-# Use Glob tool: pattern "works/WORK-*/" → list all WORK directories (sorted)
-# For each WORK (descending), read last line of works/WORK-NN/work_WORK-NN.log
-#   - No log file → not started
-#   - Last line contains "COMMITTER_DONE" with last TASK number → check if more TASKs remain
-# First WORK that is not fully completed is the active WORK
+# 미완료 TASK가 있는 최신 WORK 찾기
+# Glob 도구 사용: pattern "works/WORK-*/" → 모든 WORK 디렉토리 목록 (정렬)
+# 각 WORK (내림차순)에 대해 works/WORK-NN/work_WORK-NN.log 마지막 줄 읽기
+#   - 로그 파일 없음 → 시작 안 됨
+#   - 마지막 줄에 마지막 TASK 번호의 "COMMITTER_DONE" 포함 → 남은 TASK 확인
+# 완전히 완료되지 않은 첫 번째 WORK가 활성 WORK
 
-# List all WORKs
-# Use Glob tool: pattern "works/WORK-*/"
+# 모든 WORK 목록
+# Glob 도구 사용: pattern "works/WORK-*/"
 
-# WORK/TASK status from activity log (last line)
-# Read last line of works/${WORK_ID}/work_${WORK_ID}.log
-#   Format: [timestamp] EVENT — description
+# 활동 로그의 마지막 줄로 WORK/TASK 상태 파악
+# works/${WORK_ID}/work_${WORK_ID}.log 마지막 줄 읽기
+#   형식: [timestamp] EVENT — description
 #
-#   Key rule: *_START without matching *_DONE = interrupted, must REDO that step
+#   핵심 규칙: *_START에 대응하는 *_DONE이 없으면 = 중단됨, 해당 단계 재수행 필요
 #
-#   COMMITTER_DONE — TASK-NN → TASK-NN completed, next TASK is TASK-(NN+1)
-#   COMMITTER_START — TASK-NN → committer interrupted, redo verifier+committer for TASK-NN
-#   VERIFIER_DONE — TASK-NN  → TASK-NN verified, needs committer
-#   VERIFIER_START — TASK-NN → verifier interrupted, redo verifier+committer for TASK-NN
-#   BUILDER_DONE — TASK-NN   → TASK-NN builder done, needs verifier+committer
-#   BUILDER_START — TASK-NN  → builder interrupted, redo builder for TASK-NN
-#   PLANNER_DONE             → planning done, start first TASK
-#   PLANNER_START            → planner interrupted, redo specifier+planner
-#   SPECIFIER_DONE           → specifier done, needs planner
-#   SPECIFIER_START          → specifier interrupted, redo specifier+planner
-#   No log file              → start from scratch
+#   COMMITTER_DONE — TASK-NN → TASK-NN 완료, 다음은 TASK-(NN+1)
+#   COMMITTER_START — TASK-NN → committer 중단됨, TASK-NN committer 재수행
+#   VERIFIER_DONE — TASK-NN  → TASK-NN 검증됨, committer 필요
+#   VERIFIER_START — TASK-NN → verifier 중단됨, TASK-NN verifier 재수행
+#   BUILDER_DONE — TASK-NN   → TASK-NN builder 완료, verifier 필요
+#   BUILDER_START — TASK-NN  → builder 중단됨, TASK-NN builder 재수행
+#   PLANNER_DONE             → 계획 완료, 첫 TASK 시작
+#   PLANNER_START            → planner 중단됨, planner 재수행
+#   SPECIFIER_DONE           → specifier 완료, planner 필요
+#   SPECIFIER_START          → specifier 중단됨, specifier 재수행
+#   로그 파일 없음           → 처음부터 시작
 ```
 
 ---
 
-## § 5. Task Result XML Format
+## § 5. Task Result XML 형식
 
 ```xml
 <task-result work="{WORK_ID}" task="{TASK_ID}" agent="{agent}" status="{PASS|FAIL}">
-  <summary>{1-2 line summary}</summary>
+  <summary>{1-2줄 요약}</summary>
   <files-changed>
-    <file action="{created|modified|deleted}" path="{path}">{description}</file>
+    <file action="{created|modified|deleted}" path="{path}">{설명}</file>
   </files-changed>
   <verification>
-    <check name="{type}" status="{PASS|FAIL|N/A}">{details}</check>
+    <check name="{type}" status="{PASS|FAIL|N/A}">{상세}</check>
   </verification>
-  <notes>{notes for next steps}</notes>
+  <notes>{다음 단계를 위한 메모}</notes>
 </task-result>
 ```
 
 ---
 
-## § 7. PLAN.md Required Meta-Information — 7 Fields
+## § 7. PLAN.md 필수 메타 정보 — 7개 필드
 
-→ `{REFERENCES_DIR}/file-content-schema.md` § 1 reference
+→ `{REFERENCES_DIR}/file-content-schema.md` § 1 참조
 
-| Field | Required | Description |
-|-------|----------|-------------|
+| 필드 | 필수 | 설명 |
+|------|------|------|
 | `> Created:` | ✅ | YYYY-MM-DD |
-| `> Requirement:` | ✅ | `REQ-XXX` or user request text |
+| `> Requirement:` | ✅ | `REQ-XXX` 또는 사용자 요청 텍스트 |
 | `> Execution-Mode:` | ✅ | `direct` / `pipeline` / `full` |
-| `> Project:` | ✅ | Project name |
-| `> Tech Stack:` | ✅ | Detected tech stack |
-| `> Language:` | ✅ | Language code (`ko`, `en`, etc.) |
-| `> Status:` | ✅ | Always starts as `PLANNED` |
+| `> Project:` | ✅ | 프로젝트 이름 |
+| `> Tech Stack:` | ✅ | 감지된 기술 스택 |
+| `> Language:` | ✅ | 언어 코드 (`ko`, `en` 등) |
+| `> Status:` | ✅ | 항상 `PLANNED`로 시작 |
 
 ---
 
-## § 8. WORK-LIST.md Update Rules
+## § 8. WORK-LIST.md 업데이트 규칙
 
-File: `works/WORK-LIST.md`
+파일: `works/WORK-LIST.md`
 
-**Format:**
+**형식:**
 ```
 LAST_WORK_ID: WORK-XX
 
@@ -145,163 +145,63 @@ LAST_WORK_ID: WORK-XX
 | WORK-MM | ... | DONE | YYYY-MM-DD | YYYY-MM-DD |
 ```
 
-| Status | Meaning | Trigger |
-|--------|---------|---------|
-| `IN_PROGRESS` | WORK is being executed | specifier creates WORK |
-| `DONE` | All TASKs completed, awaiting review/push | committer completes last TASK |
-| `COMPLETED` | Archived to _COMPLETED/ | push merge (Main Claude batch processes all DONE) |
+| 상태 | 의미 | 트리거 |
+|------|------|--------|
+| `IN_PROGRESS` | WORK 실행 중 | specifier가 WORK 생성 |
+| `DONE` | 모든 TASK 완료, 리뷰/push 대기 | committer가 마지막 TASK 완료 |
+| `COMPLETED` | _COMPLETED/로 아카이빙됨 | push 머지 (Main Claude가 모든 DONE 일괄 처리) |
 
-Rules:
-- `LAST_WORK_ID` header tracks the highest WORK ID ever created
-- **specifier**: on WORK creation, add IN_PROGRESS row + update `LAST_WORK_ID`
-- **committer**: when last TASK is completed, change `IN_PROGRESS` → `DONE` and fill completion date (do NOT move folder or remove row)
-- **Main Claude** (push procedure): move all DONE WORKs to `works/_COMPLETED/`, remove their rows from WORK-LIST.md
+규칙:
+- `LAST_WORK_ID` 헤더는 지금까지 생성된 가장 높은 WORK ID를 추적
+- **specifier**: WORK 생성 시 IN_PROGRESS 행 추가 + `LAST_WORK_ID` 업데이트
+- **committer**: 마지막 TASK 완료 시 `IN_PROGRESS` → `DONE`으로 변경하고 완료일 기입 (폴더 이동이나 행 제거 금지)
+- **Main Claude** (push 절차): 모든 DONE WORK를 `works/_COMPLETED/`로 이동, WORK-LIST.md에서 해당 행 제거
 
 ---
 
-## § 9. Locale Detection
+## § 9. 로케일 감지
 
 ```
-1. Use Grep tool: pattern "Language:\s*[a-z]{2}" path="CLAUDE.md" → extract language code
-2. If not found, ask user for language
-3. If not found, auto-detect system locale via Bash:
+1. Grep 도구 사용: pattern "Language:\s*[a-z]{2}" path="CLAUDE.md" → 언어 코드 추출
+2. 없으면 사용자에게 언어 확인
+3. 없으면 Bash로 시스템 로케일 자동 감지:
    - Windows: powershell -c "[CultureInfo]::CurrentCulture.TwoLetterISOLanguageName"
    - Linux/Mac: locale | grep LANG
-   - Fallback: "en"
+   - 폴백: "en"
 ```
 
 ---
 
-## § 10. Callback & Activity Log
+## § 12. Bash 명령 규칙
 
-### 10-1. Callback (CE7)
+Bash 명령은 권한 호환성을 위해 다음 규칙을 반드시 따라야 합니다.
 
-Each agent sends START/DONE/FAILED events to the server via CE7 API.
+**필수:**
+- Bash 호출당 단순 명령 하나 — 복합 명령 금지 (`&&`, `||`, `;`, `|`)
+- `cd` 금지 — Bash 도구의 cwd는 항상 프로젝트 루트. `cd dir &&`, `cd dir ;`, `cd dir` 어떤 형태든 사용 금지. 프로젝트 루트 기준 상대 경로 사용
+- 멀티라인 스크립트 금지 — 별도 Bash 호출로 분할
+- 인수 내 서브셸 확장 금지 — 예: `printf` 안의 `$(date ...)`
+- 프로젝트 루트 기준 상대 경로 사용 (예: `works/WORK-01/`) — 절대 경로 금지
+- `git add file`, `git commit -m "msg"` 사용 — `git -C path` 플래그 금지
 
-**Activation condition:** Only when `CALLBACK_URL` is available. Check in order:
-1. Dispatch XML `<callback-url>` element (passed from Main Claude)
-2. Prompt text containing `CALLBACK_URL=...` line
-3. If neither found → **skip all callbacks**
+**파일 작업에는 Bash 대신 전용 도구를 우선 사용:**
+- 파일 읽기 → `Read` 도구 (`cat` 아님)
+- 파일 쓰기/추가 → `Write` 도구 (`echo >>` 또는 `printf >>` 아님)
+- 파일 편집 → `Edit` 도구 (`sed -i` 아님)
+- 파일 검색 → `Grep` 도구 (`grep` 아님)
+- 파일 찾기 → `Glob` 도구 (`find` 아님)
 
-**How to resolve CALLBACK_URL and CALLBACK_TOKEN:**
-
-The runner injects callback info directly into the prompt:
+**활동 로그 예시:**
 ```
-POST {CALLBACK_URL}
-Authorization: Bearer {CALLBACK_TOKEN}
-```
-The first agent (specifier) extracts these and passes them via dispatch XML to subsequent agents.
-
-**When to send:**
-- **START**: At the very beginning of agent execution (after STARTUP)
-- **DONE**: At the very end, before returning task-result XML
-- **FAILED**: On unrecoverable failure, before returning FAIL task-result
-
-**How to send** (single curl command):
-```bash
-curl -s --connect-timeout 3 --max-time 5 -X POST "$CALLBACK_URL" \
-  -H "Authorization: Bearer $CALLBACK_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"stage":"BUILDER","event":"START","workId":"WORK-09","taskId":"TASK-01"}' \
-  2>/dev/null || true
+잘못됨: printf '[%s]_%s\n' "$(date ...)" "INIT" >> work.log
+올바름: Write 도구로 로그 파일에 한 줄 추가
 ```
 
-- `--connect-timeout 3`: 연결 대기 최대 3초
-- `--max-time 5`: 전체 요청 최대 5초
-- `|| true`: 실패해도 agent 실행 계속
-
-**Include docs (actual file content, not references):**
-- specifier DONE: `"docs": {"requirementContent": "<Requirement.md content>"}`
-- planner DONE: `"docs": {"planContent": "<PLAN.md content>"}`
-- builder START: `"docs": {"taskContent": "<TASK-NN.md content>"}`
-- committer DONE: `"docs": {"resultContent": "<TASK-NN_result.md content>"}`
-
-**Token usage** (DONE event only, optional):
-```json
-{"inputTokens": 1234, "outputTokens": 567, "cacheCreationTokens": 890, "cacheReadTokens": 456}
+**Git 예시:**
 ```
-
-Callback failure must NOT block agent execution. Always continue.
-
-### 10-2. Activity Log
-
-Each agent records start/end to `works/{WORK_ID}/work_{WORK_ID}.log`.
-
-**All WORKs** — no CALLBACK_URL condition.
-
-**Timestamp:** Run `date -u +"%Y-%m-%dT%H:%M:%SZ"` via Bash tool to get the real UTC time. Do NOT use dummy/placeholder timestamps.
-
-**Format:**
-```
-[2026-03-30T14:30:00Z] AGENT_EVENT — description
-```
-
-**How to write:** Use Bash `echo "[timestamp] EVENT — description" >> works/{WORK_ID}/work_{WORK_ID}.log`
-
-**Required entries per agent (START and DONE only):**
-```
-[{timestamp}] SPECIFIER_START — WORK-NN specifier started
-[{timestamp}] SPECIFIER_DONE — WORK-NN specifier completed
-[{timestamp}] BUILDER_START — TASK-NN implement
-[{timestamp}] BUILDER_DONE — TASK-NN complete
-[{timestamp}] VERIFIER_START — TASK-NN verification
-[{timestamp}] VERIFIER_DONE — TASK-NN verified
-[{timestamp}] COMMITTER_START — TASK-NN commit
-[{timestamp}] COMMITTER_DONE — TASK-NN committed
-```
-
-Do NOT write INIT, REF, PLAN, DISPATCH or other intermediate entries. Only START and DONE per agent role.
-
----
-
-## § 11. Project Discovery
-
-```
-# 1. Check CLAUDE.md language setting
-Use Grep tool: pattern "Language:\s*[a-z]{2}" path="CLAUDE.md"
-
-# 2. Tech stack (read first 50/30/20/10 lines if file exists)
-Use Read tool: "package.json" (limit=50)
-Use Read tool: "pyproject.toml" (limit=30)
-Use Read tool: "Cargo.toml" (limit=20)
-Use Read tool: "go.mod" (limit=10)
-
-# 3. Structure (when needed)
-Use Glob tool: pattern "**/*.{md,json,toml}" (exclude node_modules)
-```
-
----
-
-## § 12. Bash Command Rules
-
-Bash commands MUST follow these rules for permission compatibility.
-
-**MANDATORY:**
-- One simple command per Bash call — NO compound commands (`&&`, `||`, `;`, `|`)
-- NO `cd` — Bash tool cwd is always the project root. Never use `cd dir &&`, `cd dir ;`, or `cd dir` in any form. Use relative paths from project root
-- NO multi-line scripts — split into separate Bash calls
-- NO sub-shell expansions in arguments — e.g., `$(date ...)` inside `printf`
-- Use relative paths from project root (e.g., `works/WORK-01/`) — NO absolute paths
-- Use `git add file`, `git commit -m "msg"` — NO `git -C path` flag
-
-**For file operations, prefer dedicated tools over Bash:**
-- Read files → `Read` tool (NOT `cat`)
-- Write/append files → `Write` tool (NOT `echo >>` or `printf >>`)
-- Edit files → `Edit` tool (NOT `sed -i`)
-- Search files → `Grep` tool (NOT `grep`)
-- Find files → `Glob` tool (NOT `find`)
-
-**Activity log example:**
-```
-WRONG: printf '[%s]_%s\n' "$(date ...)" "INIT" >> work.log
-RIGHT: Use Write tool to append a line to the log file
-```
-
-**Git example:**
-```
-WRONG: cd /path/to/project && git add file && git commit -m "msg"
-RIGHT: git add file        (one call)
-       git commit -m "msg"  (next call)
+잘못됨: cd /path/to/project && git add file && git commit -m "msg"
+올바름: git add file        (한 번의 호출)
+       git commit -m "msg"  (다음 호출)
 ```
 
 ---
@@ -309,4 +209,4 @@ RIGHT: git add file        (one call)
 ## Version
 
 - Created: 2026-03-10
-- Updated: 2026-03-28
+- Updated: 2026-03-31

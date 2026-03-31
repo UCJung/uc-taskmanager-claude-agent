@@ -1,31 +1,31 @@
-# ref-cache Protocol
+# ref-cache 프로토콜
 
-## Overview
+## 개요
 
-ref-cache is a mechanism to avoid redundant file reads across sub-agent invocations within a pipeline.
-Reference files are passed between agents via `<ref-cache>` XML elements instead of being re-read from disk each time.
+ref-cache는 파이프라인 내 서브에이전트 호출 간 중복 파일 읽기를 방지하는 메커니즘입니다.
+레퍼런스 파일이 매번 디스크에서 다시 읽히는 대신 `<ref-cache>` XML 요소를 통해 에이전트 간에 전달됩니다.
 
-## Protocol (4 Steps)
+## 프로토콜 (4단계)
 
-1. **Check** if `<ref-cache>` exists in the received dispatch XML
-2. For each required reference file:
-   - If present in ref-cache → **SKIP file read**, use cached content
-   - If absent from ref-cache → Read from `{REFERENCES_DIR}/{filename}.md` and add to ref-cache
-3. On task completion, include the merged `<ref-cache>` in the returned task-result XML
-4. **Backward compatibility**: If dispatch contains no `<ref-cache>`, read all reference files normally (existing behavior)
+1. 수신한 dispatch XML에 `<ref-cache>`가 있는지 **확인**
+2. 각 필수 레퍼런스 파일에 대해:
+   - ref-cache에 있으면 → **파일 읽기 건너뛰기**, 캐시된 내용 사용
+   - ref-cache에 없으면 → `{REFERENCES_DIR}/{filename}.md`에서 읽고 ref-cache에 추가
+3. 작업 완료 시, 반환하는 task-result XML에 병합된 `<ref-cache>` 포함
+4. **하위 호환성**: dispatch에 `<ref-cache>`가 없으면 모든 레퍼런스 파일을 정상적으로 읽기 (기존 동작)
 
-## ref-cache XML Format
+## ref-cache XML 형식
 
-See `xml-schema.md` § 4 for the full schema.
+전체 스키마는 `xml-schema.md` § 4 참조.
 
 ```xml
 <ref-cache>
-  <ref key="file-content-schema">...content...</ref>
-  <ref key="shared-prompt-sections">...content...</ref>
-  <!-- one <ref> per loaded reference file -->
+  <ref key="file-content-schema">...내용...</ref>
+  <ref key="shared-prompt-sections">...내용...</ref>
+  <!-- 로딩된 레퍼런스 파일당 하나의 <ref> -->
 </ref-cache>
 ```
 
-## Chain Propagation
+## 체인 전파
 
-See `agent-flow.md` § ref-cache Chain Propagation for how ref-cache flows between agents in the pipeline.
+파이프라인에서 ref-cache가 에이전트 간에 어떻게 흐르는지는 `agent-flow.md` § ref-cache Chain Propagation 참조.

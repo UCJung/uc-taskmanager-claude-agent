@@ -162,6 +162,8 @@ cd "$TEST_DIR" && env -u ANTHROPIC_API_KEY claude -p \
 
 ### 로그 기록 방식
 
+> ⚠️ 실행만 하고 로그를 모니터링 하지 말것 
+
 #### 기본 (최종 응답만)
 
 ```bash

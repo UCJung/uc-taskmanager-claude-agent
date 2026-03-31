@@ -1,23 +1,23 @@
-# Work Activity Log
+# 작업 활동 로그
 
-Records agent start/end events in `works/{WORK_ID}/work_{WORK_ID}.log`.
+`works/{WORK_ID}/work_{WORK_ID}.log`에 에이전트 시작/종료 이벤트를 기록.
 
-## Rules
+## 규칙
 
-1. **Timestamp**: Run `date -u +"%Y-%m-%dT%H:%M:%SZ"` via Bash to get real UTC time. Never use dummy values.
-2. **Write method**: Use `Edit` tool to append. Do NOT use Bash for log writes.
-3. **Entries**: Only START and DONE per agent role. No intermediate stages.
+1. **타임스탬프**: Bash로 `date -u +"%Y-%m-%dT%H:%M:%SZ"` 실행하여 실제 UTC 시간 획득. 더미 값 사용 금지.
+2. **기록 방법**: Bash `echo` 로 추가. 
+3. **항목**: 에이전트 역할별 START와 DONE만. 중간 단계 없음.
 
-## Format
+## 형식
 
 ```
 [YYYY-MM-DDTHH:MM:SSZ] AGENT_EVENT — description
 ```
 
-## Required Entries
+## 필수 항목
 
-| Agent | START | DONE |
-|-------|-------|------|
+| 에이전트 | START | DONE |
+|----------|-------|------|
 | specifier | `SPECIFIER_START — WORK-NN specifier started` | `SPECIFIER_DONE — WORK-NN specifier completed` |
 | planner | `PLANNER_START — WORK-NN planner started` | `PLANNER_DONE — WORK-NN planner completed` |
 | scheduler | `SCHEDULER_START — WORK-NN scheduler started` | `SCHEDULER_DONE — WORK-NN scheduler completed` |

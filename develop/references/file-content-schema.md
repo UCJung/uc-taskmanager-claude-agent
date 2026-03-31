@@ -1,27 +1,28 @@
-# File Content Schema
+# 파일 내용 스키마
 
-Single source of truth for pipeline artifact file formats.
+파이프라인 산출물 파일 형식의 단일 정의 소스.
 
-## COMPLIANCE
+## 준수사항
 
-| Generated File | Reference Section | Violation Consequence |
-|----------------|-------------------|----------------------|
-| `PLAN.md` | § 1 | `parsePlanMd()` parsing failure, scheduler inoperable |
-| `TASK-XX.md` | § 2 | `parseTaskFilename()` DB registration missed |
-| `TASK-XX_result.md` | § 3 | context-handoff missing |
-| `TASK-XX_result.md` (direct) | § 4 | result.md recognition failure |
+| 생성 파일 | 참조 섹션 | 위반 시 결과 |
+|-----------|----------|-------------|
+| `Requirement.md` | § 0 |  |
+| `PLAN.md` | § 1 | `parsePlanMd()` 파싱 실패, scheduler 작동 불가 |
+| `TASK-XX.md` | § 2 | `parseTaskFilename()` DB 등록 누락 |
+| `TASK-XX_result.md` | § 3 | context-handoff 누락 |
+| `TASK-XX_result.md` (direct) | § 4 | result.md 인식 실패 |
 
 ---
 
 ## § 0. Requirement.md
 
-Path: `works/{WORK_ID}/Requirement.md`
+경로: `works/{WORK_ID}/Requirement.md`
 
 ```markdown
 # Requirement — WORK-NN
 
 ## Original Request
-> User's exact input
+> 사용자의 정확한 입력
 
 ## Functional Requirements
 - FR-01: ...
@@ -31,100 +32,168 @@ Path: `works/{WORK_ID}/Requirement.md`
 - NFR-01: ...
 
 ## Acceptance Criteria
-- [ ] Verifiable criteria
+- [ ] 검증 가능한 기준
 ```
 
-Created by: Specifier (mandatory for all requests)
+생성 주체: Specifier (모든 요청에 필수)
 
 ---
 
 ## § 1. PLAN.md
 
-Path: `works/{WORK_ID}/PLAN.md`
+경로: `works/{WORK_ID}/PLAN.md`
+
+> 요구사항 수준에 따라 ## 설계 이하 간략화 가능
 
 ```markdown
-# WORK-01: {title}
+# WORK-01: {제목}
 
 > Created: {YYYY-MM-DD}
-> Requirement: {REQ-XXX | user request text}
+> Requirement: {REQ-XXX | 사용자 요청 텍스트}
 > Execution-Mode: {direct | pipeline | full}
-> Project: {project name}
-> Tech Stack: {stack}
+> Project: {프로젝트 이름}
+> Tech Stack: {스택}
 > Language: {lang_code}
 > Status: PLANNED
 
-## Goal
-{1-2 sentences}
+## 목표
+{1-2문장}
 
-## Task Dependency Graph
-{ASCII diagram}
+## 설계
 
-## Tasks
+### 1. 아키텍처 방향
 
-### TASK-00: {title}
-- **Depends on**: (none)
-- **Scope**: {description}
-- **Files**:
-  - `path/to/file` — {description}
+- **접근 방식**: 신규 구축 / 기존 수정 / 확장
+- **구조**: (계층형, 이벤트 기반, 마이크로서비스 등)
+- **데이터 흐름**: (입력 → 처리 → 출력 경로 요약)
 
-### TASK-01: {title}
-- **Depends on**: TASK-00
+### 2. 데이터 설계
+
+| 항목 | 내용 |
+|------|------|
+| 스키마 변경 | 있음 / 없음 |
+| 마이그레이션 필요 | 있음 / 없음 |
+| 변경 내용 | |
+
+### 3. 인터페이스 설계
+
+| 인터페이스 | 방식 | 엔드포인트/형식 | 관련 FR |
+|-----------|------|---------------|--------|
+| | REST / GraphQL / gRPC / 파일 | | |
+
+### 4. NFR 대응 설계
+
+| NFR ID | 요구사항 | 대응 방안 |
+|--------|---------|----------|
+| NFR-01 | | |
+| NFR-02 | | |
+
+## 작업 목록 
+
+| Task ID | 제목 | 의존관계 | Phase | 우선순위 | 매핑 FR/NFR | 예상 규모 |
+|---------|------|---------|-------|---------|------------|----------|
+| TASK-01 | | 없음 | 1 | Must | FR-01 | S/M/L |
+| TASK-02 | | TASK-01 | 2 | Must | FR-02, NFR-01 | S/M/L |
+| TASK-03 | | 없음 | 1 | Should | FR-03 | S/M/L |
+| | | | | | | |
+
+
+## Task 의존성 그래프
+{ASCII 다이어그램}
+
+## 리스크 및 대응
+
+| # | 리스크 | 발생 가능성 | 영향도 | 대응 전략 | 비고 |
+|---|--------|-----------|-------|----------|------|
+| R-01 | | 높/중/낮 | 높/중/낮 | 회피 / 완화 / 수용 | |
+| R-02 | | | | | |
+
+---
+
+## 추적성 매트릭스
+
+| 원본 요청 | FR/NFR | Task | 인수 기준 | 검증 방법 |
+|----------|--------|------|----------|----------|
+| | FR-01 | TASK-01 | AC-01 | 단위테스트 / 수동확인 / 자동화 |
+| | FR-02 | TASK-02 | AC-02 | |
+| | NFR-01 | TASK-02 | AC-03 | |
+
+---
+
+## 자체 검증 체크리스트
+
+- [ ] 모든 FR이 최소 1개 Task에 매핑됨
+- [ ] 모든 NFR이 설계 또는 Task에 반영됨
+- [ ] Task 간 순환 의존 없음
+- [ ] 제약조건 내 실현 가능
+- [ ] 각 Task에 완료 조건이 있음
+- [ ] 리스크가 식별되고 대응 전략이 있음
+- [ ] 실행 순서가 의존관계와 일치함
+
+---
 ```
 
-Title format: `# WORK-NN: title` — `# PLAN WORK-NN:` is prohibited (`parsePlanMd()` error)
+제목 형식: `# WORK-NN: title` — `# PLAN WORK-NN:` 금지 (`parsePlanMd()` 오류)
 
 ---
 
 ## § 2. TASK-XX.md
 
-Path: `works/{WORK_ID}/TASK-XX.md`
+경로: `works/{WORK_ID}/TASK-XX.md`
 
-> `parseTaskFilename()` regex: `/^TASK-(\d+)\.md$/` — WORK prefix prohibited
+> `parseTaskFilename()` regex: `/^TASK-(\d+)\.md$/` — WORK 접두사 금지
 
 ```markdown
-# TASK-XX: {title}
+# TASK-XX: {제목}
 
 ## WORK
-{WORK_ID}: {WORK title}
+{WORK_ID}: {WORK 제목}
 
-## Dependencies
-- TASK-YY (required)
+## Task 개요
+
+| 항목 | 내용 |
+|------|------|
+| 목적 | (이 Task가 완료되면 무엇이 달라지는가) |
+| 매핑 요구사항 | FR-{NN}, NFR-{NN} |
+| 우선순위 | Must / Should / Could |
+| 예상 규모 | S / M / L |
+| 의존관계 | 없음 / TASK-{NN} 완료 후 |
+| Phase | Phase {N} |
 
 ## Scope
-{description}
+{설명}
 
 ## Files
 | Path | Action | Description |
 |------|--------|-------------|
-| `src/file.ts` | CREATE | description |
+| `src/file.ts` | CREATE | 설명 |
 
 ## Acceptance Criteria
-- [ ] {criterion}
+- [ ] {기준}
 
 ## Verify
 ```bash
-{verification commands}
-```
+{검증 명령}
 ```
 
 ---
 
 ## § 3. TASK-XX_result.md (full / pipeline)
 
-Path: `works/{WORK_ID}/TASK-XX_result.md`
+경로: `works/{WORK_ID}/TASK-XX_result.md`
 
 ```markdown
 # TASK-XX Result
 
-> WORK: {WORK_ID} — {title}
+> WORK: {WORK_ID} — {제목}
 > Completed: {YYYY-MM-DD HH:MM}
 > Status: **DONE**
 
 {## Summary | ## 요약 | ## サマリー}
-{1-2 lines}
+{1-2줄}
 
 {## Completed Checklist | ## 완료 체크리스트 | ## 完了チェックリスト}
-- [x] {item}
+- [x] {항목}
 
 {## Verification Results | ## 검증 결과 | ## 検証結果}
 - Build: ✅
@@ -133,7 +202,7 @@ Path: `works/{WORK_ID}/TASK-XX_result.md`
 
 {## Files Changed | ## 변경 파일 | ## 変更ファイル}
 ### Created
-- `path` — {description}
+- `path` — {설명}
 
 {## Issues Encountered | ## 발생 이슈 | ## 発生した問題}
 None
@@ -144,14 +213,14 @@ None
 {## Context Handoff | ## 컨텍스트 핸드오프 | ## コンテキスト引き継ぎ}
 
 ### Builder Context (SUMMARY)
-{builder what field 1-3 lines}
+{builder what 필드 1-3줄}
 
 ### Verifier Context (FULL)
-{verifier context-handoff 4 fields}
+{verifier context-handoff 4개 필드}
 ```
 
-| Section | en | ko | ja |
-|---------|----|----|-----|
+| 섹션 | en | ko | ja |
+|------|----|----|-----|
 | Summary | `## Summary` | `## 요약` | `## サマリー` |
 | Completed Checklist | `## Completed Checklist` | `## 완료 체크리스트` | `## 完了チェックリスト` |
 | Verification Results | `## Verification Results` | `## 검증 결과` | `## 検証結果` |
@@ -162,37 +231,37 @@ None
 
 ---
 
-## § 4. TASK-XX_result.md (direct mode)
+## § 4. TASK-XX_result.md (direct 모드)
 
 ```markdown
 # TASK-00 Result
 
-> WORK: WORK-NN — {title}
+> WORK: WORK-NN — {제목}
 > Completed: {YYYY-MM-DD HH:MM}
 > Execution-Mode: direct
 > Status: **DONE**
 
-## Summary
-{1 line}
+## 요약
+{1줄}
 
-## Files Changed
-- `{path}` — {description}
+## 변경 파일
+- `{path}` — {설명}
 
-## Verification
+## 검증
 - Build: PASS (self-check)
 - Lint: PASS (self-check)
 ```
 
 ---
 
-## § 5. File Naming Rules
+## § 5. 파일 이름 규칙
 
-| Type | Format | Created By |
-|------|--------|------------|
-| Requirement | `Requirement.md` | specifier |
-| WORK plan | `PLAN.md` | planner / specifier |
-| TASK plan | `TASK-NN.md` | planner / specifier |
-| TASK result | `TASK-NN_result.md` | committer |
-| Activity log | `work_WORK-NN.log` | all agents (append) |
+| 유형 | 형식 | 생성 주체 |
+|------|------|-----------|
+| 요구사항 | `Requirement.md` | specifier |
+| WORK 계획 | `PLAN.md` | planner / specifier |
+| TASK 계획 | `TASK-NN.md` | planner / specifier |
+| TASK 결과 | `TASK-NN_result.md` | committer |
+| 활동 로그 | `work_WORK-NN.log` | 모든 에이전트 (추가) |
 
-`WORK-NN-TASK-NN.md` format prohibited → `parseTaskFilename()` cannot recognize it.
+`WORK-NN-TASK-NN.md` 형식 금지 → `parseTaskFilename()`이 인식할 수 없음.
