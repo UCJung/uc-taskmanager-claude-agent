@@ -54,9 +54,7 @@ fi
 works/{WORK_ID}/
   ├─ Requirement.md                 # Created by Specifier (mandatory)
   ├─ PLAN.md
-  ├─ PROGRESS.md
   ├─ TASK-00.md               # No WORK prefix
-  ├─ TASK-00_progress.md      # Separator: underscore
   ├─ TASK-00_result.md        # Separator: underscore
   └─ TASK-01.md ...
 ```
@@ -71,17 +69,31 @@ works/{WORK_ID}/
 ```
 # Find latest WORK with incomplete TASKs
 # Use Glob tool: pattern "works/WORK-*/" → list all WORK directories (sorted)
-# For each WORK (descending), compare:
-#   Glob "works/WORK-NN/TASK-*.md" (exclude *_result.md, *_progress.md) → TOTAL
-#   Glob "works/WORK-NN/TASK-*_result.md" → DONE
-# First WORK where DONE < TOTAL is the active WORK
+# For each WORK (descending), read last line of works/WORK-NN/work_WORK-NN.log
+#   - No log file → not started
+#   - Last line contains "COMMITTER_DONE" with last TASK number → check if more TASKs remain
+# First WORK that is not fully completed is the active WORK
 
 # List all WORKs
 # Use Glob tool: pattern "works/WORK-*/"
 
-# TASK completion status
-# TOTAL = count of Glob "works/${WORK_ID}/TASK-??.md"
-# DONE  = count of Glob "works/${WORK_ID}/TASK-*_result.md"
+# WORK/TASK status from activity log (last line)
+# Read last line of works/${WORK_ID}/work_${WORK_ID}.log
+#   Format: [timestamp] EVENT — description
+#
+#   Key rule: *_START without matching *_DONE = interrupted, must REDO that step
+#
+#   COMMITTER_DONE — TASK-NN → TASK-NN completed, next TASK is TASK-(NN+1)
+#   COMMITTER_START — TASK-NN → committer interrupted, redo verifier+committer for TASK-NN
+#   VERIFIER_DONE — TASK-NN  → TASK-NN verified, needs committer
+#   VERIFIER_START — TASK-NN → verifier interrupted, redo verifier+committer for TASK-NN
+#   BUILDER_DONE — TASK-NN   → TASK-NN builder done, needs verifier+committer
+#   BUILDER_START — TASK-NN  → builder interrupted, redo builder for TASK-NN
+#   PLANNER_DONE             → planning done, start first TASK
+#   PLANNER_START            → planner interrupted, redo specifier+planner
+#   SPECIFIER_DONE           → specifier done, needs planner
+#   SPECIFIER_START          → specifier interrupted, redo specifier+planner
+#   No log file              → start from scratch
 ```
 
 ---

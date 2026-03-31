@@ -99,7 +99,6 @@ Verifier-specific additional fields:
 
 ```xml
 <verification>
-  <check name="progress" status="{PASS|FAIL}"/>
   <check name="build" status="{PASS|FAIL}"/>
   <check name="lint" status="{PASS|FAIL|N/A}"/>
   <check name="tests" status="{PASS|FAIL|N/A}" count="{N}"/>

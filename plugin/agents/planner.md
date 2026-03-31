@@ -112,8 +112,8 @@ Record the determined mode in PLAN.md's `> Execution-Mode:` field.
 
 Creation responsibilities:
 - `PLAN.md`, `TASK-XX.md` → Planner
-- `PROGRESS.md` → Scheduler
 - `TASK-XX_result.md` → Committer
+- `work_WORK-NN.log` → All agents (append)
 
 File formats: → `{REFERENCES_DIR}/file-content-schema.md` § 1 (PLAN.md), § 2 (TASK)
 

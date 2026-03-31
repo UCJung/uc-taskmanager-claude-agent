@@ -49,12 +49,11 @@ Output:
 
 ### Committer
 
-Input: Verifier context-handoff (FULL) + Builder context-handoff (SUMMARY) + progress.md (gate)
+Input: Verifier context-handoff (FULL) + Builder context-handoff (SUMMARY)
 
 Processing:
-1. progress.md gate: exists + Status=COMPLETED + Files changed is not empty
-2. Gate passed → write result.md + git commit
-3. Gate failed → return FAIL (triggers scheduler retry)
+1. Verify builder completed successfully (check context-handoff status)
+2. Write result.md + git commit
 
 Output: → `{REFERENCES_DIR}/file-content-schema.md` § 4 reference
 
@@ -89,6 +88,6 @@ Output: → `{REFERENCES_DIR}/file-content-schema.md` § 4 reference
 
 ## Committer Retry
 
-1. Failure cause: progress.md not found / Status≠COMPLETED / No files changed
-2. Re-dispatch to builder including existing progress.md
+1. Failure cause: verification FAIL / No files changed
+2. Re-dispatch to builder
 3. Maximum 2 retries (3 attempts total). 3 failures → TASK FAILED, pipeline halted

@@ -1,17 +1,22 @@
 ---
 name: work-pipeline
-description: Triggers the WORK-PIPELINE when a user request starts with a [] tag (e.g., [new-feature], [bugfix], [WORK start]). Use this skill whenever you detect a [] tag at the beginning of a user message.
+description: Triggers the WORK-PIPELINE. Use this skill when (1) user request starts with a [] tag (e.g., [new-feature], [bugfix]), or (2) user asks to resume/continue a WORK (e.g., "WORK-01 계속실행", "resume WORK-01", "WORK-01 실행", "continue WORK-01").
 ---
 
 # WORK-PIPELINE Trigger
 
-When the user's message starts with a `[]` tag, start the WORK-PIPELINE by reading `../../references/agent-flow.md` and following the orchestration flow.
+Read `../../references/agent-flow.md` and follow the orchestration flow.
 
 ## Trigger Detection
 
-Any message starting with `[...]` triggers this pipeline:
+**New WORK** — message starts with `[...]` tag:
 - `[new-feature]`, `[enhancement]`, `[bugfix]`, `[new-work]`, `[WORK start]`
 - Or any custom tag in square brackets
+
+**Resume WORK** — message mentions existing WORK-ID with execution intent:
+- "WORK-XX 계속실행", "WORK-XX 실행", "resume WORK-XX", "continue WORK-XX"
+- "파이프라인 재개", "WORK 계속"
+- → Follow agent-flow.md § Resuming Existing WORK
 
 ## References Directory (CRITICAL)
 
@@ -48,7 +53,7 @@ CALLBACK_TOKEN={token}
 2. **⛔ STOP — Present the specifier's output summary to the user and WAIT for explicit approval.** Do NOT call the next agent until the user approves. Show what was created (Requirement.md, PLAN.md if direct mode, TASK files) and ask "Proceed?"
 3. **Follow the execution-mode** returned by specifier:
    - `direct`: spawn builder (Agent tool) → spawn verifier+committer (single Agent tool, see agent-flow.md § Combined Agent Invocation)
-   - `pipeline`: spawn builder → spawn verifier+committer (single Agent tool)
+   - `pipeline`: for each TASK → spawn builder → spawn verifier+committer (repeat per TASK)
    - `full`: spawn planner → **⛔ STOP for 2nd approval** → spawn scheduler → scheduler handles [builder → verifier+committer] × N
 
 ## ⚠️ CRITICAL: Agent Spawn Rules

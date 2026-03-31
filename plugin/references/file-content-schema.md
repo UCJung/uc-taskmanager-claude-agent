@@ -10,7 +10,6 @@ Single source of truth for pipeline artifact file formats.
 | `TASK-XX.md` | § 2 | `parseTaskFilename()` DB registration missed |
 | `TASK-XX_result.md` | § 3 | context-handoff missing |
 | `TASK-XX_result.md` (direct) | § 4 | result.md recognition failure |
-| `PROGRESS.md` | § 5 | scheduler progress tracking inoperable |
 
 ---
 
@@ -186,38 +185,14 @@ None
 
 ---
 
-## § 5. PROGRESS.md
-
-Path: `works/{WORK_ID}/PROGRESS.md`
-
-```markdown
-# {WORK_ID} Progress
-
-> WORK: {title}
-> Last updated: {timestamp}
-> Mode: manual | auto
-
-| TASK | Title | Status | Commit | Duration |
-|------|-------|--------|--------|----------|
-| TASK-00 | {title} | ✅ Done | abc1234 | 12min |
-| TASK-01 | {title} | 🔄 In Progress | — | — |
-
-## Log
-- [10:00] TASK-00 started
-- [10:12] TASK-00 verified ✅, committed abc1234
-```
-
----
-
-## § 6. File Naming Rules
+## § 5. File Naming Rules
 
 | Type | Format | Created By |
 |------|--------|------------|
 | Requirement | `Requirement.md` | specifier |
 | WORK plan | `PLAN.md` | planner / specifier |
 | TASK plan | `TASK-NN.md` | planner / specifier |
-| TASK progress | `TASK-NN_progress.md` | planner / specifier (template) / builder (update) |
 | TASK result | `TASK-NN_result.md` | committer |
-| WORK progress | `PROGRESS.md` | scheduler |
+| Activity log | `work_WORK-NN.log` | all agents (append) |
 
 `WORK-NN-TASK-NN.md` format prohibited → `parseTaskFilename()` cannot recognize it.
