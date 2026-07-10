@@ -1,25 +1,28 @@
-# Agent Flow — Main Claude 오케스트레이션 가이드
+# Agent Flow — Main Claude 역할 가이드
 
-> **모든 에이전트 호출은 Main Claude가 수행합니다.**
-> 서브에이전트는 작업 완료 후 결과(dispatch XML 또는 task-result XML)만 반환합니다.
-> Main Claude가 반환값을 받아 다음 에이전트를 호출합니다.
+> Main Claude는 실행흐름에 따라 agent를 실행하세요.
+> Agent들이 승인 요청을 하면 사용자에게 질문하고 승인하면 흐름에 따라 진행하세요.
+> agent가 종료되면 흐름에 따라 다음 Agent를 실행하세요.
+> 다음 Agent를 실행할때 반환값을 전달하세요.
 
 ---
+
+## 파이프라인 시작
+
+Main Claude는 specifier를 호출하고 사용자의 요구사항 받은것을 그대로 전달하세요.
+당신의 역할은 흐름에 따라 실행하는 것이지 
 
 ## 파이프라인 흐름
 
 ```
 [] 태그 감지 → specifier 호출
     │
-    specifier 반환값 확인
+    specifier 실행 mode 판단
     │
-    ├─ 겸임 (direct) → specifier가 Requirement.md + PLAN.md + TASK-00 생성
-    │                    → builder dispatch XML 반환
-    │                    → § direct 절차 실행
+    ├─ direct mode → specifier 수행 → planner 역할 수행
     │
-    └─ 위임 (pipeline/full) → specifier가 Requirement.md만 생성
-                                → planner dispatch XML 반환
-                                → § planner 주도 절차 실행
+    └─ pipeline/full → specifier 수행 → planner dispatch XML 반환
+
 ```
 
 ---
@@ -27,11 +30,11 @@
 ## Direct 모드 (Specifier가 Planner 겸임)
 
 ```
-1. specifier 호출 → Requirement.md + PLAN.md + TASK-00 생성 + builder dispatch XML 반환
-2. ⛔ 정지 — 요약을 사용자에게 제시하고 승인 대기 (builder를 호출하지 말 것)
-3. builder 호출 (dispatch XML을 프롬프트로) — 셀프 체크 포함
-4. verifier 호출 (builder 결과를 프롬프트로) — 빌드/린트/테스트 검증
-5. committer 호출 (verifier 결과를 프롬프트로) — result.md 생성 + git commit
+1. specifier 호출 → planner 역할 수행 + builder dispatch XML 반환
+2. ⛔ 정지 — 요약을 사용자에게 제시하고 승인 대기
+3. builder 호출
+4. verifier 호출
+5. committer 호출
 ```
 
 ---
@@ -39,13 +42,13 @@
 ## Pipeline 모드
 
 ```
-1. specifier 호출 → Requirement.md 생성
-2. planner 호출 → PLAN.md + TASK-NN 생성 + execution-mode 결정
+1. specifier 호출 
+2. planner 호출
 3. ⛔ 정지 — Requirement.md + PLAN.md + TASK 목록을 제시하고 승인 대기
 4. 각 TASK에 대해 (오름차순):
-   a. builder 호출 (TASK별 dispatch XML을 프롬프트로)
-   b. verifier 호출 (builder 결과를 프롬프트로)
-   c. committer 호출 (verifier 결과를 프롬프트로)
+   a. builder 호출 TASK별
+   b. verifier 호출 TASK별
+   c. committer 호출 TASK별
    d. 미완료 TASK가 남아있으면 다음 TASK로 계속
 ```
 
@@ -54,14 +57,14 @@
 ## Full 모드 (Scheduler 포함)
 
 ```
-1. specifier 호출 → Requirement.md 생성
-2. planner 호출 → PLAN.md + TASK들 + execution-mode: full 생성
+1. specifier 호출
+2. planner 호출
 3. ⛔ 정지 — Requirement.md + PLAN.md + TASK 목록을 제시하고 승인 대기
-4. scheduler 호출 → DAG 분석 + READY TASK + builder dispatch XML 반환
-5. builder 호출 (dispatch XML을 프롬프트로) → 구현
-6. verifier 호출 (builder 결과를 프롬프트로) → 검증
-7. committer 호출 (verifier 결과를 프롬프트로) → 커밋
-8. 미완료 TASK가 남아있으면 4단계로 돌아감
+4. scheduler 호출
+5. builder 호출
+6. verifier 호출
+7. committer 호출
+8. 미완료 TASK가 남아있으면 4.scheduler 호출
 ```
 
 병렬 실행: scheduler가 여러 READY TASK를 반환하면 builder를 동시에 호출.
@@ -101,7 +104,7 @@ PLAN.md + TASK가 이미 있는 WORK의 파이프라인 재개:
 | 에이전트 | 역할 | 모델 |
 |----------|------|------|
 | specifier | 요구사항 분석 | opus |
-| planner | PLAN + TASK 분해 | opus |
+| planner | 실행계획 수립 + TASK 분해 | opus |
 | scheduler | DAG 관리 + 디스패치 | haiku |
 | builder | 코드 구현 | sonnet |
 | verifier | 빌드/린트/테스트 검증 | haiku |
@@ -127,8 +130,8 @@ PLAN.md + TASK가 이미 있는 WORK의 파이프라인 재개:
 
 | 모드 | 승인 횟수 | 시점 | 사용자에게 보여줄 내용 |
 |------|:---------:|------|------------------------|
-| direct | 1 | Specifier 완료 후 | Requirement.md + PLAN.md + TASK-00.md 요약 |
-| pipeline/full | 1 | Planner 완료 후 | Requirement.md + PLAN.md + TASK 목록 |
+| direct | 1 | Specifier 완료 및 Planner 역할 수행 완료 후 | Requirement.md + PLAN.md + TASK-00.md 요약 |
+| pipeline/full | 2 | Specifier 완료 후, Planner 완료 후 | Requirement.md 요약, PLAN.md + TASK-00.md 요약|
 | auto-approve | 0 | — | 모든 승인 게이트 생략 |
 
 **승인 요청 방법:**

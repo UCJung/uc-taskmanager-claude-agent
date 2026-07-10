@@ -191,12 +191,6 @@ Bash 명령은 권한 호환성을 위해 다음 규칙을 반드시 따라야 �
 - 파일 검색 → `Grep` 도구 (`grep` 아님)
 - 파일 찾기 → `Glob` 도구 (`find` 아님)
 
-**활동 로그 예시:**
-```
-잘못됨: printf '[%s]_%s\n' "$(date ...)" "INIT" >> work.log
-올바름: Write 도구로 로그 파일에 한 줄 추가
-```
-
 **Git 예시:**
 ```
 잘못됨: cd /path/to/project && git add file && git commit -m "msg"

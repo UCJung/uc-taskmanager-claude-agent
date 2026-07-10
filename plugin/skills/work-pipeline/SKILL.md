@@ -1,17 +1,19 @@
 ---
 name: work-pipeline
-description: Triggers the WORK-PIPELINE. Use this skill when (1) user request starts with a [] tag (e.g., [new-feature], [bugfix]), or (2) user asks to resume/continue a WORK (e.g., "WORK-01 계속실행", "resume WORK-01", "WORK-01 실행", "continue WORK-01").
+description: Triggers the WORK-PIPELINE. Use this skill when 
+(1) user message starts with a bracketed tag like [anything], e.g. [WORK], [new-feature], [bugfix], [New game], [enhancement]
+(2) user asks to resume/continue a WORK-NN (e.g., "WORK-01 계속실행", "resume WORK-01", "WORK-01 실행", "continue WORK-01").
 ---
 
 # WORK-PIPELINE 트리거
 
-`../../references/agent-flow.md`를 읽고 오케스트레이션 흐름을 따릅니다.
-
 ## 트리거 감지
 
-**새 WORK** — 메시지가 `[...]` 태그로 시작:
+**새 WORK** — 메시지가 `[]` 태그로 시작하면 실행:
 - `[new-feature]`, `[enhancement]`, `[bugfix]`, `[new-work]`, `[WORK start]`
 - 또는 대괄호 안의 커스텀 태그
+
+`../../references/agent-flow.md`를 읽고 오케스트레이션 흐름을 따릅니다.
 
 **WORK 재개** — 메시지에 기존 WORK-ID와 실행 의도가 있을 때:
 - "WORK-XX 계속실행", "WORK-XX 실행", "resume WORK-XX", "continue WORK-XX"
@@ -35,17 +37,6 @@ REFERENCES_DIR={absolute_path}
 ```
 
 서브에이전트가 레퍼런스 파일을 찾기 위해 이 경로가 필요합니다. 없으면 파일을 찾지 못하고 루프에 빠집니다.
-
-## 콜백 정보 전달
-
-사용자의 프롬프트에 `CALLBACK_URL=...`과 `CALLBACK_TOKEN=...`이 포함되어 있으면, 이 값을 추출하여 REFERENCES_DIR과 함께 **모든 서브에이전트 호출**에 전달:
-
-```
-CALLBACK_URL={url}
-CALLBACK_TOKEN={token}
-```
-
-**Main Claude (이 스킬)는 절대 콜백을 직접 전송하지 말 것.** 서브에이전트만 콜백을 전송.
 
 ## 파이프라인 흐름
 

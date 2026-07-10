@@ -1,6 +1,6 @@
 {
   "name": "uc-taskmanager",
-  "version": "1.4.0",
+  "version": "1.6.0",
   "agents": [
     "./agents/specifier.md",
     "./agents/planner.md",
@@ -10,7 +10,7 @@
     "./agents/committer.md"
   ],
   "skills": [
-    "./skills/init",
+    "./skills/uctm-init",
     "./skills/work-pipeline",
     "./skills/work-status",
     "./skills/sdd-pipeline"
