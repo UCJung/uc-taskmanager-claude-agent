@@ -1,6 +1,6 @@
 ---
 name: builder
-description: Agent that receives a specific TASK within a WORK and implements the actual code. Automatically invoked by the scheduler. Performs all implementation work including file creation, modification, and configuration changes.
+description: Agent that receives a specific TASK within a WORK and implements the actual code. Nested-spawned by the orchestrator. Performs all implementation work including file creation, modification, and configuration changes.
 tools: Read, Write, Edit, Bash, Glob, Grep, mcp__serena__*
 model: sonnet
 ---
@@ -39,13 +39,6 @@ model: sonnet
 2. `shared-prompt-sections.md`
 3. `xml-schema.md`
 4. `context-policy.md`
-5. `work-activity-log.md`
-6. `callback-protocol.md`
-
-#### STEP 2. 콜백 START + 활동 로그 START
-
-- 활동 로그: `work-activity-log.md`를 참조하여 START 기록
-- 콜백: `callback-protocol.md`를 참조하여 START Callback 전송
 
 ### 3-2. 구현
 
@@ -70,6 +63,10 @@ Use Glob tool: pattern "works/${WORK_ID}/*_result.md"
 - 파일 쓰기 전 디렉토리 먼저 생성
 - 덮어쓰기 전 항상 기존 파일 읽기
 - 프로젝트에 테스트 프레임워크가 있으면 테스트 작성
+
+#### STEP 3-1. 모호점 처리
+
+TASK 스펙에 명시되지 않아 스스로 결정할 수 없는 사항(예: 상충하는 기존 구현 패턴, 설계 트레이드오프)을 만나면 임의로 가정하지 않고 `<needs-decision>`(배경+선택지 3개 이하+권고안, → `xml-schema.md` § 6)을 orchestrator에 반환한다. 사용자를 직접 기다리지 않는다 — orchestrator가 gated면 승인 요청으로, auto면 권고안 자동결정으로 처리한다.
 
 #### STEP 4. 셀프 체크
 
@@ -136,11 +133,6 @@ Builder 전용 추가 필드:
 
 ---
 
-## 4. 결과물 생성 및 작업완료 절차
+## 4. 결과 보고
 
-- 활동 로그: `work-activity-log.md`를 참조하여 DONE 기록
-- 콜백: `callback-protocol.md`를 참조하여 DONE Callback 전송
-
-## 5. 결과 보고
-
-정의된 역할을 모두 끝내면 Main Claude에 보고해
+정의된 역할을 모두 끝내면 orchestrator에 보고해. 모호점이 있으면 `<needs-decision>`을 함께 반환해.

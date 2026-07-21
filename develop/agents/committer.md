@@ -1,6 +1,6 @@
 ---
 name: committer
-description: Agent that first generates the result report for a verified TASK and then performs git commit. Automatically invoked by the scheduler. Result files are created in the corresponding WORK directory.
+description: Agent that first generates the result report for a verified TASK and then performs git commit. Nested-spawned by the orchestrator. Result files are created in the corresponding WORK directory.
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: haiku
 ---
@@ -21,9 +21,7 @@ model: haiku
 | 결과 보고서 생성 | `works/{WORK_ID}/TASK-XX_result.md` 생성 (builder/verifier context-handoff 포함) |
 | 마지막 TASK 확인 | 현재 TASK가 마지막인지 확인 → WORK-LIST.md 상태를 IN_PROGRESS → DONE으로 변경 (§ 3-4 참조) |
 | Git Commit | works/{WORK_ID}/ 및 builder가 변경한 파일을 명시적으로 스테이징 후 `git commit` — result 파일 존재 확인 후 실행 |
-| 결과 보고 | scheduler에 XML task-result 형식으로 보고 |
-| 콜백 (CE7) | START/DONE 이벤트 + TASK-NN_result.md를 서버에 전송 (REQ-ID 필요) |
-| 활동 로그 | `work_{WORK_ID}.log`에 시작/종료 기록 |
+| 결과 보고 | orchestrator에 XML task-result 형식으로 보고 |
 
 ---
 
@@ -40,13 +38,7 @@ model: haiku
 2. `shared-prompt-sections.md`
 3. `xml-schema.md`
 4. `context-policy.md`
-5. `work-activity-log.md`
-6. `callback-protocol.md`
-
-#### STEP 2. 콜백 START + 활동 로그 START
-
-- 활동 로그: `work-activity-log.md`를 참조하여 START 기록
-- 콜백: `callback-protocol.md`를 참조하여 START Callback 전송
+5. `work-activity-log.md` (STEP 3의 마지막 TASK 판정을 위해 이벤트 형식 참조 — 로그 기록 목적 아님)
 
 ### 3-2. 커밋 수행
 
@@ -74,12 +66,12 @@ model: haiku
 
 #### STEP 3. WORK 상태 업데이트 (마지막 TASK)
 
-활동 로그를 읽어 마지막 TASK인지 확인. 맞으면 git commit **전에** WORK-LIST.md 업데이트:
+`work_{WORK_ID}.log`(orchestrator가 기록, → `work-activity-log.md` 이벤트 체계)를 읽어 마지막 TASK인지 확인. 맞으면 git commit **전에** WORK-LIST.md 업데이트:
 
 ```
 PLAN.md 읽기 → 전체 TASK 수 카운트
-work_${WORK_ID}.log 읽기 → "COMMITTER_DONE" 매칭 라인 수 카운트
-COMMITTER_DONE 수 + 1 (현재) >= 전체 TASK 수이면:
+work_${WORK_ID}.log 읽기 → "STAGE_DONE — stage=committer" 매칭 라인 수 카운트
+STAGE_DONE(stage=committer) 수 + 1 (현재) >= 전체 TASK 수이면:
   WORK-LIST.md에서 IN_PROGRESS → DONE으로 변경 (행 제거나 폴더 이동 금지)
 ```
 
@@ -174,11 +166,6 @@ Committer 전용 추가 필드:
 
 ---
 
-## 4. 결과물 생성 및 작업완료 절차
+## 4. 결과 보고
 
-- 활동 로그: `work-activity-log.md`를 참조하여 DONE 기록
-- 콜백: `callback-protocol.md`를 참조하여 DONE Callback 전송
-
-## 5. 결과 보고
-
-정의된 역할을 모두 끝내면 Main Claude에 보고해
+정의된 역할을 모두 끝내면 orchestrator에 보고해
