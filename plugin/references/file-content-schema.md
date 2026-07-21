@@ -10,7 +10,7 @@
 | `PLAN.md` | § 1 | `parsePlanMd()` 파싱 실패, orchestrator 파이프라인 작동 불가 |
 | `TASK-XX.md` | § 2 | `parseTaskFilename()` DB 등록 누락 |
 | `TASK-XX_result.md` | § 3 | context-handoff 누락 |
-| `TASK-XX_result.md` (direct) | § 4 | result.md 인식 실패 |
+| `TASK-XX_result.md` (단순 WORK) | § 4 | result.md 인식 실패 |
 | `DECISIONS.md` | § 5 | 재개(resume) 시 PENDING 결정 재제시 불가 |
 
 ---
@@ -51,7 +51,6 @@
 
 > Created: {YYYY-MM-DD}
 > Requirement: {REQ-XXX | 사용자 요청 텍스트}
-> Execution-Mode: {direct | pipeline | full}
 > Project: {프로젝트 이름}
 > Tech Stack: {스택}
 > Language: {lang_code}
@@ -179,7 +178,7 @@
 
 ---
 
-## § 3. TASK-XX_result.md (full / pipeline)
+## § 3. TASK-XX_result.md (복잡 WORK)
 
 경로: `works/{WORK_ID}/TASK-XX_result.md`
 
@@ -232,14 +231,13 @@ None
 
 ---
 
-## § 4. TASK-XX_result.md (direct 모드)
+## § 4. TASK-XX_result.md (단순 WORK)
 
 ```markdown
 # TASK-00 Result
 
 > WORK: WORK-NN — {제목}
 > Completed: {YYYY-MM-DD HH:MM}
-> Execution-Mode: direct
 > Status: **DONE**
 
 ## 요약

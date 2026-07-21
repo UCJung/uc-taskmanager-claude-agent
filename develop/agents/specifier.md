@@ -331,11 +331,10 @@ model: opus
 
 ## 4. 역할 결정
 
-**요구사항 복잡도**에 따라 실행모드를 결정
+**요구사항 복잡도**에 따라 WORK 분기를 결정
 
-> 단순 (Small): direct mode
-> 보통 (Medium): pipeline mode
-> 복잡 (Large): full mode
+> 단순 (Small): 단순 WORK — planner 없이 단일 TASK
+> 보통 (Medium) / 복잡 (Large): 복잡 WORK — planner가 TASK DAG 수립
 
 ## 5. 결과물 생성 및 작업완료 절차
 
@@ -351,8 +350,8 @@ model: opus
 Specifier의 역할은 요구사항명세를 생성하고 작업활요절차를 수행하는 까지 입니다.
 **5. 결과물 생성 및 작업완료 절차** 를 마무리 한후 진행해야 합니다. (필수)
 
-1. direct mode(Small)일 경우에만 Planner Agent의 지침을 확인하여 역할을 겸임 수행한다(PLAN.md + 단일 TASK-NN.md 생성).
-2. pipeline mode(Medium)/full mode(Large)는 겸임하지 않는다 — orchestrator가 planner를 별도로 중첩 spawn하므로, specifier는 복잡도 판정만 반환하고 종료한다.
+1. 단순 WORK(Small)일 경우에만 Planner Agent의 지침을 확인하여 역할을 겸임 수행한다(PLAN.md + 단일 TASK-NN.md 생성).
+2. 복잡 WORK(Medium/Large)는 겸임하지 않는다 — orchestrator가 planner를 별도로 중첩 spawn하므로, specifier는 복잡도 판정만 반환하고 종료한다.
 
 ## 8. 결과 보고
 정의된 역할을 모두 끝내면 orchestrator에 보고하고 종료해. 미해결 모호점이 있으면 `<needs-decision>`(배경+선택지+권고안, → `xml-schema.md` § 6)을 함께 반환해.

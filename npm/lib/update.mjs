@@ -44,5 +44,5 @@ export function update(isGlobal) {
   console.log(`\n  Updating ${dim(label)} ...`);
   console.log(`    ${green('✓')} ${agentCount} agent files updated`);
   console.log(`    ${green('✓')} ${refCount} reference files updated`);
-  console.log(`    ${dim('-')} CLAUDE.md, router_rule_config.json untouched\n`);
+  console.log(`    ${dim('-')} CLAUDE.md untouched\n`);
 }

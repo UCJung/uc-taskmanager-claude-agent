@@ -73,18 +73,6 @@ function copyPluginResources(destBaseDir) {
   return count;
 }
 
-function ensureRouterConfig(projectDir) {
-  const configDir = join(projectDir, '.agent');
-  const configPath = join(configDir, 'router_rule_config.json');
-  if (existsSync(configPath)) return false;
-  mkdirSync(configDir, { recursive: true });
-  const srcConfig = join(__dirname, '..', '.agent', 'router_rule_config.json');
-  if (existsSync(srcConfig)) {
-    copyFileSync(srcConfig, configPath);
-  }
-  return true;
-}
-
 function ensureWorksDir(projectDir) {
   const worksDir = join(projectDir, 'works');
   if (existsSync(worksDir)) return false;
@@ -172,12 +160,6 @@ export async function init(isGlobal) {
   const resCount = copyPluginResources(claudeDir);
   if (resCount > 0) {
     console.log(`    ${green('✓')} ${resCount} plugin resource files copied (.claude-plugin, skills)`);
-  }
-
-  if (ensureRouterConfig(projectDir)) {
-    console.log(`    ${green('✓')} .agent/router_rule_config.json created`);
-  } else {
-    console.log(`    ${dim('-')} .agent/router_rule_config.json already exists`);
   }
 
   if (ensureWorksDir(projectDir)) {

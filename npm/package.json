@@ -11,7 +11,6 @@
     "lib/",
     "agents/",
     "references/",
-    ".agent/",
     ".claude-plugin/",
     "skills/"
   ],

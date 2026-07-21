@@ -41,7 +41,7 @@ Main Claude가 관여하지 않는 orchestrator 내부 진행이다. 상세 절�
 
 - **복잡 WORK**(요구사항 규모가 커서 설계 분해가 필요한 경우)만 planner를 중첩 spawn → `PLAN.md` + TASK DAG 생성.
 - **단순 WORK**는 planner 호출을 생략하고 specifier가 이미 만든 단일 TASK를 그대로 사용한다.
-  - **이 분기가 기존 direct/pipeline/full 3-모드 분기를 대체한다** — "단순 WORK"는 기존 direct에, "복잡 WORK"는 기존 pipeline/full에 대응하되, 모드를 사용자가 미리 지정하지 않고 orchestrator가 specifier 판정을 근거로 자율 결정한다.
+  - 단순/복잡은 사용자가 미리 지정하지 않고 orchestrator가 specifier 판정을 근거로 자율 결정한다.
 - `mode=gated`(복잡 WORK만 해당): `GATE_WAIT — stage=planner` 기록 → `<gate type="stage" work="{WORK}" stage="planner">` 반환 후 **yield**.
 - `mode=auto`: 게이트 생략, `STAGE_DONE — stage=planner` 즉시 기록 후 STEP C로 진행. 단순 WORK는 이 STEP 자체를 건너뛴다.
 
@@ -98,7 +98,7 @@ orchestrator가 자식 프롬프트를 구성할 때 이전 단계 결과를 다
 | GATE-1 | specifier 완료 후 | `specifier` | 복잡 WORK → planner spawn / 단순 WORK → STEP C(builder) |
 | GATE-2 | planner 완료 후 (복잡 WORK만) | `planner` | STEP C(builder) |
 
-단순 WORK는 GATE-2가 없다 — GATE-1 승인만으로 STEP C까지 진행한다(기존 direct=1게이트, pipeline/full=2게이트 체계와 동일한 승인 횟수를 유지).
+단순 WORK는 GATE-2가 없다 — GATE-1 승인만으로 STEP C까지 진행한다.
 
 ### 동적 게이트 (`type="decision"`)
 
@@ -126,8 +126,8 @@ orchestrator가 자식 프롬프트를 구성할 때 이전 단계 결과를 다
 
 | 내부 분기 | Main → Orchestrator | Orchestrator → Specifier | → Planner | → Builder | → Verifier | → Committer | 합계 |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| 단순 WORK (기존 direct 대응) | 1 | 1 | — | N | N | N | **2 + 3N** |
-| 복잡 WORK (기존 pipeline/full 대응, N TASK) | 1 | 1 | 1 | N | N | N | **3 + 3N** |
+| 단순 WORK | 1 | 1 | — | N | N | N | **2 + 3N** |
+| 복잡 WORK (N TASK) | 1 | 1 | 1 | N | N | N | **3 + 3N** |
 
 - `gated`/`auto` 여부는 spawn 수에 영향을 주지 않는다 — 게이트 정지 발생 여부만 다르다(§3).
 - 위 표는 orchestrator 내부 자식 spawn만 집계한다. Main Claude가 spawn하는 대상은 오직 orchestrator 1개다.
@@ -140,7 +140,7 @@ Main Claude는 재개 요청을 감지하면 대상 `WORK_ID`를 orchestrator에
 
 1. 파킹된 agentId를 보관하고 있으면 → `SendMessage(agentId, "WORK-{NN} 계속")`으로 컨텍스트를 유지한 채 재개.
 2. 세션이 끊겨 핸들이 없으면(예: 새 세션에서 "WORK-01 계속실행") → orchestrator를 `WORK_ID` + `REFERENCES_DIR` + (승계된) `mode`와 함께 새로 spawn → orchestrator가 `work_{WORK_ID}.log`의 마지막 이벤트로 재개 지점을 판정한다.
-3. execution-mode(단순/복잡)는 다시 묻지 않는다 — orchestrator가 로그 헤더 또는 `PLAN.md`에서 승계한다.
+3. 단순/복잡 분기는 다시 묻지 않는다 — orchestrator가 `PLAN.md`와 TASK 구성에서 판정한다.
 
 ---
 

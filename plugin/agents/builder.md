@@ -46,7 +46,7 @@ model: sonnet
 
 → dispatch XML 형식: `xml-schema.md` § 1 참조
 
-- `work`, `task`, `execution-mode` 속성 추출
+- `work`, `task` 속성 추출
 - `<language>`에서 출력 언어 결정
 - `<task-spec><file>`에서 TASK 스펙 읽기
 - `<previous-results>`에서 이전 TASK 컨텍스트 파악

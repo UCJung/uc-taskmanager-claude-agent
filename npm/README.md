@@ -738,105 +738,6 @@ orchestrator's context after 5 TASKs:
 | Tracking | Scroll chat history | File-based (PLAN.md, result.md) |
 | Verification | Manual | Automated (build/lint/test) |
 
-### Router Rule Config (`.agent/router_rule_config.json`)
-
-The specifier (nested by orchestrator in STEP A) reads `.agent/router_rule_config.json` from the project root to determine routing criteria. If the file is absent, the specifier uses its built-in defaults.
-
-> **Mapping to orchestrator's branch**: specifier's `direct` classification → orchestrator treats it as a **simple WORK** (planner nested spawn skipped). specifier's `pipeline`/`full` classification → orchestrator treats it as a **complex WORK** (planner is nested, TASK DAG scheduled in STEP C). The `direct`/`pipeline`/`full` labels below are specifier's internal complexity assessment; they no longer select a separate top-level pipeline the way they used to.
-
-**File location:**
-```
-{project-root}/.agent/router_rule_config.json
-```
-
-**JSON structure:**
-```json
-{
-  "$schema": "http://uc-taskmanager.local/schemas/specifier-rules/v1.0.json",
-  "version": "1.1.0",
-  "description": "Specifier execution-mode decision criteria. Customize per project.",
-  "decision_flow": [
-    "1. build_test_required? → false → direct",
-    "2. single_domain + sequential DAG → pipeline",
-    "3. any full_conditions met → full"
-  ],
-  "rules": {
-    "direct": {
-      "criteria": {
-        "build_test_required": false,
-        "note": "File/line count irrelevant. If no build/test needed → direct (text edits, config changes, simple substitutions)"
-      }
-    },
-    "pipeline": {
-      "criteria": {
-        "build_test_required": true,
-        "single_domain_only": true,
-        "max_tasks": 5,
-        "dag_complexity": "sequential"
-      }
-    },
-    "full": {
-      "criteria": {
-        "any_of": [
-          "task_count > 5",
-          "dag_complexity == complex (2+ dependency levels)",
-          "multi_domain == true (BE + FE simultaneously)",
-          "new_module == true (design → implement → verify multi-phase)",
-          "partial_rollback_needed == true"
-        ]
-      }
-    }
-  },
-  "customization_guide": {
-    "doc-heavy projects (md edits)": "Widen direct scope. Most build_test_required=false cases → direct",
-    "code-heavy projects": "Center on pipeline/full. Simple bug fixes → pipeline, multi-domain → full",
-    "max_tasks tuning": "Adjust pipeline max_tasks between 3–7 based on team size or context limits"
-  }
-}
-```
-
-**Key fields:**
-| Field | Description |
-|-------|-------------|
-| `rules.direct.criteria.build_test_required` | `false` → specifier handles implementation, then committer commits |
-| `rules.pipeline.criteria.max_tasks` | Max task count before escalating to full (default: 5) |
-| `rules.pipeline.criteria.dag_complexity` | `sequential` only; complex DAG → escalates to full |
-| `rules.full.criteria.any_of` | List of conditions — any match triggers full mode |
-
-**Fallback behavior:** If `.agent/router_rule_config.json` is absent or malformed, the specifier falls back to its built-in defaults (equivalent to the structure above).
-
-**Per-project customization example:**
-
-For a documentation-heavy project where most changes are text edits:
-```json
-{
-  "rules": {
-    "direct": {
-      "criteria": { "build_test_required": false }
-    },
-    "pipeline": {
-      "criteria": { "max_tasks": 3, "single_domain_only": true, "dag_complexity": "sequential" }
-    }
-  }
-}
-```
-
-For a monorepo with strict build requirements:
-```json
-{
-  "rules": {
-    "pipeline": {
-      "criteria": { "max_tasks": 7 }
-    },
-    "full": {
-      "criteria": {
-        "any_of": ["task_count > 7", "multi_domain == true"]
-      }
-    }
-  }
-}
-```
-
 ### Approval Gates, Nested Autonomy, and DECISIONS.md
 
 Main Claude spawns `orchestrator` exactly once per WORK; orchestrator alone decides when to nest specifier/planner/builder/verifier/committer, and when to pause and ask a human. Since nested sub-agents cannot prompt the user directly, **every approval or decision is surfaced at the Main Claude boundary**:
@@ -857,7 +758,7 @@ Instead of ambiguous natural language prompts, agents communicate using structur
 
 **Dispatch Format** (Caller → Receiver):
 ```xml
-<dispatch to="builder" work="WORK-03" task="TASK-00" execution-mode="pipeline">
+<dispatch to="builder" work="WORK-03" task="TASK-00">
   <context>
     <project>uc-taskmanager</project>
     <language>ko</language>
@@ -974,7 +875,7 @@ Place a file with the same name in `.claude/agents/` to override.
 
 | What | File | Section |
 |------|------|---------|
-| Routing criteria | `specifier.md` | 3-2. Execution-Mode 결정 |
+| Complexity criteria | `specifier.md` | 4. 역할 결정 |
 | Approval gates / mode handling | `orchestrator.md` | 3-3. 게이트 및 동적 의사결정 |
 | TASK DAG scheduling / retries | `orchestrator.md` | STEP C: TASK DAG 실행 |
 | Commit message format | `committer.md` | Step 3: Stage + Commit |
@@ -1030,8 +931,6 @@ uc-taskmanager/
 │   ├── skills/              ← Synced from develop/skills/ (4 SKILL.md)
 │   ├── bin/cli.mjs          ← CLI entry point (uctm init/update)
 │   ├── lib/                 ← CLI implementation (constants.mjs, init.mjs, update.mjs)
-│   ├── .agent/              ← Default router config bundled with npm
-│   │   └── router_rule_config.json
 │   ├── .claude-plugin/
 │   │   └── plugin.json      ← Synced from develop/.claude-plugin/plugin.json
 │   ├── README.md            ← Synced from README.md (exposed on npmjs.com)

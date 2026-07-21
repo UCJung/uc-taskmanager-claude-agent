@@ -132,7 +132,6 @@ works/{WORK_ID}/
 |------|------|------|
 | `> Created:` | ✅ | YYYY-MM-DD |
 | `> Requirement:` | ✅ | `REQ-XXX` 또는 사용자 요청 텍스트 |
-| `> Execution-Mode:` | ✅ | `direct` / `pipeline` / `full` |
 | `> Project:` | ✅ | 프로젝트 이름 |
 | `> Tech Stack:` | ✅ | 감지된 기술 스택 |
 | `> Language:` | ✅ | 언어 코드 (`ko`, `en` 등) |

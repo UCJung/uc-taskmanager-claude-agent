@@ -61,7 +61,7 @@ model: opus
 
 #### STEP 3. 재개 판정 (기존 WORK 이어가기)
 
-`WORK_ID`가 주어졌거나 미완료 WORK가 감지되면(→ `shared-prompt-sections.md` § 4) `works/{WORK_ID}/work_{WORK_ID}.log`의 **마지막 이벤트**로 재개 지점을 판정한다. execution-mode는 다시 묻지 않고 로그 헤더(`EXECUTION-MODE — ...`) 또는 PLAN.md `> Execution-Mode:`에서 승계한다.
+`WORK_ID`가 주어졌거나 미완료 WORK가 감지되면(→ `shared-prompt-sections.md` § 4) `works/{WORK_ID}/work_{WORK_ID}.log`의 **마지막 이벤트**로 재개 지점을 판정한다. 단순/복잡 분기는 다시 묻지 않고 `PLAN.md`와 TASK 구성에서 판정한다.
 
 | 마지막 로그 이벤트 | 판정 | 처리 |
 |---|---|---|
@@ -77,7 +77,7 @@ model: opus
 
 #### STEP 4. 활동 로그 ORCHESTRATOR_START
 
-- 활동 로그: 신규 WORK면 실행 헤더(`EXECUTION-MODE — ...`) 1회 기록 후 `ORCHESTRATOR_START` 기록. 재개면 재개 사실만 기록(중복 헤더 금지).
+- 활동 로그: 신규 WORK면 `ORCHESTRATOR_START` 기록. 재개면 재개 사실만 기록.
 
 ---
 
@@ -87,15 +87,15 @@ model: opus
 
 - 활동 로그 `STAGE_START — stage=specifier` 기록.
 - specifier를 중첩 spawn. 프롬프트에 `REFERENCES_DIR`, 사용자 요청 원문, (있으면) `<ref-cache>`를 포함.
-- 반환값에서 WORK 폴더/Requirement.md 생성 여부, 복잡도 판정(Small/Medium/Large → direct/pipeline/full)을 확인.
+- 반환값에서 WORK 폴더/Requirement.md 생성 여부, 복잡도 판정(Small/Medium/Large)을 확인.
 - **게이트 처리**:
   - `mode=gated`: `GATE_WAIT — stage=specifier` 기록 → `[GATE-1] <gate type="stage" work="{WORK}" stage="specifier">` + Requirement 요약(`<next-stage>`는 복잡도에 따라 `planner` 또는 `builder`) 반환 후 **yield**.
   - `mode=auto`: 게이트 생략, `STAGE_DONE — stage=specifier` 즉시 기록 후 STEP B로 진행.
 
 #### STEP B. Planner 중첩 spawn (복잡 WORK만)
 
-- specifier 복잡도 판정이 **Medium/Large**(pipeline/full) → planner를 중첩 spawn → `PLAN.md` + `TASK-NN.md` DAG 생성.
-- **Small**(direct) → planner 생략, specifier가 이미 생성한 단일 TASK를 그대로 사용(기존 direct/pipeline/full 3-모드 분기를 이 내부 브랜치로 대체).
+- specifier 복잡도 판정이 **Medium/Large** → 복잡 WORK. planner를 중첩 spawn → `PLAN.md` + `TASK-NN.md` DAG 생성.
+- **Small** → 단순 WORK. planner 생략, specifier가 이미 생성한 단일 TASK를 그대로 사용.
 - 활동 로그 `STAGE_START — stage=planner` (planner를 spawn하는 경우만).
 - **게이트 처리** (복잡 WORK만 해당):
   - `mode=gated`: `GATE_WAIT — stage=planner` 기록 → `[GATE-2] <gate type="stage" work="{WORK}" stage="planner">` + PLAN/TASK 요약(`<next-stage>builder</next-stage>`) 반환 후 **yield**.
@@ -149,7 +149,7 @@ model: opus
 | GATE-1 | specifier 완료 후 | `specifier` | 복잡 WORK → planner / 단순 WORK → STEP C(builder) |
 | GATE-2 | planner 완료 후 (복잡 WORK만) | `planner` | STEP C(builder) |
 
-단순 WORK(direct)는 GATE-2가 없다 — GATE-1 승인만으로 STEP C까지 진행(기존 direct=1게이트, pipeline/full=2게이트 체계와 동일).
+단순 WORK는 GATE-2가 없다 — GATE-1 승인만으로 STEP C까지 진행.
 
 #### 동적 `<gate type="decision">` — 발생 및 에스컬레이션 규칙
 
@@ -192,7 +192,6 @@ TASK 간 의존성 전달(builder→verifier→committer, 그리고 다음 TASK�
 | STAGE_DONE 선기록 금지 | 게이트가 있는 단계는 게이트 해소(RESOLVED) 이전에 `STAGE_DONE`을 기록하지 않음 |
 | 파킹 핸들 1개 원칙 | orchestrator 자신만 파킹 대상 — 자식은 실행→반환하면 종료, 능동 관리 대상 아님 |
 | 재개 시 재실행 최소화 | `GATE_WAIT`/`DECISION_WAIT`로 종료된 경우 자식을 재실행하지 않고 디스크 산출물을 재사용 |
-| execution-mode 재확인 금지 | 재개 시 WORK 메타에서 승계한 execution-mode를 그대로 사용, 다시 묻지 않음 |
 
 ---
 
@@ -207,7 +206,7 @@ TASK 간 의존성 전달(builder→verifier→committer, 그리고 다음 TASK�
 ```
 🎉 {WORK_ID} 완료
    총: {N}개 TASK, {N}개 commit
-   실행 모드: {direct|pipeline|full} / orchestrator 모드: {gated|auto}
+   분기: {단순|복잡} WORK / orchestrator 모드: {gated|auto}
 
 ## 자동 결정 사항
 - D-01 [{stage 또는 task}] {확정값} — 근거: {rationale 1줄}

@@ -93,11 +93,10 @@ WORK-_D 확인 : 이전 단계에서 전달한 WORK ID를 확인합니다.
 
 ## 4. 역할 결정
 
-**구현계획  복잡도**에 따라 실행모드를 결정
+**구현계획 복잡도**에 따라 WORK 분기를 결정
 
-> 단순 (Small): direct mode
-> 보통 (Medium): pipeline mode
-> 복잡 (Large): full mode
+> 단순 (Small): 단순 WORK — planner 없이 단일 TASK
+> 보통 (Medium) / 복잡 (Large): 복잡 WORK — planner가 TASK DAG 수립
 
 ## 5. 결과물 생성 및 작업완료 절차
 

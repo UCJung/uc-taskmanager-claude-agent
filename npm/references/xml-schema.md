@@ -9,7 +9,7 @@ uc-taskmanager 에이전트용 XML 통신 형식 정의.
 ## 1. Dispatch 형식 (orchestrator → 수신자)
 
 ```xml
-<dispatch to="{receiver}" work="{WORK_ID}" task="{TASK_ID}" execution-mode="{direct|pipeline|full}">
+<dispatch to="{receiver}" work="{WORK_ID}" task="{TASK_ID}">
   <ref-cache>                                        <!-- 선택사항 -->
     <ref key="shared-prompt-sections">{파일 내용}</ref>
     <ref key="file-content-schema">{파일 내용}</ref>
@@ -40,7 +40,6 @@ uc-taskmanager 에이전트용 XML 통신 형식 정의.
 |------|-----|
 | `to` | builder, verifier, committer, planner, specifier |
 | `task` | `TASK-NN` — WORK 접두사 포함 금지 |
-| `execution-mode` | direct / pipeline / full (생략 시 full 기본값) |
 
 ---
 
