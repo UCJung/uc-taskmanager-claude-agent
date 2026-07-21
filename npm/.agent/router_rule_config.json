@@ -1,7 +1,7 @@
 {
-  "$schema": "http://uc-taskmanager.local/schemas/router-rules/v1.0.json",
+  "$schema": "http://uc-taskmanager.local/schemas/specifier-rules/v1.0.json",
   "version": "1.1.0",
-  "description": "Router execution-mode 판정 기준 설정. 프로젝트별로 이 파일을 수정하여 라우팅 기준을 커스터마이즈한다.",
+  "description": "Specifier execution-mode 판정 기준 설정. 프로젝트별로 이 파일을 수정하여 판정 기준을 커스터마이즈한다.",
   "decision_flow": [
     "1. build_test_required 여부 판단 → false이면 direct",
     "2. single_domain + sequential DAG → pipeline",
@@ -9,14 +9,14 @@
   ],
   "rules": {
     "direct": {
-      "description": "Router 단독 처리 — 빌드/테스트 검증 불필요, 서브에이전트 0",
+      "description": "단순 WORK — planner 생략. specifier가 만든 단일 TASK를 orchestrator가 builder → verifier → committer로 실행",
       "criteria": {
         "build_test_required": false,
         "note": "파일 수·줄 수 무관. 검증 없이 끝나는 작업이면 direct (텍스트 편집, 설정 변경, 단순 치환 등)"
       }
     },
     "pipeline": {
-      "description": "Builder → Verifier → Committer 단일 흐름 — Builder 1회 호출",
+      "description": "복잡 WORK — orchestrator가 planner를 중첩 spawn해 순차 TASK DAG를 만들고, TASK마다 builder → verifier → committer를 실행",
       "criteria": {
         "build_test_required": true,
         "single_domain_only": true,
@@ -26,7 +26,7 @@
       }
     },
     "full": {
-      "description": "Planner → Scheduler → [Builder → Verifier → Committer] × N",
+      "description": "복잡 WORK — 실행 흐름은 pipeline과 같고, TASK 수·의존 깊이·도메인 범위가 더 큰 경우에 해당",
       "criteria": {
         "any_of": [
           "task_count > 5",
@@ -35,13 +35,13 @@
           "new_module == true (신규 모듈/기능 — 설계→구현→검증 다단계)",
           "partial_rollback_needed == true (TASK 실패 시 부분 롤백 필요)"
         ],
-        "note": "Builder를 여러 번 독립 호출해야 안전한 규모"
+        "note": "builder를 여러 번 독립 호출해야 안전한 규모"
       }
     }
   },
   "customization_guide": {
-    "uc-taskmanager형 프로젝트 (md 편집 중심)": "direct 범위를 넓게. build_test_required=false인 경우 대부분 direct 처리",
-    "uc-teamspace형 프로젝트 (코드 개발 중심)": "pipeline/full 중심. 단순 버그 수정은 pipeline, 멀티도메인 기능은 full",
+    "문서 중심 프로젝트 (md 편집 위주)": "direct 범위를 넓게. build_test_required=false인 경우 대부분 direct 처리",
+    "코드 중심 프로젝트": "pipeline/full 중심. 단순 버그 수정은 pipeline, 멀티도메인 기능은 full",
     "max_tasks 조정": "팀 규모나 컨텍스트 한계에 따라 pipeline의 max_tasks를 3~7 사이로 조정 가능"
   }
 }
