@@ -70,14 +70,14 @@ The agents analyze your request, plan the work, and execute through isolated sub
 [game-dev] Build a brick breaker game in HTML
 ```
 
-* **Requirement Analysis**: The agent analyzes your requirement and asks for approval. Review `works/WORK-NN/Requirement.md` and type **"approve"** to proceed.
+* **Requirement Analysis**: Main Claude spawns a single `orchestrator` agent (`mode=gated` by default), which nests a `specifier` call to analyze your requirement. Orchestrator pauses at **[GATE-1]** and returns a summary for approval. Review `works/WORK-NN/Requirement.md` and type **"approve"** to proceed.
 ```
 {Requirement specification content}
-If you approve Requirement.md, I will call the Planner to create PLAN.md + TASK decomposition.
+If you approve Requirement.md, orchestrator will nest-spawn the Planner to create PLAN.md + TASK decomposition.
 Let me know if you want to modify anything.
 ```
 
-* **WORK Execution Plan**: The agent builds an execution plan and asks again. Review `works/WORK-NN/PLAN.md` and `TASK-NN.md`, then type **"approve"** to proceed.
+* **WORK Execution Plan**: For a **complex WORK** (multiple TASKs), orchestrator nests a `planner` call to build an execution plan, then pauses again at **[GATE-2]**. Review `works/WORK-NN/PLAN.md` and `TASK-NN.md`, then type **"approve"** to proceed.
 ```
 WORK-31 Development Approval Request
 
@@ -86,7 +86,7 @@ WORK-31 Development Approval Request
   ┌─────────┬─────────────────────────┐
   │  Item   │        Details          │
   ├─────────┼─────────────────────────┤
-  │ Mode    │ full                    │
+  │ Branch  │ complex WORK            │
   ├─────────┼─────────────────────────┤
   │ TASKs   │ 6 (TASK-00 ~ TASK-05)  │
   └─────────┴─────────────────────────┘
@@ -99,11 +99,11 @@ WORK-31 Development Approval Request
      └─────────────────────────────────→ TASK-05 ($$$$$$$$$)
 
   - TASK-01/02 parallel, TASK-03/04 parallel, TASK-05 final integration
-  - If approved, scheduler → builder → verifier → committer pipeline will execute.
+  - If approved, orchestrator schedules the TASK DAG itself and nest-spawns builder → verifier → committer for each TASK — no further approval gates in this phase.
 
   Proceed?
 ```
-* Per-TASK: build → verify → commit repeats automatically for each TASK.
+* Per-TASK: build → verify → commit repeats automatically for each TASK, all inside the same nested orchestrator run.
 ```
 ● TASK-05 committed. Updating PROGRESS.md and finalizing WORK-31.
 ```
@@ -118,7 +118,7 @@ WORK-31 Development Approval Request
 ```
 [WORK start] Change the submit button label to "Send" — auto
 ```
-Add "auto" to skip all approval steps and run the entire process automatically.
+Add "auto" to run orchestrator in `mode=auto` — it completes the entire WORK in one nested spawn with **zero approval gates**, and records every judgment call it had to make on your behalf in `works/WORK-NN/DECISIONS.md` and the final report's `## 자동 결정 사항` section.
 
 ### 2. Token Economy
 
@@ -127,11 +127,10 @@ I'm cost-conscious (honestly). So this agent applies four token-saving strategie
 **(1) Serena MCP for codebase analysis.**
 The agent prioritizes [Serena MCP](https://github.com/oraios/serena) for code exploration — reading symbols instead of entire files. (Huge thanks to the Serena team.)
 
-**(2) Three execution modes + spawn consolidation to minimize subagent overhead.** The WORK-PIPELINE has 6 agent stages running sequentially. For a single-TASK WORK, that's 6 subagent sessions — each consuming tokens just to boot up. Wasteful. So the specifier agent decides the execution mode based on complexity: **direct** mode uses only 3 agent calls (specifier → builder → verifier+committer), skipping planner and scheduler. On top of this, related agents are combined into a single spawn: specifier+planner run together, and verifier+committer run together — reducing total spawns by **~30%** (6 TASKs: 20 → 14 spawns). See [Three Execution Modes](#concept-three-execution-modes).
+**(2) A single nested orchestrator instead of per-stage round-trips.** The WORK-PIPELINE has up to 6 agent stages. Instead of Main Claude calling each stage one at a time, Main Claude spawns a single `orchestrator` agent **once**, which nests specifier → (planner) → builder → verifier → committer as sub-spawns of its own (Claude Code sub-agent nesting, depth 2). The orchestrator classifies each WORK as **simple** (single TASK — planner is skipped entirely: `orchestrator → specifier → builder → verifier → committer`) or **complex** (multiple TASKs — planner is nested too, and the orchestrator schedules the TASK DAG itself instead of round-tripping through Main Claude for every stage). See [Concept: Orchestrator Modes](#concept-orchestrator-modes-gated-vs-auto).
 
-**(3) Structured XML communication.** Subagents can't nest — Main Claude orchestrates everything.
-* When one agent finishes and the next agent starts, Main Claude sits in between, causing data to be transmitted twice. This communication is a blob of text —
-* The receiving side has to parse it again. So we standardized the communication format as XML.
+**(3) Structured XML communication.** Even with nesting, every hop between agents is still a text boundary — gate summaries and hand-offs are still just blobs of text.
+* Whichever side receives it has to parse it again. So we standardized the communication format as XML.
 * Every bit helps.
 * (This also made agent log monitoring much easier.) See [Structured Agent Communication](#structured-agent-communication).
 
@@ -164,21 +163,21 @@ Six subagents work across any project and any language, automatically handling *
 
 ## Usage
 
-### Trivial Fix (direct mode)
+### Trivial Fix (simple WORK)
 
 ```
 > [bugfix] Fix typo in login error message
 ```
 
-Main Claude calls specifier, which selects `execution-mode: direct` and returns a dispatch XML. Main Claude then calls builder (implements the change) and committer (commits). Creates WORK-NN directory + PLAN + result.md + commit.
+Main Claude spawns `orchestrator` once (`mode=gated` by default). Orchestrator nests specifier, which classifies this as a **simple WORK** (single TASK, no planner needed) and returns a dispatch XML. After **[GATE-1]** approval, orchestrator nests builder (implements the change) → verifier → committer (commits). Creates WORK-NN directory + PLAN + result.md + commit — all inside the same orchestrator run.
 
-### Quick Task (pipeline mode)
+### Quick Task (simple WORK, build/test required)
 
 ```
 > [bugfix] Fix the login button not responding on mobile
 ```
 
-Main Claude calls specifier, which selects `execution-mode: pipeline` and creates PLAN. Then Main Claude calls builder → verifier → committer in sequence.
+Orchestrator still classifies this as a **simple WORK** (single TASK) but flags that build/test verification is required. After **[GATE-1]** approval, orchestrator nests builder → verifier → committer in sequence.
 
 ### Complex Feature (WORK)
 
@@ -188,7 +187,7 @@ Main Claude calls specifier, which selects `execution-mode: pipeline` and create
 > [new-feature] Build a user authentication feature. Plan it.
 ```
 
-The planner analyzes the project and creates WORK-01:
+Orchestrator classifies this as a **complex WORK** and nests specifier → planner, which analyzes the project and creates WORK-01:
 
 ```
 WORK-01: User Authentication
@@ -208,7 +207,7 @@ WORK-01: User Authentication
 > Run WORK-01 pipeline
 ```
 
-The scheduler executes WORK-01's TASKs in dependency order.
+Orchestrator's internal DAG scheduling (STEP C) executes WORK-01's TASKs in dependency order, nesting builder → verifier → committer for each TASK — this phase has no approval gates.
 
 #### 3. Add to Existing WORK
 
@@ -235,6 +234,8 @@ WORK Status
 > Resume WORK-02
 ```
 
+"automatically" triggers `mode=auto` — orchestrator completes in a single nested spawn without gates. "Resume" reattaches to the parked orchestrator via `SendMessage` (context preserved), or falls back to a fresh nested re-spawn reconstructed from `work_{WORK}.log` if the handle was lost.
+
 #### 6. Run a Specific TASK
 
 Skip to a specific TASK within a WORK (e.g., retry after a failure):
@@ -243,7 +244,7 @@ Skip to a specific TASK within a WORK (e.g., retry after a failure):
 > Run WORK-02: TASK-02
 ```
 
-The scheduler returns the next TASK, then Main Claude calls builder → verifier → committer in sequence.
+Orchestrator's DAG scheduling (STEP C) identifies the next READY TASK, then nests builder → verifier → committer in sequence.
 
 #### 7. Force WORK Creation (Skip Complexity Check)
 
@@ -255,7 +256,7 @@ Use the `[new-work]` tag to always create a new WORK regardless of complexity:
 
 #### 8. Handle Failure / Retry
 
-If a TASK fails during the pipeline, the scheduler retries up to 3 times automatically.
+If a TASK fails during the pipeline, orchestrator re-dispatches builder up to 3 times automatically (STEP C). If all 3 attempts fail, it escalates via `<needs-decision>` — a `<gate type="decision">` in `mode=gated`, or an auto-decision recorded in `DECISIONS.md` in `mode=auto`.
 If it still fails, you can inspect the result file and retry manually:
 
 ```
@@ -284,7 +285,7 @@ If WORK-02 is `IN_PROGRESS`, the specifier asks:
 > What's the status of WORK-03: TASK-02?
 ```
 
-The scheduler reads `PROGRESS.md` and `result.md` files to report current state.
+Orchestrator reads `PROGRESS.md` and `result.md` files to report current state.
 
 ---
 
@@ -355,48 +356,49 @@ claude --plugin-dir ./
 ```bash
 claude
 > /agents
-# specifier, planner, scheduler, builder, verifier, committer → confirm all 6
+# orchestrator, specifier, planner, builder, verifier, committer → confirm all 6
 ```
 
 ---
 
-## Concept: Three Execution Modes
+## Concept: Orchestrator Modes (Gated vs Auto)
 
-Main Claude detects the `[]` tag and calls the **specifier** subagent, which selects one of three `execution-mode` values:
+Main Claude detects the `[]` tag and spawns a single **orchestrator** subagent, passing `mode=gated` (default) or `mode=auto` (when the request contains "auto"/"자동으로"). Orchestrator nests every other agent itself — Main Claude never calls specifier/planner/builder/verifier/committer directly:
 
 ```
-User Request → Main Claude (orchestrator)
+User Request → Main Claude
                     │
-                    ▼
-              ┌───────────┐
-              │ specifier │ (called by Main Claude)
-              └─────┬─────┘
-                    │
-              execution-mode returned
-                    │
-      ├─ direct  (no build/test required)
-      │   → specifier returns dispatch XML → Main Claude calls builder → [verifier+committer]
+                    ▼ spawn once, mode=gated|auto
+              ┌──────────────┐
+              │ orchestrator │  ← TASK DAG scheduling + gate/decision mediation
+              └──────┬───────┘
+                     │ nested spawn (depth 2)
+                     ▼
+              specifier  (always) → simple/complex classification
+                     │
+      ├─ simple WORK  (single TASK)
+      │   → skip planner → STEP C: builder → verifier → committer
       │
-      ├─ pipeline  (build/test required, single domain, sequential)
-      │   → Main Claude calls: [specifier+planner] → builder → [verifier+committer]
-      │
-      └─ full  (multi-domain / complex DAG / new module / 5+ tasks)
-          → Main Claude calls: [specifier+planner] → scheduler → [builder → verifier+committer] × N
+      └─ complex WORK  (multiple TASKs / DAG)
+          → nest planner → STEP C: DAG-ordered [builder → verifier → committer] × N (parallel where READY)
 ```
 
-**Sub-agent Spawn Count by Mode:**
+- `mode=gated`: pauses with `<gate type="stage">` after specifier (**[GATE-1]**) and, for complex WORKs, after planner (**[GATE-2]**); also pauses anytime with `<gate type="decision">` (background + options + recommendation) when orchestrator or a nested child needs a user call. Main Claude relays the gate, waits for approval/choice, then resumes the parked orchestrator with `SendMessage` (falls back to a log-based re-spawn if the handle is gone).
+- `mode=auto`: **one spawn, zero gates** — every judgment point is resolved with the recommended option and logged to `works/{WORK}/DECISIONS.md` plus the final report's `## 자동 결정 사항` section.
+- Execution (STEP C: builder → verifier → committer) never gates on the user — only WORK creation (specifier) and planning (planner) do.
 
-| Mode | Spawns | Agents |
-|------|--------|--------|
-| direct | 3 | specifier + builder + verifier+committer |
-| pipeline | 3 | specifier+planner + builder + verifier+committer |
-| full (N TASKs) | 2+2N | specifier+planner + scheduler + [builder + verifier+committer] × N |
+**Sub-agent Spawn Count:**
 
-Compared to the previous approach (separate spawns): **6 TASKs: 20 → 14 spawns (-30%)**.
+| Branch | Main → Orchestrator | → Specifier | → Planner | → Builder | → Verifier | → Committer | Total |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| simple WORK (1 TASK) | 1 | 1 | — | 1 | 1 | 1 | **2 + 3N** |
+| complex WORK (N TASKs) | 1 | 1 | 1 | N | N | N | **3 + 3N** |
 
-All three modes output to `works/WORK-NN/` and guarantee `result.md` + `COMMITTER DONE` callback.
+`gated` vs `auto` doesn't change the spawn count — only whether execution pauses for approval (see [Approval Gates, Nested Autonomy, and DECISIONS.md](#approval-gates-nested-autonomy-and-decisionsmd) below, `agent-flow.md` § 4).
 
-### WORK (Multi-Task, full mode)
+Both branches output to `works/WORK-NN/` and guarantee `result.md` + `DECISIONS.md` + `COMMITTER DONE` callback (sent by orchestrator on the child's behalf).
+
+### WORK (Multi-Task, complex WORK)
 
 A two-level hierarchy for complex features:
 
@@ -406,82 +408,93 @@ WORK (unit of work)       A single goal. The unit requested by the user.
     └── result            Completion proof. Auto-generated after verification.
 ```
 
-### pipeline mode (Single Task, Delegated)
+### complex WORK (Multi-Task, Nested)
 
-Subagent-delegated path for moderate single tasks. specifier+planner run in a single spawn, then builder, then verifier+committer.
-
-```
-Main Claude → [specifier+planner](opus) → builder(sonnet) → [verifier+committer](haiku)
-              (each group called as a single spawn by Main Claude)
-```
-
-### direct mode (Trivial)
-
-Main Claude calls specifier, which determines direct mode and returns a dispatch XML. Main Claude then calls builder (implements the change) and verifier+committer (verifies and commits) as a single spawn.
+Orchestrator nests planner once, then loops builder → verifier → committer per TASK in DAG order.
 
 ```
-Main Claude → specifier: Analyze → return dispatch XML → [back to Main Claude]
-Main Claude → builder: Implement → Self-check → [back to Main Claude]
-Main Claude → [verifier+committer]: Verify → Commit → result.md
+orchestrator → planner(opus, nested)                 → PLAN.md + TASK DAG
+             → [builder(sonnet) → verifier(haiku) → committer(haiku)] × N   ← STEP C, no gates
+              (each nested spawn made by orchestrator, not Main Claude)
+```
+
+### simple WORK (Trivial, Nested)
+
+Orchestrator skips planner and nests builder → verifier → committer directly on the single TASK specifier produced.
+
+```
+orchestrator → specifier: Analyze → classify simple → dispatch XML
+             → builder: Implement → Self-check
+             → verifier: Verify
+             → committer: Commit → result.md
 ```
 
 ---
 
 ## Pipeline
 
-### WORK Pipeline (Complex)
+### WORK Pipeline (Complex WORK, Nested)
 
-> Subagents cannot nest — Main Claude (CLI terminal) orchestrates every call.
-
-```
-                               Main Claude (orchestrator)
-                    ┌─────────────┼──────────────────────┐
-                    │             │                       │
-  specifier        planner          scheduler         builder          verifier         committer
- ┌──────────┐    ┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
- │Request   │────▶│Create   │────▶│Dependency│────▶│Code      │────▶│Build/Test│────▶│Result    │
- │Analysis  │     │WORK/TASK│     │DAG+Order │     │Implement │     │Verify    │     │→ git     │
- └──────────┘    └─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
-                                                        │                │                │
-                                                        └── Retry on fail┘                │
-                                                           (max 3 times)                  │
-                                                                          Next TASK loop ◀┘
-```
-
-### pipeline mode (Simple → Delegated)
+> Main Claude spawns `orchestrator` **once**. Every other call below is a *nested* sub-agent spawn made by orchestrator itself — Main Claude is not in this loop.
 
 ```
-  specifier+planner    builder       verifier+committer
- ┌──────────────┐     ┌──────────┐     ┌────────────────┐
- │PLAN          │────▶│Code      │────▶│Build/Test      │
- │+TASK         │     │Implement │     │Verify→ git     │
- └──────────────┘     └──────────┘     └────────────────┘
-   (opus, 1 spawn)     (sonnet)         (haiku, 1 spawn)
-              ← each group called by Main Claude →
+Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
+                                                      │  nested spawn (depth 2)
+                    ┌─────────────┬──────────────────┴──────────────────┐
+                    │             │                                     │
+  specifier        planner                    builder          verifier         committer
+ ┌──────────┐    ┌─────────┐               ┌──────────┐     ┌──────────┐     ┌──────────┐
+ │Request   │────▶│Create   │──────────────▶│Code      │────▶│Build/Test│────▶│Result    │
+ │Analysis  │     │WORK/TASK│  (complex     │Implement │     │Verify    │     │→ git     │
+ └────┬─────┘     └────┬────┘   WORK only)  └────┬─────┘     └────┬─────┘     └────┬─────┘
+      │                │                         │                │                │
+ [GATE-1]          [GATE-2]                      └── Retry on fail┘                │
+ (gated mode        (gated mode                     (max 3 times, then             │
+  only; yield        only; yield                    <needs-decision> escalation)   │
+  + SendMessage       + SendMessage)                                Next READY TASK loop ◀┘
+  to resume)                              (orchestrator schedules the DAG itself — STEP C, no gate)
 ```
 
-### direct mode (Trivial)
+- `mode=gated` (default): pause + yield at **[GATE-1]** (after specifier) and **[GATE-2]** (after planner, complex WORK only); resume via `SendMessage(agentId, decision)`, fallback to log-based re-spawn.
+- `mode=auto`: no gates — orchestrator completes the entire diagram in one spawn and records any judgment calls to `DECISIONS.md`.
+- STEP C (the builder → verifier → committer loop) never gates on the user, in either mode.
+
+### complex WORK (Nested, Multi-Task)
 
 ```
-  specifier        builder                    verifier+committer
- ┌──────────┐     ┌──────────────────────┐     ┌──────────────┐
- │ Analyze  │────▶│ Implement → Self-chk │────▶│Verify→Commit │
- │ dispatch │     └──────────────────────┘     │→ result      │
- └──────────┘      (no build/test required)    └──────────────┘
+  specifier   →  planner  →  [builder → verifier → committer] × N
+ ┌──────────┐   ┌─────────┐   ┌──────────┐  ┌──────────┐  ┌────────────┐
+ │Request   │──▶│PLAN     │──▶│Code      │─▶│Build/Test│─▶│Result→ git │
+ │Analysis  │   │+TASK DAG│   │Implement │  │Verify    │  │            │
+ └──────────┘   └─────────┘   └──────────┘  └──────────┘  └────────────┘
+   (opus)          (opus)       (sonnet)       (haiku)        (haiku)
+              ← all nested spawns made by orchestrator →
+```
+
+### simple WORK (Nested, Trivial)
+
+```
+  specifier        builder                    verifier      committer
+ ┌──────────┐     ┌──────────────────────┐     ┌────────┐   ┌──────────────┐
+ │ Analyze  │────▶│ Implement → Self-chk │────▶│ Verify │──▶│Commit→ result│
+ │ dispatch │     └──────────────────────┘     └────────┘   └──────────────┘
+ └──────────┘      (planner skipped — single TASK, no DAG needed)
 ```
 
 ### Agents
 
-Six agents work together in a clean, isolated pipeline:
+Six agents work together in a clean, isolated pipeline — Main Claude spawns only `orchestrator`; orchestrator nests the rest:
 
 | Agent | Role | Model | Permission | MCP | Spawn |
 |-------|------|-------|------------|-----|-------|
-| **specifier** | `[]` tag detection, execution-mode selection (direct/pipeline/full), PLAN creation, WORK-LIST management, returns dispatch XML for all modes | **opus** | read + dispatch | Serena (codebase exploration), sequential-thinking (complexity check) | combined with planner (pipeline/full) |
-| **planner** | Create WORK + decompose TASKs + generate PLAN.md (full mode) + pre-create progress templates | **opus** | read-only | Serena (codebase exploration), sequential-thinking (task decomposition) | combined with specifier |
-| **scheduler** | Manage DAG for a specific WORK + run pipeline with sliding window context | **haiku** | read + dispatch | — | standalone (full mode only) |
-| **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena (symbol-level explore/edit) | standalone |
-| **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification (read-only) | **haiku** | read + execute | — | combined with committer |
-| **committer** | Gate check (progress.md) → write result.md → git commit → COMMITTER DONE callback | **haiku** | read + write + git | — | combined with verifier |
+| **orchestrator** | Nests specifier→(planner)→builder→verifier→committer; schedules the TASK DAG (STEP C); mediates fixed/dynamic gates; batch-records activity log + callbacks | **opus** | read + nested spawn | Serena (optional) | spawned **once** by Main Claude per WORK |
+| **specifier** | `[]` tag detection, simple/complex classification, PLAN seed, WORK-LIST management, returns dispatch XML | **opus** | read + dispatch | Serena (codebase exploration), sequential-thinking (complexity check) | nested by orchestrator |
+| **planner** | Create WORK + decompose TASKs + generate PLAN.md (complex WORK only) + pre-create progress templates | **opus** | read-only | Serena (codebase exploration), sequential-thinking (task decomposition) | nested by orchestrator (complex WORK only) |
+| **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena (symbol-level explore/edit) | nested by orchestrator, per TASK |
+| **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification (read-only) | **haiku** | read + execute | — | nested by orchestrator, per TASK |
+| **committer** | Gate check (progress.md) → write result.md → git commit | **haiku** | read + write + git | — | nested by orchestrator, per TASK |
+
+> Activity-log and callback recording (`COMMITTER DONE`, etc.) is done **once, by orchestrator**, on behalf of the agent it just nested — the child agents themselves no longer write logs or send callbacks directly.
 
 ### Support Files (included in Plugin)
 
@@ -490,7 +503,7 @@ These are located in `plugin/skills/sdd-pipeline/references/` (synced from `deve
 
 | File | Purpose |
 |------|---------|
-| `agent-flow.md` | Pipeline orchestration rules — how Main Claude calls each agent in sequence |
+| `agent-flow.md` | Pipeline orchestration rules — Main Claude's trigger/gate boundary + orchestrator's internal nested-spawn flow |
 | `file-content-schema.md` | Single source of truth for all file formats (PLAN.md, TASK.md, progress.md, result.md) |
 | `shared-prompt-sections.md` | Shared prompt sections with cache_control — reduces repeated token cost up to 90% |
 | `context-policy.md` | Sliding window context transfer rules between agents |
@@ -507,6 +520,8 @@ works/
 ├── WORK-01/                          ← "User Authentication"
 │   ├── PLAN.md                       ← Plan + dependency graph
 │   ├── PROGRESS.md                   ← Progress tracking (auto-updated)
+│   ├── work_WORK-01.log               ← Orchestrator activity log (STAGE_*/GATE_WAIT/DECISION_WAIT/DECISION)
+│   ├── DECISIONS.md                  ← Auto-decisions + resolved gate decisions (PENDING to RESOLVED)
 │   ├── TASK-00.md                    ← Task specification
 │   ├── TASK-00_progress.md           ← Real-time checkpoint (builder writes)
 │   ├── TASK-00_result.md             ← Completion report (committer writes)
@@ -525,6 +540,8 @@ works/
 | Completion report | `TASK-NN_result.md` |
 | Plan | `PLAN.md` |
 | Work progress | `PROGRESS.md` |
+| Activity log | `work_{WORK_ID}.log` (orchestrator writes; drives gate resume) |
+| Decision log | `DECISIONS.md` (auto-decisions + user-approved decisions, `PENDING`/`RESOLVED`) |
 
 ### WORK-LIST.md
 
@@ -572,7 +589,7 @@ Requests without `[]` tags are handled directly by Claude without routing. If yo
 
 ### Parallel TASKs
 
-The planner creates dependency-aware TASK graphs. Independent TASKs (same `blockedBy` set) can be dispatched concurrently by the scheduler — mention it when approving:
+The planner creates dependency-aware TASK graphs. Independent TASKs (same `blockedBy` set) are dispatched concurrently by orchestrator's DAG scheduling (STEP C) — mention it when approving:
 
 ```
 > Approve. Run independent tasks in parallel.
@@ -586,7 +603,7 @@ If Claude loses context mid-pipeline, you can always resume:
 > Resume WORK-02 from where it stopped
 ```
 
-The scheduler reads `PROGRESS.md` to determine the last completed TASK and continues.
+Orchestrator reads `work_{WORK}.log` (and `PROGRESS.md`) to determine the last completed stage/TASK and continues — reattaching via `SendMessage` if its parked handle is still alive, or a fresh nested re-spawn reconstructed from the log otherwise. An unresolved `GATE_WAIT`/`DECISION_WAIT` is always re-presented rather than skipped.
 
 ---
 
@@ -595,11 +612,15 @@ The scheduler reads `PROGRESS.md` to determine the last completed TASK and conti
 ```
 User: [new-feature] Build a comment feature for the blog system.
 
-Claude: [specifier → WORK path]
-  Complexity: 4+ files, DB schema change, multiple modules
+Claude: [Main Claude spawns orchestrator once, mode=gated]
+
+Claude: [orchestrator nests specifier → WORK path]
+  Complexity: 4+ files, DB schema change, multiple modules → complex WORK
   → Creating new WORK
 
-Claude: [planner]
+  [GATE-1] Requirement approved implicitly — complex WORK, continuing to planner
+
+Claude: [orchestrator nests planner]
   Project analysis
      Tech Stack: Next.js + Prisma + PostgreSQL
      Existing code: Post CRUD done, Auth done
@@ -612,11 +633,11 @@ Claude: [planner]
   WORK-03: TASK-03: Frontend comment component         ← TASK-00 (parallelizable)
   WORK-03: TASK-04: Integration + notifications        ← TASK-02, TASK-03
 
-  Do you approve?
+  [GATE-2] Do you approve this plan?
 
-User: Approve. Run automatically.
+User: Approve.
 
-Claude: [scheduler → auto mode]
+Claude: [orchestrator resumed via SendMessage → STEP C: DAG execution, no further gates]
   WORK-03: TASK-00 → builder → verifier ✅ → committer [a1b2c3d]
   WORK-03: TASK-01 → builder → verifier ✅ → committer [d4e5f6g]
   WORK-03: TASK-02 → builder → verifier ✅ → committer [h7i8j9k]
@@ -624,6 +645,7 @@ Claude: [scheduler → auto mode]
   WORK-03: TASK-04 → builder → verifier ✅ → committer [p3q4r5s]
 
   🎉 WORK-03 completed! 5 tasks, 5 commits
+  ## 자동 결정 사항: 없음 (both gates required explicit approval)
 ```
 
 ---
@@ -664,13 +686,13 @@ Each agent file follows a consistent four-section structure:
 
 Each agent reads 4-5 shared reference files (shared-prompt-sections.md, file-content-schema.md, xml-schema.md, etc.) on startup — totaling ~26 file reads across a full pipeline. **ref-cache** eliminates this redundancy:
 
-1. **First agent** reads reference files normally and returns `<ref-cache>` in its result XML
-2. **Main Claude** copies ref-cache into the next agent's dispatch
-3. **Subsequent agents** use cached content instead of reading files from disk
+1. **First agent** (orchestrator itself, per its STARTUP step) reads reference files normally and can return `<ref-cache>` when nesting the next agent's dispatch
+2. **Orchestrator** copies ref-cache into each nested child's dispatch instead of Main Claude relaying it
+3. **Subsequent nested agents** use cached content instead of reading files from disk
 
 Phase 2 (selective delivery) further reduces token usage by passing only the sections each agent needs — not the full file contents. The section mapping per agent is defined in `agent-flow.md`.
 
-**Measured impact** (direct mode, 3 agents):
+**Measured impact** (simple WORK, 3 agents):
 - File reads: 14 → 5 (**-64%**)
 - Token usage: ~85K → ~72K (**-15%**)
 
@@ -689,10 +711,10 @@ This ensures:
 
 ### Context Isolation
 
-Each subagent runs in an independent context. Even if the builder creates 50 files using 20,000 tokens, the scheduler only receives a 3-line summary.
+Each subagent runs in an independent context. Even if the builder creates 50 files using 20,000 tokens, orchestrator (which nested it) only receives a 3-line summary via the sliding-window context-handoff.
 
 ```
-scheduler's context after 5 TASKs:
+orchestrator's context after 5 TASKs:
 
   PLAN.md (loaded once)                              ~500 tokens
   WORK-01: TASK-00 result: "20 files, PASS"           ~200 tokens
@@ -716,7 +738,9 @@ scheduler's context after 5 TASKs:
 
 ### Router Rule Config (`.agent/router_rule_config.json`)
 
-The specifier reads `.agent/router_rule_config.json` from the project root to determine routing criteria. If the file is absent, the specifier uses its built-in defaults.
+The specifier (nested by orchestrator in STEP A) reads `.agent/router_rule_config.json` from the project root to determine routing criteria. If the file is absent, the specifier uses its built-in defaults.
+
+> **Mapping to orchestrator's branch**: specifier's `direct` classification → orchestrator treats it as a **simple WORK** (planner nested spawn skipped). specifier's `pipeline`/`full` classification → orchestrator treats it as a **complex WORK** (planner is nested, TASK DAG scheduled in STEP C). The `direct`/`pipeline`/`full` labels below are specifier's internal complexity assessment; they no longer select a separate top-level pipeline the way they used to.
 
 **File location:**
 ```
@@ -811,16 +835,19 @@ For a monorepo with strict build requirements:
 }
 ```
 
-### Three Execution Modes
+### Approval Gates, Nested Autonomy, and DECISIONS.md
 
-The specifier matches effort to complexity via `execution-mode`:
-- **direct**: 1-line typo fix — Main Claude calls specifier, which returns a dispatch XML. Main Claude then calls builder (implements) + [verifier+committer] (verifies and commits). 3 spawns total.
-- **pipeline**: Moderate fix — Main Claude calls [specifier+planner] → builder → [verifier+committer] in sequence. 3 spawns total.
-- **full**: Complex features — [specifier+planner] → scheduler → [builder + verifier+committer] × N. 2+2N spawns total.
+Main Claude spawns `orchestrator` exactly once per WORK; orchestrator alone decides when to nest specifier/planner/builder/verifier/committer, and when to pause and ask a human. Since nested sub-agents cannot prompt the user directly, **every approval or decision is surfaced at the Main Claude boundary**:
 
-Agent pairs are combined into a single spawn to eliminate redundant context loading. This reduces total spawns by **~30%** across all modes.
+- **Fixed gates** (`<gate type="stage">`) — exactly two, and only in `mode=gated` (the default): **[GATE-1]** right after specifier (Requirement.md ready), and **[GATE-2]** right after planner (PLAN.md + TASK DAG ready, complex WORK only). A simple WORK only ever sees [GATE-1].
+- **Dynamic gates** (`<gate type="decision">`) — raised by orchestrator or any nested child, at *any* point (design trade-off, scope creep, destructive change, 3 failed retries, ambiguous requirement…), carrying `<context>` + `<options>` + `<recommended>`.
+- At a gate, orchestrator **yields (parks)** rather than exiting. Main Claude presents the gate, waits for the human, then resumes the parked orchestrator with `SendMessage(agentId, decision)` — context is preserved, no re-reading of files. If the handle is lost (new session, crashed terminal), Main Claude re-spawns orchestrator with the `WORK_ID`; orchestrator replays `work_{WORK}.log` and re-presents the exact same unresolved gate — **an unapproved gate is never silently skipped**, because `STAGE_DONE` is only ever written *after* the gate resolves.
+- Once the final report lands, Main Claude calls `TaskStop(agentId)` to release the parked handle.
+- `mode=auto` ("auto"/"자동으로" in the request) skips every gate: orchestrator resolves each judgment point with its own recommended option and completes in a single spawn.
 
-All three modes output to `works/WORK-NN/` with identical artifact structure (PLAN.md + result.md + COMMITTER DONE callback), ensuring Runner integration works regardless of mode.
+Every decision — whether a human approved it or orchestrator auto-resolved it — is written to `works/{WORK_ID}/DECISIONS.md` (status `PENDING` while parked, `RESOLVED` once settled) and summarized in the final report's `## 자동 결정 사항` section. STEP C itself (the builder → verifier → committer TASK loop) never gates, in either mode — it's the part of the pipeline nobody needs to approve.
+
+Both branches (simple/complex WORK) and both modes (gated/auto) output to `works/WORK-NN/` with identical artifact structure (PLAN.md + result.md + `DECISIONS.md` + `COMMITTER DONE` callback), ensuring downstream integration works regardless of branch or mode.
 
 ### Structured Agent Communication
 
@@ -905,9 +932,10 @@ CallbackToken: <your-token>
 ```
 
 - **No config** → works as-is, no external calls made
-- **TaskCallback** → committer POSTs result after each TASK commit
-- **ProgressCallback** → builder POSTs checkpoint after each progress.md update
+- **TaskCallback** → orchestrator POSTs the TASK result on the committer's behalf after each TASK commit (`STAGE_DONE — stage=committer`)
+- **ProgressCallback** → orchestrator POSTs a checkpoint on the builder's behalf after each progress.md update (`STAGE_DONE — stage=builder`)
 - Callback failures are non-fatal — a warning is printed and the pipeline continues
+- Callbacks are sent **once, by orchestrator** — nested children (specifier/planner/builder/verifier/committer) no longer send callbacks themselves
 
 See `docs/spec_callback-integration.md` for payload schema and implementation guide.
 
@@ -964,7 +992,8 @@ Place a file with the same name in `.claude/agents/` to override.
 | What | File | Section |
 |------|------|---------|
 | Routing criteria | `specifier.md` | 3-2. Execution-Mode 결정 |
-| Approval policy | `scheduler.md` | Phase 1: User Approval |
+| Approval gates / mode handling | `orchestrator.md` | 3-3. 게이트 및 동적 의사결정 |
+| TASK DAG scheduling / retries | `orchestrator.md` | STEP C: TASK DAG 실행 |
 | Commit message format | `committer.md` | Step 3: Stage + Commit |
 | Verification steps | `verifier.md` | Verification Pipeline |
 | Task granularity | `planner.md` | Task Decomposition Rules |
@@ -995,9 +1024,9 @@ Auto-detected from project files. No configuration needed.
 uc-taskmanager/
 ├── develop/                 ← Source of truth (edit here)
 │   ├── agents/              ← 6 agent prompts (language-agnostic)
-│   │   ├── specifier.md     ← [] tag detection + execution-mode routing
-│   │   ├── planner.md       ← WORK creation + TASK decomposition
-│   │   ├── scheduler.md     ← DAG management + pipeline orchestration
+│   │   ├── orchestrator.md  ← Nested spawn coordinator: specifier→(planner)→builder→verifier→committer, TASK DAG scheduling, gates/decisions, batch log+callback
+│   │   ├── specifier.md     ← [] tag detection + simple/complex classification
+│   │   ├── planner.md       ← WORK creation + TASK decomposition (complex WORK only)
 │   │   ├── builder.md       ← Code implementation
 │   │   ├── verifier.md      ← Build/lint/test verification
 │   │   └── committer.md     ← git commit + result.md
@@ -1053,7 +1082,7 @@ uc-taskmanager/
 │   └── _archive/                           ← Legacy docs (Router-based)
 └── works/                   ← WORK directories (auto-generated)
     ├── WORK-LIST.md          ← Master index
-    ├── WORK-01/              ← all modes output here (direct/pipeline/full)
+    ├── WORK-01/              ← all branches output here (simple/complex WORK)
     └── ...
 ```
 
