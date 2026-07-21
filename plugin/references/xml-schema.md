@@ -4,7 +4,7 @@ uc-taskmanager 에이전트용 XML 통신 형식 정의.
 
 ---
 
-> **디스패처 라벨**: dispatch를 발신하고 task-result를 수신하는 디스패처 역할은 **orchestrator**가 수행한다(과거 Main Claude가 서브에이전트를 직접 호출하던 방식에서 변경). 아래 §1/§2의 "디스패처"는 모두 orchestrator를 가리킨다.
+> **디스패처 라벨**: dispatch를 발신하고 task-result를 수신하는 디스패처 역할은 **orchestrator**가 수행한다. 아래 §1/§2의 "디스패처"는 모두 orchestrator를 가리킨다.
 
 ## 1. Dispatch 형식 (orchestrator → 수신자)
 

@@ -65,7 +65,7 @@
 
 ## Orchestrator 디스패치
 
-TASK DAG 실행 중 다음 자식(중첩 spawn)의 프롬프트를 구성하는 주체는 **orchestrator**다(기존 scheduler가 Main Claude에 반환하던 dispatch XML을 이제 orchestrator가 직접 만들어 자식 spawn 프롬프트에 포함한다).
+TASK DAG 실행 중 다음 자식(중첩 spawn)의 프롬프트를 구성하는 주체는 **orchestrator**다 — dispatch XML을 직접 만들어 자식 spawn 프롬프트에 포함한다.
 
 ```xml
 <!-- Verifier: Builder FULL -->

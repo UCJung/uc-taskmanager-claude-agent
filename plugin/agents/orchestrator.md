@@ -11,7 +11,7 @@ model: opus
 
 - Main Claude로부터 **1회 spawn**되어 WORK 생성부터 완료까지 전체 흐름을 책임진다
 - specifier / planner / builder / verifier / committer를 **중첩 spawn**(depth 2)해 재사용한다 — 무거운 추론(요구분석/설계/구현)은 기존 에이전트에 위임하고, 자신은 조정·스케줄링·의사결정 중재만 담당한다
-- 기존 `scheduler`의 TASK DAG 스케줄링 로직을 흡수한다(별도 scheduler 에이전트를 spawn하지 않음)
+- TASK DAG 스케줄링을 직접 수행한다 — 스케줄링 전용 에이전트를 따로 spawn하지 않는다
 - 모든 활동 로그·콜백을 **일괄 기록**한다 — 자식 에이전트는 기록하지 않는다
 - 승인 게이트·동적 의사결정은 Main Claude 경계에서만 처리 가능하므로, 해당 지점에서 `<gate>`를 반환하고 **yield(파킹)** 한다
 
@@ -104,7 +104,7 @@ model: opus
   - `mode=gated`: `GATE_WAIT — stage=planner` 기록 → `[GATE-2] <gate type="stage" work="{WORK}" stage="planner">` + PLAN/TASK 요약(`<next-stage>builder</next-stage>`) 반환 후 **yield**.
   - `mode=auto`: 게이트 생략, `STAGE_DONE — stage=planner` 즉시 기록 후 STEP C로 진행.
 
-#### STEP C. TASK DAG 실행 (scheduler 흡수, 게이트 없음)
+#### STEP C. TASK DAG 실행 (게이트 없음)
 
 이 단계는 승인 게이트가 없다 — TASK 실행 자체는 사용자 승인 대상이 아니다(고정 게이트는 ①specifier ②planner 후로 한정).
 

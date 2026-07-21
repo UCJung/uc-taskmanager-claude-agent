@@ -495,7 +495,7 @@ Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
 | **verifier** | progress gate(Status=COMPLETED) 검사 → 빌드/린트/테스트 검증 (읽기 전용) | **haiku** | read + execute | — | orchestrator가 TASK별로 중첩 호출 |
 | **committer** | gate 검사(progress.md) → result.md 작성 → git commit | **haiku** | read + write + git | — | orchestrator가 TASK별로 중첩 호출 |
 
-> 활동 로그와 콜백 기록(`COMMITTER DONE` 등)은 **orchestrator가 한 번만** 방금 중첩 호출한 에이전트를 대신해 수행합니다 — 자식 에이전트(specifier/planner/builder/verifier/committer)는 더 이상 직접 로그를 쓰거나 콜백을 보내지 않습니다.
+> 활동 로그와 콜백 기록(`COMMITTER DONE` 등)은 **orchestrator가 한 번만** 방금 중첩 호출한 에이전트를 대신해 수행합니다 — 자식 에이전트(specifier/planner/builder/verifier/committer)는 직접 로그를 쓰거나 콜백을 보내지 않습니다.
 
 ### 참조 문서 (Plugin에 포함)
 
@@ -938,7 +938,7 @@ CallbackToken: <your-token>
 - **TaskCallback** → 각 TASK 커밋 후 orchestrator가 committer를 대신해 TASK 결과를 POST(`STAGE_DONE — stage=committer`)
 - **ProgressCallback** → 각 progress.md 업데이트 후 orchestrator가 builder를 대신해 체크포인트를 POST(`STAGE_DONE — stage=builder`)
 - 콜백 실패는 치명적이지 않음 — 경고만 출력하고 파이프라인은 계속 진행
-- 콜백은 **orchestrator가 한 번만** 전송합니다 — 중첩된 자식(specifier/planner/builder/verifier/committer)은 더 이상 직접 콜백을 보내지 않습니다
+- 콜백은 **orchestrator가 한 번만** 전송합니다 — 중첩된 자식(specifier/planner/builder/verifier/committer)은 직접 콜백을 보내지 않습니다
 
 페이로드 스키마와 구현 가이드는 `docs/spec_callback-integration.md`를 참조하세요.
 

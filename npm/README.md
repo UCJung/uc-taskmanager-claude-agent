@@ -495,7 +495,7 @@ Six agents work together in a clean, isolated pipeline — Main Claude spawns on
 | **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification (read-only) | **haiku** | read + execute | — | nested by orchestrator, per TASK |
 | **committer** | Gate check (progress.md) → write result.md → git commit | **haiku** | read + write + git | — | nested by orchestrator, per TASK |
 
-> Activity-log and callback recording (`COMMITTER DONE`, etc.) is done **once, by orchestrator**, on behalf of the agent it just nested — the child agents themselves no longer write logs or send callbacks directly.
+> Activity-log and callback recording (`COMMITTER DONE`, etc.) is done **once, by orchestrator**, on behalf of the agent it just nested — child agents do not write logs or send callbacks themselves.
 
 ### Support Files (included in Plugin)
 
@@ -938,7 +938,7 @@ CallbackToken: <your-token>
 - **TaskCallback** → orchestrator POSTs the TASK result on the committer's behalf after each TASK commit (`STAGE_DONE — stage=committer`)
 - **ProgressCallback** → orchestrator POSTs a checkpoint on the builder's behalf after each progress.md update (`STAGE_DONE — stage=builder`)
 - Callback failures are non-fatal — a warning is printed and the pipeline continues
-- Callbacks are sent **once, by orchestrator** — nested children (specifier/planner/builder/verifier/committer) no longer send callbacks themselves
+- Callbacks are sent **once, by orchestrator** — nested children (specifier/planner/builder/verifier/committer) do not send callbacks themselves
 
 See `docs/spec_callback-integration.md` for payload schema and implementation guide.
 
