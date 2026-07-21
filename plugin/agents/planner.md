@@ -93,11 +93,7 @@ WORK-_D 확인 : 이전 단계에서 전달한 WORK ID를 확인합니다.
 
 ## 4. 역할 결정
 
-**구현계획  복잡도**에 따라 실행모드를 결정
-
-> 단순 (Small): direct mode
-> 보통 (Medium): pipeline mode
-> 복잡 (Large): full mode
+specifier가 판정한 복잡도를 참고해 TASK 분해 단위를 정한다.
 
 ## 5. 결과물 생성 및 작업완료 절차
 
@@ -106,7 +102,7 @@ WORK-_D 확인 : 이전 단계에서 전달한 WORK ID를 확인합니다.
 
 ## 6. 승인요청
 
-- 승인 요청은 planner가 직접 수행하지 않는다 — orchestrator가 `<gate type="stage" work stage="planner">`(→ `xml-schema.md` § 5)를 반환해 상위 경계에서 승인을 요청한다(gated 모드, 복잡 WORK만 해당).
+- 승인 요청은 planner가 직접 수행하지 않는다 — orchestrator가 `<gate type="stage" work stage="planner">`(→ `xml-schema.md` § 5)를 반환해 상위 경계에서 승인을 요청한다(gated 모드).
 
 ## 7. 결과 보고
 정의된 역할을 모두 끝내면 orchestrator에 보고해. 미해결 모호점이 있으면 `<needs-decision>`을 함께 반환해.

@@ -829,7 +829,6 @@ Main Claude가 파이프라인 시작 시 참조 파일을 한 번 읽고, 에�
 | 에이전트 흐름 | `agents/en/agent-flow.md` (또는 `skills/sdd-pipeline/references/agent-flow.md`) | Main Claude 오케스트레이션 가이드 |
 | Activity Log | `agents/en/work-activity-log.md` (또는 `skills/sdd-pipeline/references/work-activity-log.md`) | log_work 함수, STAGE 테이블 |
 | 슬라이딩 윈도우 설계 | `docs/spec_sliding-window-context.md` | 토큰 절감 설계 및 효과 |
-| 콜백 통합 | `docs/spec_callback-integration.md` | 외부 시스템 콜백 연동 |
 
 ---
 

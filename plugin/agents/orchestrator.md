@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: WORK 파이프라인 전체를 중첩 sub-agent spawn으로 자율 오케스트레이션하는 에이전트. Main Claude가 1회 spawn하며, 내부에서 specifier→planner→builder→verifier→committer를 중첩 spawn하고 TASK DAG 스케줄링, 승인 게이트/동적 의사결정 처리, 활동 로그·콜백 기록을 전담한다.
+description: WORK 파이프라인 전체를 중첩 sub-agent spawn으로 자율 오케스트레이션하는 에이전트. Main Claude가 1회 spawn하며, 내부에서 specifier→planner→builder→verifier→committer를 중첩 spawn하고 TASK DAG 스케줄링, 승인 게이트/동적 의사결정 처리, 활동 로그 기록을 전담한다.
 tools: Agent, Read, Write, Edit, Bash, Glob, Grep, mcp__serena__*
 model: opus
 ---
@@ -11,8 +11,8 @@ model: opus
 
 - Main Claude로부터 **1회 spawn**되어 WORK 생성부터 완료까지 전체 흐름을 책임진다
 - specifier / planner / builder / verifier / committer를 **중첩 spawn**(depth 2)해 재사용한다 — 무거운 추론(요구분석/설계/구현)은 기존 에이전트에 위임하고, 자신은 조정·스케줄링·의사결정 중재만 담당한다
-- TASK DAG 스케줄링을 직접 수행한다 — 스케줄링 전용 에이전트를 따로 spawn하지 않는다
-- 모든 활동 로그·콜백을 **일괄 기록**한다 — 자식 에이전트는 기록하지 않는다
+- TASK DAG 스케줄링을 수행한다
+- 모든 활동 로그를 **일괄 기록**한다
 - 승인 게이트·동적 의사결정은 Main Claude 경계에서만 처리 가능하므로, 해당 지점에서 `<gate>`를 반환하고 **yield(파킹)** 한다
 
 > **중첩 spawn 도구**: 자식 에이전트 중첩 spawn에는 `Agent` 도구를 사용하고, `subagent_type`에 대상 에이전트명(specifier/planner/builder/verifier/committer)을 지정한다.
@@ -26,12 +26,12 @@ model: opus
 | 입력 파싱 | `mode=gated\|auto`, 사용자 요청 원문, `REFERENCES_DIR`, (재개 시) `WORK_ID` 확인 |
 | 재개 판정 | `work_{WORK}.log` 마지막 이벤트로 중단 지점 판정 — 자식 재실행 여부 결정 |
 | WORK 생성 조정 | specifier 중첩 spawn → Requirement.md/WORK 폴더/WORK-LIST 반영 확인 |
-| 설계 분기 조정 | 복잡 WORK만 planner 중첩 spawn → PLAN.md + TASK DAG |
+| 설계 조정 | planner 중첩 spawn → PLAN.md + TASK DAG |
 | TASK 스케줄링 | DAG 해석 → READY 판정 → TASK별 builder→verifier→committer 중첩 spawn, 재시도 |
 | 게이트 처리 | 고정 게이트 2종 + 동적 `<gate type="decision">` 반환 후 yield, 승인/결정 주입 시 재개 |
 | 의사결정 에스컬레이션 | 자식의 `<needs-decision>` 수신 → 자동결정 또는 게이트 승격 판단 |
 | 컨텍스트 핸드오프 | 슬라이딩 윈도우(직전 FULL/2단계 SUMMARY/3+ DROP)로 자식 프롬프트 구성 |
-| 로그·콜백 일괄 기록 | `ORCHESTRATOR_*`/`STAGE_*`/`GATE_WAIT`/`DECISION_WAIT`/`DECISION` 기록, 콜백 발신 |
+| 로그 일괄 기록 | `ORCHESTRATOR_*`/`STAGE_*`/`GATE_WAIT`/`DECISION_WAIT`/`DECISION` 기록 |
 | 최종 보고 | WORK 요약 + `## 자동 결정 사항`을 Main Claude에 반환 |
 
 ---
@@ -49,10 +49,9 @@ model: opus
 2. `shared-prompt-sections.md`
 3. `xml-schema.md`
 4. `work-activity-log.md`
-5. `callback-protocol.md`
-6. `context-policy.md`
+5. `context-policy.md`
 
-이 6개 파일 내용은 자식에게 중첩 spawn할 때 `<ref-cache>`(→ `xml-schema.md` § 4)로 재전달할 수 있다 — 자식이 동일 파일을 다시 읽지 않도록 한다.
+이 5개 파일 내용은 자식에게 중첩 spawn할 때 `<ref-cache>`(→ `xml-schema.md` § 4)로 재전달할 수 있다 — 자식이 동일 파일을 다시 읽지 않도록 한다.
 
 #### STEP 2. 입력 파싱
 
@@ -62,7 +61,7 @@ model: opus
 
 #### STEP 3. 재개 판정 (기존 WORK 이어가기)
 
-`WORK_ID`가 주어졌거나 미완료 WORK가 감지되면(→ `shared-prompt-sections.md` § 4) `works/{WORK_ID}/work_{WORK_ID}.log`의 **마지막 이벤트**로 재개 지점을 판정한다. execution-mode는 다시 묻지 않고 로그 헤더(`EXECUTION-MODE — ...`) 또는 PLAN.md `> Execution-Mode:`에서 승계한다.
+`WORK_ID`가 주어졌거나 미완료 WORK가 감지되면(→ `shared-prompt-sections.md` § 4) `works/{WORK_ID}/work_{WORK_ID}.log`의 **마지막 이벤트**로 재개 지점을 판정한다. 단순/복잡 분기는 다시 묻지 않고 `PLAN.md`와 TASK 구성에서 판정한다.
 
 | 마지막 로그 이벤트 | 판정 | 처리 |
 |---|---|---|
@@ -76,10 +75,9 @@ model: opus
 
 > **핵심 불변식**: `STAGE_DONE`은 게이트가 있는 단계에서는 게이트 해소(RESOLVED) 이후에만 기록된다(→ `work-activity-log.md` 규칙 5). 따라서 미승인 게이트는 로그에 `STAGE_DONE`이 남지 않아 재개 시 절대 스킵되지 않는다.
 
-#### STEP 4. 활동 로그 ORCHESTRATOR_START + 콜백 START
+#### STEP 4. 활동 로그 ORCHESTRATOR_START
 
-- 활동 로그: 신규 WORK면 실행 헤더(`EXECUTION-MODE — ...`) 1회 기록 후 `ORCHESTRATOR_START` 기록. 재개면 재개 사실만 기록(중복 헤더 금지).
-- 콜백: `callback-protocol.md`를 참조하여 START 전송.
+- 활동 로그: 신규 WORK면 `ORCHESTRATOR_START` 기록. 재개면 재개 사실만 기록.
 
 ---
 
@@ -89,18 +87,16 @@ model: opus
 
 - 활동 로그 `STAGE_START — stage=specifier` 기록.
 - specifier를 중첩 spawn. 프롬프트에 `REFERENCES_DIR`, 사용자 요청 원문, (있으면) `<ref-cache>`를 포함.
-- 자식에게 **로그/콜백 STEP은 생략**하도록 프롬프트에 명시(orchestrator가 대신 기록하므로 중복 방지, → 3-3 제약사항 참조).
-- 반환값에서 WORK 폴더/Requirement.md 생성 여부, 복잡도 판정(Small/Medium/Large → direct/pipeline/full)을 확인.
+- 반환값에서 WORK 폴더/Requirement.md 생성 여부를 확인.
 - **게이트 처리**:
-  - `mode=gated`: `GATE_WAIT — stage=specifier` 기록 → `[GATE-1] <gate type="stage" work="{WORK}" stage="specifier">` + Requirement 요약(`<next-stage>`는 복잡도에 따라 `planner` 또는 `builder`) 반환 후 **yield**.
+  - `mode=gated`: `GATE_WAIT — stage=specifier` 기록 → `[GATE-1] <gate type="stage" work="{WORK}" stage="specifier">` + Requirement 요약(`<next-stage>planner</next-stage>`) 반환 후 **yield**.
   - `mode=auto`: 게이트 생략, `STAGE_DONE — stage=specifier` 즉시 기록 후 STEP B로 진행.
 
-#### STEP B. Planner 중첩 spawn (복잡 WORK만)
+#### STEP B. Planner 중첩 spawn
 
-- specifier 복잡도 판정이 **Medium/Large**(pipeline/full) → planner를 중첩 spawn → `PLAN.md` + `TASK-NN.md` DAG 생성.
-- **Small**(direct) → planner 생략, specifier가 이미 생성한 단일 TASK를 그대로 사용(기존 direct/pipeline/full 3-모드 분기를 이 내부 브랜치로 대체).
-- 활동 로그 `STAGE_START — stage=planner` (planner를 spawn하는 경우만).
-- **게이트 처리** (복잡 WORK만 해당):
+- planner를 중첩 spawn → `PLAN.md` + `TASK-NN.md` DAG 생성.
+- 활동 로그 `STAGE_START — stage=planner`.
+- **게이트 처리**:
   - `mode=gated`: `GATE_WAIT — stage=planner` 기록 → `[GATE-2] <gate type="stage" work="{WORK}" stage="planner">` + PLAN/TASK 요약(`<next-stage>builder</next-stage>`) 반환 후 **yield**.
   - `mode=auto`: 게이트 생략, `STAGE_DONE — stage=planner` 즉시 기록 후 STEP C로 진행.
 
@@ -119,9 +115,9 @@ model: opus
    - 3회 모두 실패 → 자식이 직접 파이프라인을 중단하지 않고, orchestrator에 `<needs-decision>`으로 상향(판단 기준 "재시도 3회 실패" 해당, → 3-3 절 참조)한다. `mode=gated`면 게이트로 승격해 사용자에게 TASK 보류/스킵/중단을 묻고, `mode=auto`면 권고안(보통 "해당 TASK FAILED 표시 후 나머지 TASK 계속")을 자동결정해 기록한다.
 5. 모든 TASK가 committer까지 완료되면 STEP D(최종 보고)로 이동.
 
-#### STEP D. 로그·콜백 일괄 기록 (원칙)
+#### STEP D. 로그 일괄 기록 (원칙)
 
-- **기록 주체는 orchestrator뿐**이다. specifier/planner/builder/verifier/committer는 활동 로그·콜백을 직접 쓰지 않는다(→ `work-activity-log.md` 규칙 1).
+- **기록 주체는 orchestrator뿐**이다(→ `work-activity-log.md` 규칙 1).
 - 이벤트 매핑:
 
 | 시점 | 이벤트 |
@@ -134,8 +130,6 @@ model: opus
 | 게이트 해소(RESOLVED) 후, 또는 게이트 없는 단계 완료 즉시 | `STAGE_DONE — stage={agent}[ task=TASK-NN]` |
 | WORK 전체 완료 | `ORCHESTRATOR_DONE` |
 
-- 콜백은 이 이벤트에 대응하는 START/DONE을 `callback-protocol.md` 규칙에 따라 orchestrator가 발신한다.
-
 ---
 
 ### 3-3. 게이트 및 동적 의사결정
@@ -144,17 +138,15 @@ model: opus
 
 | 플래그 | 동작 |
 |--------|------|
-| `mode=gated` (기본값) | 고정 게이트(①specifier 후 ②planner 후, 복잡 WORK만) 통과 직후 `<gate type="stage">` + 요약 반환 후 **yield**. 그 외 어느 단계에서든 자율 판단상 사용자 결정이 필요하면 `<gate type="decision">`(배경+선택지+권고안) 반환 후 **yield**. 승인/결정은 Main Claude가 처리하며 **`SendMessage`로 컨텍스트 유지 재개**(폴백: 로그+`DECISIONS.md` 기반 re-spawn). 재개 시 주입된 결정을 반영해 이어간다. |
+| `mode=gated` (기본값) | 고정 게이트(①specifier 후 ②planner 후) 통과 직후 `<gate type="stage">` + 요약 반환 후 **yield**. 그 외 어느 단계에서든 자율 판단상 사용자 결정이 필요하면 `<gate type="decision">`(배경+선택지+권고안) 반환 후 **yield**. 승인/결정은 Main Claude가 처리하며 **`SendMessage`로 컨텍스트 유지 재개**(폴백: 로그+`DECISIONS.md` 기반 re-spawn). 재개 시 주입된 결정을 반영해 이어간다. |
 | `mode=auto` | 게이트/의사결정 정지 없이 전 구간 완주(**1회 spawn**). 모든 판단 지점은 권고안으로 자동결정 후 결과보고서 `## 자동 결정 사항`에 기록하고 `DECISIONS.md`에도 반영. |
 
 #### 고정 게이트 2종
 
 | 게이트 | 발생 지점 | stage 값 | 승인 후 다음 |
 |--------|----------|----------|-------------|
-| GATE-1 | specifier 완료 후 | `specifier` | 복잡 WORK → planner / 단순 WORK → STEP C(builder) |
-| GATE-2 | planner 완료 후 (복잡 WORK만) | `planner` | STEP C(builder) |
-
-단순 WORK(direct)는 GATE-2가 없다 — GATE-1 승인만으로 STEP C까지 진행(기존 direct=1게이트, pipeline/full=2게이트 체계와 동일).
+| GATE-1 | specifier 완료 후 | `specifier` | planner |
+| GATE-2 | planner 완료 후 | `planner` | STEP C(builder) |
 
 #### 동적 `<gate type="decision">` — 발생 및 에스컬레이션 규칙
 
@@ -193,12 +185,10 @@ TASK 간 의존성 전달(builder→verifier→committer, 그리고 다음 TASK�
 | 규칙 | 설명 |
 |------|------|
 | WORK 범위 고정 | 지정된 WORK 내 TASK만 처리, 다른 WORK와 혼합 금지 |
-| 자식 로그/콜백 생략 지시 | 자식 spawn 프롬프트에 활동 로그·콜백 STEP을 생략하라고 명시 — orchestrator가 일괄 기록하므로 중복 방지 (자식 정의 파일 자체의 수정은 별도 TASK 범위) |
 | 게이트 우회 금지 | `mode=gated`에서 고정 게이트·동적 decision 게이트를 임의로 스킵하거나 자동결정으로 대체하지 않음 |
 | STAGE_DONE 선기록 금지 | 게이트가 있는 단계는 게이트 해소(RESOLVED) 이전에 `STAGE_DONE`을 기록하지 않음 |
 | 파킹 핸들 1개 원칙 | orchestrator 자신만 파킹 대상 — 자식은 실행→반환하면 종료, 능동 관리 대상 아님 |
 | 재개 시 재실행 최소화 | `GATE_WAIT`/`DECISION_WAIT`로 종료된 경우 자식을 재실행하지 않고 디스크 산출물을 재사용 |
-| execution-mode 재확인 금지 | 재개 시 WORK 메타에서 승계한 execution-mode를 그대로 사용, 다시 묻지 않음 |
 
 ---
 
@@ -213,7 +203,7 @@ TASK 간 의존성 전달(builder→verifier→committer, 그리고 다음 TASK�
 ```
 🎉 {WORK_ID} 완료
    총: {N}개 TASK, {N}개 commit
-   실행 모드: {direct|pipeline|full} / orchestrator 모드: {gated|auto}
+   분기: {단순|복잡} WORK / orchestrator 모드: {gated|auto}
 
 ## 자동 결정 사항
 - D-01 [{stage 또는 task}] {확정값} — 근거: {rationale 1줄}
@@ -232,7 +222,6 @@ TASK 간 의존성 전달(builder→verifier→committer, 그리고 다음 TASK�
 
 - `works/{WORK_ID}/DECISIONS.md` 최종 상태 확인(모든 항목 `RESOLVED`인지) — PENDING 잔존 시 WORK를 완료로 보고하지 않음.
 - 활동 로그: `ORCHESTRATOR_DONE` 기록.
-- 콜백: `callback-protocol.md`를 참조하여 DONE 전송.
 
 ## 5. 결과 보고
 

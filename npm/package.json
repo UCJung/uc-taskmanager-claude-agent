@@ -1,6 +1,6 @@
 {
   "name": "uctm",
-  "version": "1.6.0",
+  "version": "2.0.0",
   "description": "Universal Claude Task Manager — SDD-based task pipeline subagent system for Claude Code CLI",
   "type": "module",
   "bin": {
@@ -11,7 +11,6 @@
     "lib/",
     "agents/",
     "references/",
-    ".agent/",
     ".claude-plugin/",
     "skills/"
   ],

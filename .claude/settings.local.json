@@ -34,7 +34,6 @@
       "Bash(ruff:*)",
       "Bash(make:*)",
       "Bash(git:*)",
-      "Bash(curl:*)",
       "mcp__sequential-thinking__sequentialthinking",
       "Bash(C:/rnd/agent/uc-taskmanager/works/WORK-45/TASK-00_result.md:*)",
       "Bash(C:/rnd/agent/uc-taskmanager/works/WORK-45/TASK-01_result.md:*)",

@@ -9,7 +9,7 @@ uc-taskmanager 에이전트용 XML 통신 형식 정의.
 ## 1. Dispatch 형식 (orchestrator → 수신자)
 
 ```xml
-<dispatch to="{receiver}" work="{WORK_ID}" task="{TASK_ID}" execution-mode="{direct|pipeline|full}">
+<dispatch to="{receiver}" work="{WORK_ID}" task="{TASK_ID}">
   <ref-cache>                                        <!-- 선택사항 -->
     <ref key="shared-prompt-sections">{파일 내용}</ref>
     <ref key="file-content-schema">{파일 내용}</ref>
@@ -40,7 +40,6 @@ uc-taskmanager 에이전트용 XML 통신 형식 정의.
 |------|-----|
 | `to` | builder, verifier, committer, planner, specifier |
 | `task` | `TASK-NN` — WORK 접두사 포함 금지 |
-| `execution-mode` | direct / pipeline / full (생략 시 full 기본값) |
 
 ---
 
@@ -185,7 +184,7 @@ uc-taskmanager 에이전트용 XML 통신 형식 정의.
 - orchestrator는 `<needs-decision>` 수신 시 자동 결정 가능 여부를 판단한다.
   - 자동 결정 가능 → `<decision by="auto">`(§ 7)로 확정하고 자식 작업을 재개시킴.
   - 자동 결정 불가 → `<gate type="decision">`(§ 5)으로 승격하여 Main Claude에 전달.
-- 어느 경로든 결정 내용은 `works/{WORK_ID}/DECISIONS.md`에 기록된다 → `file-content-schema.md` § 5 참조.
+- 어느 경로든 결정 내용은 `works/{WORK_ID}/DECISIONS.md`에 기록된다 → `file-content-schema.md` § 4 참조.
 
 ---
 
