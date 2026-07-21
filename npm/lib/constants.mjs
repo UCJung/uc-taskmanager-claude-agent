@@ -8,16 +8,17 @@ const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8
 export const VERSION = pkg.version;
 
 export const AGENT_FILES = [
+  'orchestrator.md',
   'builder.md',
   'committer.md',
   'planner.md',
-  'scheduler.md',
   'specifier.md',
   'verifier.md',
 ];
 
 export const REFERENCE_FILES = [
   'agent-flow.md',
+  'callback-protocol.md',
   'context-policy.md',
   'file-content-schema.md',
   'ref-cache-protocol.md',
