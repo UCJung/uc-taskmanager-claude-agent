@@ -57,16 +57,16 @@ WORK-53: WORK-52 반영 README 3종 현행화
 
 ## Acceptance Criteria
 
-- [ ] `scheduler` 언급 0건 (FR-06 / AC-01)
-- [ ] 에이전트 표가 orchestrator / specifier / planner / builder / verifier / committer 6종으로 구성 (FR-06 / AC-06)
-- [ ] 실행 모드 서술이 `mode=gated` / `mode=auto` 및 `[GATE-1]` / `[GATE-2]` 체계로 대체됨 (FR-06)
-- [ ] `DECISIONS.md`, `work_{WORK}.log`, `SendMessage` 재개 서술이 포함됨 (FR-06)
-- [ ] 참조 문서 표가 8개 파일로 구성되고 경로가 `plugin/references/`로 표기됨 (FR-06 / AC-03)
-- [ ] `##` 헤더 목록이 `README.md`와 1:1 대응하며 개수가 일치함 (NFR-02 / AC-05)
-- [ ] 스폰 카운트 표 수치가 `README.md`와 동일함 (`2 + 3N`, `3 + 3N`) (NFR-02)
-- [ ] 저장소 구조 트리에 기재된 모든 경로가 실제로 존재함 (NFR-01 / AC-04)
-- [ ] 배지·영문 문서 링크·라이선스·Serena MCP·산출물 언어 섹션이 보존됨 (CON-04 / AC-07)
-- [ ] `README.md` 및 `npm/README.md`가 이 TASK에서 변경되지 않음 (R-01)
+- [x] `scheduler` 언급 0건 (FR-06 / AC-01)
+- [x] 에이전트 표가 orchestrator / specifier / planner / builder / verifier / committer 6종으로 구성 (FR-06 / AC-06)
+- [x] 실행 모드 서술이 `mode=gated` / `mode=auto` 및 `[GATE-1]` / `[GATE-2]` 체계로 대체됨 (FR-06)
+- [x] `DECISIONS.md`, `work_{WORK}.log`, `SendMessage` 재개 서술이 포함됨 (FR-06)
+- [x] 참조 문서 표가 8개 파일로 구성되고 경로가 `plugin/references/`로 표기됨 (FR-06 / AC-03)
+- [x] `##` 헤더 목록이 `README.md`와 1:1 대응하며 개수가 일치함 (NFR-02 / AC-05)
+- [x] 스폰 카운트 표 수치가 `README.md`와 동일함 (`2 + 3N`, `3 + 3N`) (NFR-02)
+- [x] 저장소 구조 트리에 기재된 모든 경로가 실제로 존재함 (NFR-01 / AC-04)
+- [x] 배지·영문 문서 링크·라이선스·Serena MCP·산출물 언어 섹션이 보존됨 (CON-04 / AC-07)
+- [x] `README.md` 및 `npm/README.md`가 이 TASK에서 변경되지 않음 (R-01)
 
 ## Verify
 
