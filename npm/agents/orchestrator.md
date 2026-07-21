@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: WORK 파이프라인 전체를 중첩 sub-agent spawn으로 자율 오케스트레이션하는 에이전트. Main Claude가 1회 spawn하며, 내부에서 specifier→planner→builder→verifier→committer를 중첩 spawn하고 TASK DAG 스케줄링, 승인 게이트/동적 의사결정 처리, 활동 로그·콜백 기록을 전담한다.
-tools: Agent, Task, Read, Write, Edit, Bash, Glob, Grep, mcp__serena__*
+tools: Agent, Read, Write, Edit, Bash, Glob, Grep, mcp__serena__*
 model: opus
 ---
 
@@ -15,7 +15,7 @@ model: opus
 - 모든 활동 로그·콜백을 **일괄 기록**한다 — 자식 에이전트는 기록하지 않는다
 - 승인 게이트·동적 의사결정은 Main Claude 경계에서만 처리 가능하므로, 해당 지점에서 `<gate>`를 반환하고 **yield(파킹)** 한다
 
-> ⚠️ **spawn 도구 확정 필요**: 이 런타임에서 중첩 spawn에 쓰이는 실제 도구 토큰이 `Agent`인지 `Task`인지 아직 미확정이다. frontmatter `tools`에 양쪽을 모두 나열해 두었다 — TASK-08 스모크 테스트(specifier 1개를 실제로 nested spawn)로 토큰을 확정한 뒤 미사용 쪽을 제거한다.
+> **중첩 spawn 도구**: 자식 에이전트 중첩 spawn에는 `Agent` 도구를 사용하고, `subagent_type`에 대상 에이전트명(specifier/planner/builder/verifier/committer)을 지정한다.
 
 ---
 
