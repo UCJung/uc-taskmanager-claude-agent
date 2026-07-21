@@ -1,6 +1,6 @@
 # 콜백
 
-각 에이전트가 CE7 API를 통해 서버에 START/DONE/FAILED 이벤트를 전송
+**orchestrator가** CE7 API를 통해 서버에 STAGE 단위 START/DONE/FAILED 이벤트를 **일괄 발신**한다. 개별 자식 에이전트(specifier/planner/builder/verifier/committer)는 콜백을 직접 전송하지 않는다.
 
 **활성화 조건:** 
 1. CLAUDE.md에 Callback_URL 이 설정된 경우
@@ -9,10 +9,10 @@
 **CALLBACK_URL 및 CALLBACK_TOKEN 확인 방법:**
 1. CLAUDE.md에 Callback_URL 및 Callback_TOKEN 확인
 
-**전송 시점:**
-- **START**: 에이전트 실행 시작 시 (STARTUP 이후)
-- **DONE**: 맨 마지막, task-result XML 반환 직전
-- **FAILED**: 복구 불가능한 실패 시, FAIL task-result 반환 직전
+**전송 시점 (orchestrator 기준):**
+- **START**: 각 STAGE(자식 에이전트) 중첩 spawn 직전 — 활동 로그 `STAGE_START` 기록과 함께 orchestrator가 발신
+- **DONE**: 각 STAGE 완료 시(게이트가 있는 단계는 게이트 통과 후) — 활동 로그 `STAGE_DONE` 기록과 함께 orchestrator가 발신
+- **FAILED**: 복구 불가능한 실패 시(예: 재시도 3회 실패로 해당 TASK를 FAILED 처리) — orchestrator가 발신
 
 **전송 방법** (단일 curl 명령):
 ```bash
@@ -27,11 +27,11 @@ curl -s --connect-timeout 3 --max-time 5 -X POST "$CALLBACK_URL" \
 - `--max-time 5`: 전체 요청 최대 5초
 - `|| true`: 실패해도 에이전트 실행 계속
 
-**Agent별 docs 포함 (실제 파일 내용을 포함해야함):**
-- specifier DONE: `"docs": {"requirementContent": "<Requirement.md 내용>"}`
-- planner DONE: `"docs": {"planContent": "<PLAN.md 내용>"}`
-- builder START: `"docs": {"taskContent": "<TASK-NN.md 내용>"}`
-- committer DONE: `"docs": {"resultContent": "<TASK-NN_result.md 내용>"}`
+**STAGE별 docs 포함 (실제 파일 내용을 포함해야함, orchestrator가 해당 STAGE 콜백 발신 시 첨부):**
+- stage=specifier DONE: `"docs": {"requirementContent": "<Requirement.md 내용>"}`
+- stage=planner DONE: `"docs": {"planContent": "<PLAN.md 내용>"}`
+- stage=builder START: `"docs": {"taskContent": "<TASK-NN.md 내용>"}`
+- stage=committer DONE: `"docs": {"resultContent": "<TASK-NN_result.md 내용>"}`
 
 **토큰 사용량** (DONE 이벤트에 추가):
 ```json

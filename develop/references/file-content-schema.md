@@ -7,7 +7,7 @@
 | 생성 파일 | 참조 섹션 | 위반 시 결과 |
 |-----------|----------|-------------|
 | `Requirement.md` | § 0 |  |
-| `PLAN.md` | § 1 | `parsePlanMd()` 파싱 실패, scheduler 작동 불가 |
+| `PLAN.md` | § 1 | `parsePlanMd()` 파싱 실패, orchestrator 파이프라인 작동 불가 |
 | `TASK-XX.md` | § 2 | `parseTaskFilename()` DB 등록 누락 |
 | `TASK-XX_result.md` | § 3 | context-handoff 누락 |
 | `TASK-XX_result.md` (direct) | § 4 | result.md 인식 실패 |
@@ -266,7 +266,7 @@ orchestrator가 `<gate type="decision">` 또는 자식 에이전트의 `<needs-d
 
 ## D-01
 > 시각: {YYYY-MM-DDTHH:MM:SSZ}
-> 단계: {specifier|planner|scheduler|builder|verifier|committer}
+> 단계: {specifier|planner|builder|verifier|committer}
 > 상태: {PENDING|RESOLVED}
 
 ### 배경

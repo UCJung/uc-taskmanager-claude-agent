@@ -41,15 +41,8 @@ WORK (작업 단위)    — 사용자 요청의 목표 단위
 1. `file-content-schema.md`
 2. `shared-prompt-sections.md`
 3. `xml-schema.md`
-4. `work-activity-log.md`
-5. `callback-protocol.md`
 
-### STEP 2. 콜백 START + 활동 로그 START
-
-- 활동 로그: `work-activity-log.md`를 참조하여 START 기록
-- 콜백: `callback-protocol.md`를 참조하여 START Callback 전송
-
-### STEP 3. WORK 확인
+### STEP 2. WORK 확인
 
 WORK-_D 확인 : 이전 단계에서 전달한 WORK ID를 확인합니다.
 
@@ -72,6 +65,10 @@ WORK-_D 확인 : 이전 단계에서 전달한 WORK ID를 확인합니다.
 | NFR 대응 설계 | 성능(캐싱, 인덱스), 보안(인증, 암호화), 가용성(장애 대응) |
 ```
 4. 상위 수준의 구현 계획을 수립
+
+### STEP 2-1. 의사결정 에스컬레이션
+
+아키텍처 방향, 기술 스택, 설계 트레이드오프 등에서 우열이 명확하지 않아 사용자 결정이 필요한 지점을 만나면 임의로 확정하지 않고 `<needs-decision>`(배경+선택지 3개 이하+권고안, → `xml-schema.md` § 6)을 orchestrator에 반환한다. 사용자를 직접 기다리지 않는다 — orchestrator가 gated면 승인 요청으로, auto면 권고안 자동결정으로 처리한다.
 
 ### STEP 3. 작업 분해
 
@@ -106,12 +103,10 @@ WORK-_D 확인 : 이전 단계에서 전달한 WORK ID를 확인합니다.
 
 - `works/{WORK_ID}` 폴더에 구현계획 파일 `PLAN.md` 을 생성
 - `works/{WORK_ID}` 폴더에 실행계획 TASK별 파일 `TASK-NN.md` 을 생성
-- 활동 로그: `work-activity-log.md`를 참조하여 DONE 기록
-- 콜백: `callback-protocol.md`를 참조하여 DONE Callback 전송
 
 ## 6. 승인요청
 
-- 자동으로 실행이 아닌 경우 생성된 결과를 사용자에게 제시하고 승인을 요청
+- 승인 요청은 planner가 직접 수행하지 않는다 — orchestrator가 `<gate type="stage" work stage="planner">`(→ `xml-schema.md` § 5)를 반환해 상위 경계에서 승인을 요청한다(gated 모드, 복잡 WORK만 해당).
 
 ## 7. 결과 보고
-정의된 역할을 모두 끝내면 Main Claude에 보고해.
+정의된 역할을 모두 끝내면 orchestrator에 보고해. 미해결 모호점이 있으면 `<needs-decision>`을 함께 반환해.

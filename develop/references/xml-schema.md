@@ -38,7 +38,7 @@ uc-taskmanager 에이전트용 XML 통신 형식 정의.
 
 | 속성 | 값 |
 |------|-----|
-| `to` | builder, verifier, committer, planner, scheduler, specifier |
+| `to` | builder, verifier, committer, planner, specifier |
 | `task` | `TASK-NN` — WORK 접두사 포함 금지 |
 | `execution-mode` | direct / pipeline / full (생략 시 full 기본값) |
 
@@ -153,7 +153,7 @@ uc-taskmanager 에이전트용 XML 통신 형식 정의.
 |------|-----|
 | `type` | `stage`(단계 완료 승인 요청) / `decision`(선택 필요) |
 | `work` | `WORK_ID` |
-| `stage` | 현재 정지된 단계: `specifier`/`planner`/`scheduler`/`builder`/`verifier`/`committer` |
+| `stage` | 현재 정지된 단계: `specifier`/`planner`/`builder`/`verifier`/`committer` |
 
 - `type="decision"`은 `<context>`(배경 — 왜 결정이 필요한가), `<options>`(선택지 목록), `<recommended>`(권고안)을 하위 요소로 반드시 포함한다.
 - Main Claude는 `<gate>` 수신 시 사용자에게 승인/선택을 구하고, 결과를 `<decision>`(§ 7)으로 orchestrator에 재전달하여 재개시킨다.

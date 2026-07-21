@@ -4,7 +4,7 @@
 
 ## 규칙
 
-1. **기록 주체**: **orchestrator로 일원화**. 개별 자식 에이전트(specifier/planner/scheduler/builder/verifier/committer)는 활동 로그에 직접 기록하지 않는다 — orchestrator가 자식의 spawn/완료를 `STAGE_START`/`STAGE_DONE`으로 대신 기록한다.
+1. **기록 주체**: **orchestrator로 일원화**. 개별 자식 에이전트(specifier/planner/builder/verifier/committer)는 활동 로그에 직접 기록하지 않는다 — orchestrator가 자식의 spawn/완료를 `STAGE_START`/`STAGE_DONE`으로 대신 기록한다.
 2. **타임스탬프**: Bash로 `date -u +"%Y-%m-%dT%H:%M:%SZ"` 실행하여 실제 UTC 시간 획득. 더미 값 사용 금지.
 3. **기록 방법**: Bash `echo` 로 추가.
 4. **execution-mode 헤더**: 로그 파일 최초 기록 시 실행 모드를 1회 남긴다 (형식은 §「실행 헤더」참조).
@@ -30,13 +30,13 @@
 | 이벤트 | 기록 시점 | 예시 |
 |--------|----------|------|
 | `ORCHESTRATOR_START` | orchestrator 실행 시작 | `ORCHESTRATOR_START — WORK-NN orchestrator started` |
-| `STAGE_START` | 자식 에이전트(specifier/planner/scheduler/builder/verifier/committer) spawn 직전 | `STAGE_START — stage=specifier` |
+| `STAGE_START` | 자식 에이전트(specifier/planner/builder/verifier/committer) spawn 직전 | `STAGE_START — stage=specifier` |
 | `GATE_WAIT` | `<gate type="stage">`에서 정지, Main Claude 승인 대기 | `GATE_WAIT — stage=specifier` |
 | `DECISION_WAIT` | `<gate type="decision">` 또는 자식의 `<needs-decision>` 수신 후 결정 대기 | `DECISION_WAIT — stage=planner` |
 | `DECISION` | 결정 확정 — 주체는 `user`(사용자 승인) 또는 `auto`(orchestrator 자동결정) | `DECISION — stage=planner by=user` / `DECISION — task=TASK-03 by=auto` |
 | `STAGE_DONE` | 게이트 해소(RESOLVED) 후, 또는 게이트가 없는 단계는 완료 즉시 | `STAGE_DONE — stage=specifier` |
 | `ORCHESTRATOR_DONE` | orchestrator 실행 종료 (WORK 완료) | `ORCHESTRATOR_DONE — WORK-NN orchestrator completed` |
 
-- `stage` 값: `specifier`/`planner`/`scheduler`/`builder`/`verifier`/`committer`.
+- `stage` 값: `specifier`/`planner`/`builder`/`verifier`/`committer`.
 - `by` 값: `user`/`auto`. `<decision>`(§ 7, `xml-schema.md`)의 `by` 속성과 동일한 값 체계를 사용.
 - 확정된 결정의 상세 내용(배경/선택지/권고안/확정값)은 로그가 아니라 `works/{WORK_ID}/DECISIONS.md`에 기록한다 → `file-content-schema.md` § 5 참조. 로그의 `DECISION` 이벤트는 "언제·누가 결정했는지"만 남긴다.

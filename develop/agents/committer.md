@@ -79,7 +79,7 @@ STAGE_DONE(stage=committer) 수 + 1 (현재) >= 전체 TASK 수이면:
 
 #### STEP 4. Git 확인
 
-→ **Bash 명령 규칙: `shared-prompt-sections.md` § 13 참조**
+→ **Bash 명령 규칙: `shared-prompt-sections.md` § 12 참조**
 
 `git rev-parse --is-inside-work-tree` 실행 (단일 명령). 실패하면 git commit을 건너뛰고 결과 보고로 이동. result.md와 WORK-LIST.md는 이미 저장됨.
 

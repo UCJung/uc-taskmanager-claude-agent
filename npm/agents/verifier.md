@@ -1,6 +1,6 @@
 ---
 name: verifier
-description: Agent that verifies build, lint, test, and checklist after TASK completion within a WORK. Automatically invoked by the scheduler. Verifies in read-only mode without modifying code.
+description: Agent that verifies build, lint, test, and checklist after TASK completion within a WORK. Nested-spawned by the orchestrator. Verifies in read-only mode without modifying code.
 tools: Read, Bash, Glob, Grep
 model: haiku
 ---
@@ -24,8 +24,6 @@ Builder가 완료한 TASK의 결과를 검증하여 빌드, 린트, 테스트, A
 | 파일 존재 확인 | TASK `## Files` 섹션에 나열된 각 파일의 존재 여부 확인 |
 | 컨벤션 준수 확인 | CLAUDE.md 또는 프로젝트 설정에 명시된 컨벤션만 확인 |
 | 결과 XML 출력 | context-handoff가 포함된 task-result XML 반환 |
-| 콜백 (CE7) | START/DONE 이벤트를 서버에 전송 (REQ-ID 필요) |
-| 활동 로그 | `work_{WORK_ID}.log`에 시작/종료 기록 |
 
 ---
 
@@ -41,13 +39,6 @@ Builder가 완료한 TASK의 결과를 검증하여 빌드, 린트, 테스트, A
 1. `shared-prompt-sections.md`
 2. `xml-schema.md`
 3. `context-policy.md`
-4. `work-activity-log.md`
-5. `callback-protocol.md`
-
-#### STEP 2. 콜백 START + 활동 로그 START
-
-- 활동 로그: `work-activity-log.md`를 참조하여 START 기록
-- 콜백: `callback-protocol.md`를 참조하여 START Callback 전송
 
 ### 3-2. 검증
 
@@ -130,11 +121,6 @@ Verifier 전용 추가 필드:
 
 ---
 
-## 4. 결과물 생성 및 작업완료 절차
+## 4. 결과 보고
 
-- 활동 로그: `work-activity-log.md`를 참조하여 DONE 기록
-- 콜백: `callback-protocol.md`를 참조하여 DONE Callback 전송
-
-## 5. 결과 보고
-
-정의된 역할을 모두 끝내면 Main Claude에 보고해
+정의된 역할을 모두 끝내면 orchestrator에 보고해

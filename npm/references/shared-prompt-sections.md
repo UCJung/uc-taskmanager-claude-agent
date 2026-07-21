@@ -71,29 +71,26 @@ works/{WORK_ID}/
 # Glob 도구 사용: pattern "works/WORK-*/" → 모든 WORK 디렉토리 목록 (정렬)
 # 각 WORK (내림차순)에 대해 works/WORK-NN/work_WORK-NN.log 마지막 줄 읽기
 #   - 로그 파일 없음 → 시작 안 됨
-#   - 마지막 줄에 마지막 TASK 번호의 "COMMITTER_DONE" 포함 → 남은 TASK 확인
+#   - 마지막 줄이 "ORCHESTRATOR_DONE" → 완료됨
 # 완전히 완료되지 않은 첫 번째 WORK가 활성 WORK
 
 # 모든 WORK 목록
 # Glob 도구 사용: pattern "works/WORK-*/"
 
-# 활동 로그의 마지막 줄로 WORK/TASK 상태 파악
+# 활동 로그의 마지막 줄로 WORK/TASK 상태 파악 (orchestrator가 일괄 기록 → work-activity-log.md 참조)
 # works/${WORK_ID}/work_${WORK_ID}.log 마지막 줄 읽기
 #   형식: [timestamp] EVENT — description
 #
-#   핵심 규칙: *_START에 대응하는 *_DONE이 없으면 = 중단됨, 해당 단계 재수행 필요
+#   핵심 규칙: STAGE_START에 대응하는 STAGE_DONE/GATE_WAIT/DECISION_WAIT가 없으면 = 자식 실행 중 중단됨, 해당 단계 재수행 필요
 #
-#   COMMITTER_DONE — TASK-NN → TASK-NN 완료, 다음은 TASK-(NN+1)
-#   COMMITTER_START — TASK-NN → committer 중단됨, TASK-NN committer 재수행
-#   VERIFIER_DONE — TASK-NN  → TASK-NN 검증됨, committer 필요
-#   VERIFIER_START — TASK-NN → verifier 중단됨, TASK-NN verifier 재수행
-#   BUILDER_DONE — TASK-NN   → TASK-NN builder 완료, verifier 필요
-#   BUILDER_START — TASK-NN  → builder 중단됨, TASK-NN builder 재수행
-#   PLANNER_DONE             → 계획 완료, 첫 TASK 시작
-#   PLANNER_START            → planner 중단됨, planner 재수행
-#   SPECIFIER_DONE           → specifier 완료, planner 필요
-#   SPECIFIER_START          → specifier 중단됨, specifier 재수행
-#   로그 파일 없음           → 처음부터 시작
+#   ORCHESTRATOR_DONE                        → WORK 전체 완료
+#   STAGE_DONE — stage=X[ task=TASK-NN]      → 해당 단계 완료(게이트 통과됨), 다음 단계로
+#   GATE_WAIT — stage=X                      → 게이트 미승인, 자식 재실행 없이 동일 게이트 재제시
+#   DECISION_WAIT — stage=X[ task=TASK-NN]   → 결정 미확정, DECISIONS.md의 PENDING 항목 재제시
+#   DECISION — stage=X by=user|auto          → 결정 확정됨, 후속 STAGE_DONE 없으면 해당 단계 이어서 진행
+#   STAGE_START — stage=X[ task=TASK-NN]     → (대응 DONE/WAIT 없으면) 자식 실행 중 중단됨, 재실행
+#   ORCHESTRATOR_START                       → orchestrator 시작됨, 하위 이벤트로 세부 판정
+#   로그 파일 없음                           → 처음부터 시작 (신규 WORK)
 ```
 
 ---
@@ -112,6 +109,18 @@ works/{WORK_ID}/
   <notes>{다음 단계를 위한 메모}</notes>
 </task-result>
 ```
+
+---
+
+## § 6. 자동결정 기록 관례
+
+권고안을 자동결정(결정주체 `auto`)한 경우, 판단 근거를 남겨 추적 가능하게 한다.
+
+- **기록 위치**: `works/{WORK_ID}/DECISIONS.md`(항목별 배경/선택지/권고안/확정값/결정주체/상태) + 최종 결과보고서 `## 자동 결정 사항` 목록.
+- **기록 시점**: 결정 확정 즉시 `RESOLVED`로 기록. `mode=auto`뿐 아니라 `mode=gated`에서 orchestrator가 경미한 사항으로 판단해 게이트 없이 자체 확정(`by=auto`)한 경우도 동일하게 기록.
+- **최소 기재 항목**: 대상(stage 또는 task) · 확정값 · 근거 1줄.
+
+→ 상세 포맷: `file-content-schema.md` § 5 참조. 기록 주체·이벤트: `work-activity-log.md`의 `DECISION` 이벤트 참조.
 
 ---
 
