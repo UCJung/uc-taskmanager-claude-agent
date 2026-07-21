@@ -33,11 +33,11 @@ WORK-53: WORK-52 반영 README 3종 현행화
 
 ## Acceptance Criteria
 
-- [ ] `diff README.md npm/README.md` 출력이 비어 있다 (FR-05 / AC-02)
-- [ ] `npm/README.md`의 `scheduler` 언급이 0건이다 (AC-01)
-- [ ] `npm/README.md`의 줄 수가 `README.md`와 동일하다
-- [ ] `README.md` 자체는 이 TASK에서 변경되지 않았다
-- [ ] `npm/README.md`에 `orchestrator`가 포함되고 6개 에이전트 목록이 기재되어 있다 (AC-06)
+- [x] `diff README.md npm/README.md` 출력이 비어 있다 (FR-05 / AC-02)
+- [x] `npm/README.md`의 `scheduler` 언급이 0건이다 (AC-01)
+- [x] `npm/README.md`의 줄 수가 `README.md`와 동일하다
+- [x] `README.md` 자체는 이 TASK에서 변경되지 않았다
+- [x] `npm/README.md`에 `orchestrator`가 포함되고 6개 에이전트 목록이 기재되어 있다 (AC-06)
 
 ## Verify
 
