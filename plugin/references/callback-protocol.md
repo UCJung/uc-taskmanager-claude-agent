@@ -1,6 +1,6 @@
 # 콜백
 
-**orchestrator가** CE7 API를 통해 서버에 STAGE 단위 START/DONE/FAILED 이벤트를 **일괄 발신**한다. 개별 자식 에이전트(specifier/planner/builder/verifier/committer)는 콜백을 직접 전송하지 않는다.
+**orchestrator가** CE7 API를 통해 서버에 STAGE 단위 START/DONE/FAILED 이벤트를 **일괄 발신**한다.
 
 **활성화 조건:** 
 1. CLAUDE.md에 Callback_URL 이 설정된 경우

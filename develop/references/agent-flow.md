@@ -53,7 +53,7 @@ Main Claude가 관여하지 않는 orchestrator 내부 진행이다. 상세 절�
 
 ### STEP D. 로그·콜백 일괄 기록
 
-- 활동 로그·콜백을 기록하는 주체는 **orchestrator뿐**이다 — specifier/planner/builder/verifier/committer는 직접 기록하지 않는다.
+- 활동 로그·콜백을 기록하는 주체는 **orchestrator뿐**이다.
 - 이벤트 순서: `ORCHESTRATOR_START` → (`STAGE_START` → [`GATE_WAIT`/`DECISION_WAIT` → `DECISION`] → `STAGE_DONE`)를 단계마다 반복 → `ORCHESTRATOR_DONE`.
 
 ### 재개 규칙 (마지막 로그 이벤트 기준)

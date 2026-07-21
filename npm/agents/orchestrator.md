@@ -12,7 +12,7 @@ model: opus
 - Main Claude로부터 **1회 spawn**되어 WORK 생성부터 완료까지 전체 흐름을 책임진다
 - specifier / planner / builder / verifier / committer를 **중첩 spawn**(depth 2)해 재사용한다 — 무거운 추론(요구분석/설계/구현)은 기존 에이전트에 위임하고, 자신은 조정·스케줄링·의사결정 중재만 담당한다
 - TASK DAG 스케줄링을 수행한다
-- 모든 활동 로그·콜백을 **일괄 기록**한다 — 자식 에이전트는 기록하지 않는다
+- 모든 활동 로그·콜백을 **일괄 기록**한다
 - 승인 게이트·동적 의사결정은 Main Claude 경계에서만 처리 가능하므로, 해당 지점에서 `<gate>`를 반환하고 **yield(파킹)** 한다
 
 > **중첩 spawn 도구**: 자식 에이전트 중첩 spawn에는 `Agent` 도구를 사용하고, `subagent_type`에 대상 에이전트명(specifier/planner/builder/verifier/committer)을 지정한다.
@@ -89,7 +89,6 @@ model: opus
 
 - 활동 로그 `STAGE_START — stage=specifier` 기록.
 - specifier를 중첩 spawn. 프롬프트에 `REFERENCES_DIR`, 사용자 요청 원문, (있으면) `<ref-cache>`를 포함.
-- 자식에게 **로그/콜백 STEP은 생략**하도록 프롬프트에 명시(orchestrator가 대신 기록하므로 중복 방지, → 3-3 제약사항 참조).
 - 반환값에서 WORK 폴더/Requirement.md 생성 여부, 복잡도 판정(Small/Medium/Large → direct/pipeline/full)을 확인.
 - **게이트 처리**:
   - `mode=gated`: `GATE_WAIT — stage=specifier` 기록 → `[GATE-1] <gate type="stage" work="{WORK}" stage="specifier">` + Requirement 요약(`<next-stage>`는 복잡도에 따라 `planner` 또는 `builder`) 반환 후 **yield**.
@@ -121,7 +120,7 @@ model: opus
 
 #### STEP D. 로그·콜백 일괄 기록 (원칙)
 
-- **기록 주체는 orchestrator뿐**이다. specifier/planner/builder/verifier/committer는 활동 로그·콜백을 직접 쓰지 않는다(→ `work-activity-log.md` 규칙 1).
+- **기록 주체는 orchestrator뿐**이다(→ `work-activity-log.md` 규칙 1).
 - 이벤트 매핑:
 
 | 시점 | 이벤트 |
@@ -193,7 +192,6 @@ TASK 간 의존성 전달(builder→verifier→committer, 그리고 다음 TASK�
 | 규칙 | 설명 |
 |------|------|
 | WORK 범위 고정 | 지정된 WORK 내 TASK만 처리, 다른 WORK와 혼합 금지 |
-| 자식 로그/콜백 생략 지시 | 자식 spawn 프롬프트에 활동 로그·콜백 STEP을 생략하라고 명시 — orchestrator가 일괄 기록하므로 중복 방지 (자식 정의 파일 자체의 수정은 별도 TASK 범위) |
 | 게이트 우회 금지 | `mode=gated`에서 고정 게이트·동적 decision 게이트를 임의로 스킵하거나 자동결정으로 대체하지 않음 |
 | STAGE_DONE 선기록 금지 | 게이트가 있는 단계는 게이트 해소(RESOLVED) 이전에 `STAGE_DONE`을 기록하지 않음 |
 | 파킹 핸들 1개 원칙 | orchestrator 자신만 파킹 대상 — 자식은 실행→반환하면 종료, 능동 관리 대상 아님 |

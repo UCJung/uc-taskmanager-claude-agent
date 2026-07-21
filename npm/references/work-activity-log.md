@@ -4,7 +4,7 @@
 
 ## 규칙
 
-1. **기록 주체**: **orchestrator로 일원화**. 개별 자식 에이전트(specifier/planner/builder/verifier/committer)는 활동 로그에 직접 기록하지 않는다 — orchestrator가 자식의 spawn/완료를 `STAGE_START`/`STAGE_DONE`으로 대신 기록한다.
+1. **기록 주체**: **orchestrator**. 자식의 spawn/완료를 `STAGE_START`/`STAGE_DONE`으로 기록한다.
 2. **타임스탬프**: Bash로 `date -u +"%Y-%m-%dT%H:%M:%SZ"` 실행하여 실제 UTC 시간 획득. 더미 값 사용 금지.
 3. **기록 방법**: Bash `echo` 로 추가.
 4. **execution-mode 헤더**: 로그 파일 최초 기록 시 실행 모드를 1회 남긴다 (형식은 §「실행 헤더」참조).
