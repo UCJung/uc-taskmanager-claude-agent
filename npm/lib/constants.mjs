@@ -18,7 +18,6 @@ export const AGENT_FILES = [
 
 export const REFERENCE_FILES = [
   'agent-flow.md',
-  'callback-protocol.md',
   'context-policy.md',
   'file-content-schema.md',
   'ref-cache-protocol.md',
@@ -46,7 +45,6 @@ export function getReferencesSrcDir() {
  *   - Formatting: printf, echo
  *   - Build/Lint: node, npm, bun, yarn, cargo, go, python, ruff, make
  *   - Git: git add, git commit, git log, git rev-parse
- *   - Network: curl (callback)
  */
 export const REQUIRED_PERMISSIONS = [
   // File read/write tools (project-root scoped)
@@ -91,7 +89,4 @@ export const REQUIRED_PERMISSIONS = [
 
   // Git operations (committer)
   'Bash(git:*)',
-
-  // Network (callback transmission)
-  'Bash(curl:*)',
 ];

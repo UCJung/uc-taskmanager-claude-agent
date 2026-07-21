@@ -340,7 +340,7 @@ uctm update --lang en
 git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
 mkdir -p .claude/agents .claude/references
 cp /tmp/uc-tm/npm/agents/*.md .claude/agents/          # 6 agents (orchestrator, specifier, planner, builder, verifier, committer)
-cp /tmp/uc-tm/npm/references/*.md .claude/references/   # 8 reference files
+cp /tmp/uc-tm/npm/references/*.md .claude/references/   # 7 reference files
 rm -rf /tmp/uc-tm
 git add .claude/agents/ .claude/references/ && git commit -m "chore: add uc-taskmanager agents"
 ```
@@ -397,7 +397,7 @@ User Request → Main Claude
 
 `gated` vs `auto` doesn't change the spawn count — only whether execution pauses for approval (see [Approval Gates, Nested Autonomy, and DECISIONS.md](#approval-gates-nested-autonomy-and-decisionsmd) below, `agent-flow.md` § 4).
 
-Both branches output to `works/WORK-NN/` and guarantee `result.md` + `DECISIONS.md` + `COMMITTER DONE` callback (sent by orchestrator on the child's behalf).
+Both branches output to `works/WORK-NN/` and guarantee `result.md` + `DECISIONS.md`.
 
 ### WORK (Multi-Task, complex WORK)
 
@@ -488,24 +488,23 @@ Six agents work together in a clean, isolated pipeline — Main Claude spawns on
 
 | Agent | Role | Model | Permission | MCP | Spawn |
 |-------|------|-------|------------|-----|-------|
-| **orchestrator** | Nests specifier→(planner)→builder→verifier→committer; schedules the TASK DAG (STEP C); mediates fixed/dynamic gates; batch-records activity log + callbacks | **opus** | read + nested spawn | Serena (optional) | spawned **once** by Main Claude per WORK |
+| **orchestrator** | Nests specifier→(planner)→builder→verifier→committer; schedules the TASK DAG (STEP C); mediates fixed/dynamic gates; batch-records the activity log | **opus** | read + nested spawn | Serena (optional) | spawned **once** by Main Claude per WORK |
 | **specifier** | `[]` tag detection, simple/complex classification, PLAN seed, WORK-LIST management, returns dispatch XML | **opus** | read + dispatch | Serena (codebase exploration), sequential-thinking (complexity check) | nested by orchestrator |
 | **planner** | Create WORK + decompose TASKs + generate PLAN.md (complex WORK only) + pre-create progress templates | **opus** | read-only | Serena (codebase exploration), sequential-thinking (task decomposition) | nested by orchestrator (complex WORK only) |
 | **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena (symbol-level explore/edit) | nested by orchestrator, per TASK |
 | **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification (read-only) | **haiku** | read + execute | — | nested by orchestrator, per TASK |
 | **committer** | Gate check (progress.md) → write result.md → git commit | **haiku** | read + write + git | — | nested by orchestrator, per TASK |
 
-> Activity-log and callback recording (`COMMITTER DONE`, etc.) is done **once, by orchestrator**, on behalf of the agent it just nested — child agents do not write logs or send callbacks themselves.
+> Activity-log recording is done **once, by orchestrator**, on behalf of the agent it just nested — child agents do not write logs themselves.
 
 ### Support Files (included in Plugin)
 
-In addition to the 6 pipeline agents, the plugin includes 8 support files that agents reference at startup.
+In addition to the 6 pipeline agents, the plugin includes 7 support files that agents reference at startup.
 These are located in `plugin/references/` (synced from `develop/references/`); when installed via npm they land in `.claude/references/`:
 
 | File | Purpose |
 |------|---------|
 | `agent-flow.md` | Pipeline orchestration rules — Main Claude's trigger/gate boundary + orchestrator's internal nested-spawn flow |
-| `callback-protocol.md` | External callback protocol — orchestrator batch-sends STAGE START/DONE/FAILED events; all callbacks are skipped if no callback URL is set in `CLAUDE.md` |
 | `context-policy.md` | Sliding window context transfer rules between agents |
 | `file-content-schema.md` | Single source of truth for all file formats (PLAN.md, TASK.md, progress.md, result.md) |
 | `ref-cache-protocol.md` | 4-step ref-cache protocol — checks `<ref-cache>` in the dispatch XML and skips disk reads when cached references are present |
@@ -850,7 +849,7 @@ Main Claude spawns `orchestrator` exactly once per WORK; orchestrator alone deci
 
 Every decision — whether a human approved it or orchestrator auto-resolved it — is written to `works/{WORK_ID}/DECISIONS.md` (status `PENDING` while parked, `RESOLVED` once settled) and summarized in the final report's `## 자동 결정 사항` section. STEP C itself (the builder → verifier → committer TASK loop) never gates, in either mode — it's the part of the pipeline nobody needs to approve.
 
-Both branches (simple/complex WORK) and both modes (gated/auto) output to `works/WORK-NN/` with identical artifact structure (PLAN.md + result.md + `DECISIONS.md` + `COMMITTER DONE` callback), ensuring downstream integration works regardless of branch or mode.
+Both branches (simple/complex WORK) and both modes (gated/auto) output to `works/WORK-NN/` with identical artifact structure (PLAN.md + result.md + `DECISIONS.md`), ensuring downstream integration works regardless of branch or mode.
 
 ### Structured Agent Communication
 
@@ -922,25 +921,6 @@ Each agent outputs a **context-handoff** — a structured reasoning document, no
 **Estimated token savings**: ~48% on a 3-TASK dependency chain vs. the naive approach of passing full results forward.
 
 See `docs/spec_sliding-window-context.md` for full design details.
-
-### External System Callback (Optional)
-
-uc-taskmanager is generic by default. To integrate with an external system (e.g., a CI/CD backend), add callback URLs to `CLAUDE.md`:
-
-```markdown
-## Task Callbacks
-TaskCallback: http://localhost:3000/api/v1/runner/{{executionId}}/task-result
-ProgressCallback: http://localhost:3000/api/v1/runner/{{executionId}}/task-progress
-CallbackToken: <your-token>
-```
-
-- **No config** → works as-is, no external calls made
-- **TaskCallback** → orchestrator POSTs the TASK result on the committer's behalf after each TASK commit (`STAGE_DONE — stage=committer`)
-- **ProgressCallback** → orchestrator POSTs a checkpoint on the builder's behalf after each progress.md update (`STAGE_DONE — stage=builder`)
-- Callback failures are non-fatal — a warning is printed and the pipeline continues
-- Callbacks are sent **once, by orchestrator** — nested children (specifier/planner/builder/verifier/committer) do not send callbacks themselves
-
-See `docs/spec_callback-integration.md` for payload schema and implementation guide.
 
 ---
 
@@ -1027,15 +1007,14 @@ Auto-detected from project files. No configuration needed.
 uc-taskmanager/
 ├── develop/                 ← Source of truth (edit here)
 │   ├── agents/              ← 6 agent prompts (language-agnostic)
-│   │   ├── orchestrator.md  ← Nested spawn coordinator: specifier→(planner)→builder→verifier→committer, TASK DAG scheduling, gates/decisions, batch log+callback
+│   │   ├── orchestrator.md  ← Nested spawn coordinator: specifier→(planner)→builder→verifier→committer, TASK DAG scheduling, gates/decisions, batch log
 │   │   ├── specifier.md     ← [] tag detection + simple/complex classification
 │   │   ├── planner.md       ← WORK creation + TASK decomposition (complex WORK only)
 │   │   ├── builder.md       ← Code implementation
 │   │   ├── verifier.md      ← Build/lint/test verification
 │   │   └── committer.md     ← git commit + result.md
-│   ├── references/          ← 8 support files (shared across agents)
+│   ├── references/          ← 7 support files (shared across agents)
 │   │   ├── agent-flow.md          ← Pipeline orchestration rules
-│   │   ├── callback-protocol.md   ← External callback protocol (batch STAGE events)
 │   │   ├── context-policy.md      ← Sliding window context rules
 │   │   ├── file-content-schema.md ← File format definitions
 │   │   ├── ref-cache-protocol.md  ← ref-cache protocol (4 steps)
@@ -1047,7 +1026,7 @@ uc-taskmanager/
 │       └── plugin.json      ← Plugin manifest source (name, version, agents array)
 ├── npm/                     ← npm package (published as `uctm`)
 │   ├── agents/              ← Synced from develop/agents/
-│   ├── references/          ← Synced from develop/references/ (8 files)
+│   ├── references/          ← Synced from develop/references/ (7 files)
 │   ├── skills/              ← Synced from develop/skills/ (4 SKILL.md)
 │   ├── bin/cli.mjs          ← CLI entry point (uctm init/update)
 │   ├── lib/                 ← CLI implementation (constants.mjs, init.mjs, update.mjs)
@@ -1082,11 +1061,9 @@ uc-taskmanager/
 ├── docs/                    ← Design specifications
 │   ├── spec_pipeline-architecture_v1.3.md  ← Pipeline architecture v1.3 (ref-cache, Specifier-based)
 │   ├── spec_sliding-window-context.md      ← Sliding window context design
-│   ├── spec_callback-integration.md        ← External system callback integration
 │   ├── spec_SDD_with_ucagent_requirement.md ← SDD v1.5 requirement management system design
 │   ├── pipeline-architecture-v1.3-visual.html ← Interactive pipeline visualization (with ref-cache tab)
 │   ├── SDD-requirement-visual.html         ← Interactive SDD visualization (with ref-cache tab)
-│   ├── callback-integration-visual.html    ← Interactive callback visualization
 │   ├── sliding-window-context-visual.html  ← Interactive sliding window visualization
 │   └── _archive/                           ← Legacy docs (Router-based)
 └── works/                   ← WORK directories (auto-generated)

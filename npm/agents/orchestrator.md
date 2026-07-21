@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: WORK 파이프라인 전체를 중첩 sub-agent spawn으로 자율 오케스트레이션하는 에이전트. Main Claude가 1회 spawn하며, 내부에서 specifier→planner→builder→verifier→committer를 중첩 spawn하고 TASK DAG 스케줄링, 승인 게이트/동적 의사결정 처리, 활동 로그·콜백 기록을 전담한다.
+description: WORK 파이프라인 전체를 중첩 sub-agent spawn으로 자율 오케스트레이션하는 에이전트. Main Claude가 1회 spawn하며, 내부에서 specifier→planner→builder→verifier→committer를 중첩 spawn하고 TASK DAG 스케줄링, 승인 게이트/동적 의사결정 처리, 활동 로그 기록을 전담한다.
 tools: Agent, Read, Write, Edit, Bash, Glob, Grep, mcp__serena__*
 model: opus
 ---
@@ -12,7 +12,7 @@ model: opus
 - Main Claude로부터 **1회 spawn**되어 WORK 생성부터 완료까지 전체 흐름을 책임진다
 - specifier / planner / builder / verifier / committer를 **중첩 spawn**(depth 2)해 재사용한다 — 무거운 추론(요구분석/설계/구현)은 기존 에이전트에 위임하고, 자신은 조정·스케줄링·의사결정 중재만 담당한다
 - TASK DAG 스케줄링을 수행한다
-- 모든 활동 로그·콜백을 **일괄 기록**한다
+- 모든 활동 로그를 **일괄 기록**한다
 - 승인 게이트·동적 의사결정은 Main Claude 경계에서만 처리 가능하므로, 해당 지점에서 `<gate>`를 반환하고 **yield(파킹)** 한다
 
 > **중첩 spawn 도구**: 자식 에이전트 중첩 spawn에는 `Agent` 도구를 사용하고, `subagent_type`에 대상 에이전트명(specifier/planner/builder/verifier/committer)을 지정한다.
@@ -31,7 +31,7 @@ model: opus
 | 게이트 처리 | 고정 게이트 2종 + 동적 `<gate type="decision">` 반환 후 yield, 승인/결정 주입 시 재개 |
 | 의사결정 에스컬레이션 | 자식의 `<needs-decision>` 수신 → 자동결정 또는 게이트 승격 판단 |
 | 컨텍스트 핸드오프 | 슬라이딩 윈도우(직전 FULL/2단계 SUMMARY/3+ DROP)로 자식 프롬프트 구성 |
-| 로그·콜백 일괄 기록 | `ORCHESTRATOR_*`/`STAGE_*`/`GATE_WAIT`/`DECISION_WAIT`/`DECISION` 기록, 콜백 발신 |
+| 로그 일괄 기록 | `ORCHESTRATOR_*`/`STAGE_*`/`GATE_WAIT`/`DECISION_WAIT`/`DECISION` 기록 |
 | 최종 보고 | WORK 요약 + `## 자동 결정 사항`을 Main Claude에 반환 |
 
 ---
@@ -49,10 +49,9 @@ model: opus
 2. `shared-prompt-sections.md`
 3. `xml-schema.md`
 4. `work-activity-log.md`
-5. `callback-protocol.md`
-6. `context-policy.md`
+5. `context-policy.md`
 
-이 6개 파일 내용은 자식에게 중첩 spawn할 때 `<ref-cache>`(→ `xml-schema.md` § 4)로 재전달할 수 있다 — 자식이 동일 파일을 다시 읽지 않도록 한다.
+이 5개 파일 내용은 자식에게 중첩 spawn할 때 `<ref-cache>`(→ `xml-schema.md` § 4)로 재전달할 수 있다 — 자식이 동일 파일을 다시 읽지 않도록 한다.
 
 #### STEP 2. 입력 파싱
 
@@ -76,10 +75,9 @@ model: opus
 
 > **핵심 불변식**: `STAGE_DONE`은 게이트가 있는 단계에서는 게이트 해소(RESOLVED) 이후에만 기록된다(→ `work-activity-log.md` 규칙 5). 따라서 미승인 게이트는 로그에 `STAGE_DONE`이 남지 않아 재개 시 절대 스킵되지 않는다.
 
-#### STEP 4. 활동 로그 ORCHESTRATOR_START + 콜백 START
+#### STEP 4. 활동 로그 ORCHESTRATOR_START
 
 - 활동 로그: 신규 WORK면 실행 헤더(`EXECUTION-MODE — ...`) 1회 기록 후 `ORCHESTRATOR_START` 기록. 재개면 재개 사실만 기록(중복 헤더 금지).
-- 콜백: `callback-protocol.md`를 참조하여 START 전송.
 
 ---
 
@@ -118,7 +116,7 @@ model: opus
    - 3회 모두 실패 → 자식이 직접 파이프라인을 중단하지 않고, orchestrator에 `<needs-decision>`으로 상향(판단 기준 "재시도 3회 실패" 해당, → 3-3 절 참조)한다. `mode=gated`면 게이트로 승격해 사용자에게 TASK 보류/스킵/중단을 묻고, `mode=auto`면 권고안(보통 "해당 TASK FAILED 표시 후 나머지 TASK 계속")을 자동결정해 기록한다.
 5. 모든 TASK가 committer까지 완료되면 STEP D(최종 보고)로 이동.
 
-#### STEP D. 로그·콜백 일괄 기록 (원칙)
+#### STEP D. 로그 일괄 기록 (원칙)
 
 - **기록 주체는 orchestrator뿐**이다(→ `work-activity-log.md` 규칙 1).
 - 이벤트 매핑:
@@ -132,8 +130,6 @@ model: opus
 | 결정 확정(사용자 승인 또는 자동결정) | `DECISION — stage=... by={user\|auto}` |
 | 게이트 해소(RESOLVED) 후, 또는 게이트 없는 단계 완료 즉시 | `STAGE_DONE — stage={agent}[ task=TASK-NN]` |
 | WORK 전체 완료 | `ORCHESTRATOR_DONE` |
-
-- 콜백은 이 이벤트에 대응하는 START/DONE을 `callback-protocol.md` 규칙에 따라 orchestrator가 발신한다.
 
 ---
 
@@ -230,7 +226,6 @@ TASK 간 의존성 전달(builder→verifier→committer, 그리고 다음 TASK�
 
 - `works/{WORK_ID}/DECISIONS.md` 최종 상태 확인(모든 항목 `RESOLVED`인지) — PENDING 잔존 시 WORK를 완료로 보고하지 않음.
 - 활동 로그: `ORCHESTRATOR_DONE` 기록.
-- 콜백: `callback-protocol.md`를 참조하여 DONE 전송.
 
 ## 5. 결과 보고
 

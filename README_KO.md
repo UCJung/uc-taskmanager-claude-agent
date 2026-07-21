@@ -340,7 +340,7 @@ uctm update --lang en
 git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
 mkdir -p .claude/agents .claude/references
 cp /tmp/uc-tm/npm/agents/*.md .claude/agents/          # 6개 에이전트 (orchestrator, specifier, planner, builder, verifier, committer)
-cp /tmp/uc-tm/npm/references/*.md .claude/references/   # 8개 참조 문서
+cp /tmp/uc-tm/npm/references/*.md .claude/references/   # 7개 참조 문서
 rm -rf /tmp/uc-tm
 git add .claude/agents/ .claude/references/ && git commit -m "chore: add uc-taskmanager agents"
 ```
@@ -397,7 +397,7 @@ User Request → Main Claude
 
 `gated`와 `auto`는 spawn 수에 영향을 주지 않습니다 — 실행이 승인 대기로 정지하는지 여부만 다릅니다([승인 게이트, 중첩 자율성, 그리고 DECISIONS.md](#승인-게이트-중첩-자율성-그리고-decisionsmd) 참고, `agent-flow.md` § 4).
 
-두 branch 모두 `works/WORK-NN/`에 산출물을 출력하고 `result.md` + `DECISIONS.md` + `COMMITTER DONE` 콜백(자식을 대신해 orchestrator가 전송)을 보장합니다.
+두 branch 모두 `works/WORK-NN/`에 산출물을 출력하고 `result.md` + `DECISIONS.md`를 보장합니다.
 
 ### WORK (다중 작업, complex WORK)
 
@@ -488,14 +488,14 @@ Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
 
 | 에이전트 | 역할 | 모델 | 권한 | MCP | Spawn |
 |-------|------|-------|------------|-----|-------|
-| **orchestrator** | specifier→(planner)→builder→verifier→committer를 중첩 호출; TASK DAG 스케줄링(STEP C); 고정/동적 게이트 중재; 활동 로그 + 콜백 일괄 기록 | **opus** | read + nested spawn | Serena (선택) | Main Claude가 WORK당 **한 번만** spawn |
+| **orchestrator** | specifier→(planner)→builder→verifier→committer를 중첩 호출; TASK DAG 스케줄링(STEP C); 고정/동적 게이트 중재; 활동 로그 일괄 기록 | **opus** | read + nested spawn | Serena (선택) | Main Claude가 WORK당 **한 번만** spawn |
 | **specifier** | `[]` 태그 감지, simple/complex 분류, PLAN seed, WORK-LIST 관리, dispatch XML 반환 | **opus** | read + dispatch | Serena(코드베이스 탐색), sequential-thinking(복잡도 판정) | orchestrator가 중첩 호출 |
 | **planner** | WORK 생성 + TASK 분해 + PLAN.md 생성(complex WORK만) + progress 템플릿 선생성 | **opus** | read-only | Serena(코드베이스 탐색), sequential-thinking(작업 분해) | orchestrator가 중첩 호출(complex WORK만) |
 | **builder** | 코드 구현 + progress.md 체크포인트 기록 | **sonnet** | full access | Serena(심볼 단위 탐색/편집) | orchestrator가 TASK별로 중첩 호출 |
 | **verifier** | progress gate(Status=COMPLETED) 검사 → 빌드/린트/테스트 검증 (읽기 전용) | **haiku** | read + execute | — | orchestrator가 TASK별로 중첩 호출 |
 | **committer** | gate 검사(progress.md) → result.md 작성 → git commit | **haiku** | read + write + git | — | orchestrator가 TASK별로 중첩 호출 |
 
-> 활동 로그와 콜백 기록(`COMMITTER DONE` 등)은 **orchestrator가 한 번만** 방금 중첩 호출한 에이전트를 대신해 수행합니다 — 자식 에이전트(specifier/planner/builder/verifier/committer)는 직접 로그를 쓰거나 콜백을 보내지 않습니다.
+> 활동 로그 기록은 **orchestrator가 한 번만** 방금 중첩 호출한 에이전트를 대신해 수행합니다 — 자식 에이전트(specifier/planner/builder/verifier/committer)는 직접 로그를 쓰지 않습니다.
 
 ### 참조 문서 (Plugin에 포함)
 
@@ -505,7 +505,6 @@ Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
 | 파일 | 용도 |
 |------|------|
 | `agent-flow.md` | 파이프라인 오케스트레이션 규칙 — Main Claude의 트리거/게이트 경계 + orchestrator 내부의 중첩 spawn 흐름 |
-| `callback-protocol.md` | 외부 콜백 프로토콜 — orchestrator가 STAGE START/DONE/FAILED 이벤트를 일괄 전송; `CLAUDE.md`에 콜백 URL이 없으면 모든 콜백이 생략됨 |
 | `context-policy.md` | 에이전트 간 슬라이딩 윈도우 컨텍스트 전달 규칙 |
 | `file-content-schema.md` | 모든 파일 포맷(PLAN.md, TASK.md, progress.md, result.md)의 단일 정보원 |
 | `ref-cache-protocol.md` | 4단계 ref-cache 프로토콜 — dispatch XML의 `<ref-cache>`를 확인하고, 캐시된 참조가 있으면 디스크 읽기를 생략 |
@@ -850,7 +849,7 @@ Main Claude는 WORK당 정확히 한 번만 `orchestrator`를 spawn합니다. sp
 
 모든 결정 — 사람이 승인했든 orchestrator가 자동으로 해결했든 — 은 `works/{WORK_ID}/DECISIONS.md`에 기록되며(park 중에는 `PENDING`, 해소 후 `RESOLVED`), 최종 보고서의 `## 자동 결정 사항` 섹션에 요약됩니다. STEP C 자체(builder → verifier → committer TASK 루프)는 어느 모드에서도 게이트를 걸지 않습니다 — 아무도 승인할 필요가 없는 파이프라인 구간이기 때문입니다.
 
-두 branch(simple/complex WORK)와 두 모드(gated/auto) 모두 동일한 산출물 구조(PLAN.md + result.md + `DECISIONS.md` + `COMMITTER DONE` 콜백)로 `works/WORK-NN/`에 출력되므로, branch나 모드와 무관하게 다운스트림 연동이 동작합니다.
+두 branch(simple/complex WORK)와 두 모드(gated/auto) 모두 동일한 산출물 구조(PLAN.md + result.md + `DECISIONS.md`)로 `works/WORK-NN/`에 출력되므로, branch나 모드와 무관하게 다운스트림 연동이 동작합니다.
 
 ### 구조화된 에이전트 통신
 
@@ -922,25 +921,6 @@ Main Claude는 WORK당 정확히 한 번만 `orchestrator`를 spawn합니다. sp
 **예상 토큰 절감**: 3-TASK 의존 체인 기준, 전체 결과를 그대로 전달하는 방식 대비 약 48%.
 
 전체 설계는 `docs/spec_sliding-window-context.md`를 참조하세요.
-
-### 외부 시스템 콜백 (선택 사항)
-
-uc-taskmanager는 기본적으로 범용입니다. 외부 시스템(예: CI/CD 백엔드)과 연동하려면 `CLAUDE.md`에 콜백 URL을 추가하세요:
-
-```markdown
-## Task Callbacks
-TaskCallback: http://localhost:3000/api/v1/runner/{{executionId}}/task-result
-ProgressCallback: http://localhost:3000/api/v1/runner/{{executionId}}/task-progress
-CallbackToken: <your-token>
-```
-
-- **설정 없음** → 별도 설정 없이 그대로 동작, 외부 호출 없음
-- **TaskCallback** → 각 TASK 커밋 후 orchestrator가 committer를 대신해 TASK 결과를 POST(`STAGE_DONE — stage=committer`)
-- **ProgressCallback** → 각 progress.md 업데이트 후 orchestrator가 builder를 대신해 체크포인트를 POST(`STAGE_DONE — stage=builder`)
-- 콜백 실패는 치명적이지 않음 — 경고만 출력하고 파이프라인은 계속 진행
-- 콜백은 **orchestrator가 한 번만** 전송합니다 — 중첩된 자식(specifier/planner/builder/verifier/committer)은 직접 콜백을 보내지 않습니다
-
-페이로드 스키마와 구현 가이드는 `docs/spec_callback-integration.md`를 참조하세요.
 
 ---
 
@@ -1027,15 +1007,14 @@ CommentLanguage: en
 uc-taskmanager/
 ├── develop/                 ← 소스 오브 트루스 (여기서 편집)
 │   ├── agents/              ← 6개 에이전트 프롬프트 (언어 독립)
-│   │   ├── orchestrator.md  ← 중첩 spawn 코디네이터: specifier→(planner)→builder→verifier→committer, TASK DAG 스케줄링, 게이트/결정, 로그+콜백 일괄 처리
+│   │   ├── orchestrator.md  ← 중첩 spawn 코디네이터: specifier→(planner)→builder→verifier→committer, TASK DAG 스케줄링, 게이트/결정, 로그 일괄 처리
 │   │   ├── specifier.md     ← [] 태그 감지 + simple/complex 분류
 │   │   ├── planner.md       ← WORK 생성 + TASK 분해 (complex WORK만)
 │   │   ├── builder.md       ← 코드 구현
 │   │   ├── verifier.md      ← 빌드/린트/테스트 검증
 │   │   └── committer.md     ← git commit + result.md
-│   ├── references/          ← 8개 지원 문서 (에이전트 간 공유)
+│   ├── references/          ← 7개 지원 문서 (에이전트 간 공유)
 │   │   ├── agent-flow.md          ← 파이프라인 오케스트레이션 규칙
-│   │   ├── callback-protocol.md   ← 외부 콜백 프로토콜 (STAGE 이벤트 일괄 전송)
 │   │   ├── context-policy.md      ← 슬라이딩 윈도우 컨텍스트 규칙
 │   │   ├── file-content-schema.md ← 파일 포맷 정의
 │   │   ├── ref-cache-protocol.md  ← ref-cache 프로토콜 (4단계)
@@ -1047,7 +1026,7 @@ uc-taskmanager/
 │       └── plugin.json      ← Plugin 매니페스트 소스 (name, version, agents 배열)
 ├── npm/                     ← npm 패키지 (`uctm`으로 배포)
 │   ├── agents/              ← develop/agents/에서 동기화
-│   ├── references/          ← develop/references/에서 동기화 (8개 파일)
+│   ├── references/          ← develop/references/에서 동기화 (7개 파일)
 │   ├── skills/              ← develop/skills/에서 동기화 (SKILL.md 4개)
 │   ├── bin/cli.mjs          ← CLI 진입점 (uctm init/update)
 │   ├── lib/                 ← CLI 구현 (constants.mjs, init.mjs, update.mjs)
@@ -1082,11 +1061,9 @@ uc-taskmanager/
 ├── docs/                    ← 설계 명세
 │   ├── spec_pipeline-architecture_v1.3.md  ← 파이프라인 아키텍처 v1.3 (ref-cache, Specifier 기반)
 │   ├── spec_sliding-window-context.md      ← 슬라이딩 윈도우 컨텍스트 설계
-│   ├── spec_callback-integration.md        ← 외부 시스템 콜백 연동
 │   ├── spec_SDD_with_ucagent_requirement.md ← SDD v1.5 요구사항관리 시스템 설계
 │   ├── pipeline-architecture-v1.3-visual.html ← 인터랙티브 파이프라인 시각화 (ref-cache 탭 포함)
 │   ├── SDD-requirement-visual.html         ← 인터랙티브 SDD 시각화 (ref-cache 탭 포함)
-│   ├── callback-integration-visual.html    ← 인터랙티브 콜백 시각화
 │   ├── sliding-window-context-visual.html  ← 인터랙티브 슬라이딩 윈도우 시각화
 │   └── _archive/                           ← 레거시 문서 (Router 기반)
 └── works/                   ← WORK 디렉토리 (자동 생성)

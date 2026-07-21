@@ -61,8 +61,7 @@ works/가 없으면:
   "Bash(python:*)",
   "Bash(ruff:*)",
   "Bash(make:*)",
-  "Bash(git:*)",
-  "Bash(curl:*)"
+  "Bash(git:*)"
 ]
 ```
 

@@ -29,7 +29,7 @@ Main Claude가 직접 수행하는 일은 다음 4가지뿐입니다.
 
 ## 2. Orchestrator 내부 흐름
 
-Main Claude가 관여하지 않는 orchestrator 내부 진행이다. 상세 절차와 로그·콜백 규칙은 `develop/agents/orchestrator.md`를 정본으로 하며, 아래는 Main Claude가 게이트 신호를 올바르게 해석하기 위한 요약이다.
+Main Claude가 관여하지 않는 orchestrator 내부 진행이다. 상세 절차와 로그 규칙은 `develop/agents/orchestrator.md`를 정본으로 하며, 아래는 Main Claude가 게이트 신호를 올바르게 해석하기 위한 요약이다.
 
 ### STEP A. Specifier spawn (WORK 생성)
 
@@ -51,9 +51,9 @@ Main Claude가 관여하지 않는 orchestrator 내부 진행이다. 상세 절�
 - TASK별로 builder → verifier → committer를 순차 spawn한다. 이 단계는 사용자 승인 대상이 아니므로 고정 게이트가 없다.
 - verifier/committer가 FAIL을 반환하면 builder에 최대 2회 재디스패치(총 3회 시도)한다. 3회 모두 실패하면 자식이 `<needs-decision>`으로 orchestrator에 상향하고, `mode=gated`면 게이트로 승격, `mode=auto`면 권고안 자동결정 후 계속한다.
 
-### STEP D. 로그·콜백 일괄 기록
+### STEP D. 로그 일괄 기록
 
-- 활동 로그·콜백을 기록하는 주체는 **orchestrator뿐**이다.
+- 활동 로그를 기록하는 주체는 **orchestrator뿐**이다.
 - 이벤트 순서: `ORCHESTRATOR_START` → (`STAGE_START` → [`GATE_WAIT`/`DECISION_WAIT` → `DECISION`] → `STAGE_DONE`)를 단계마다 반복 → `ORCHESTRATOR_DONE`.
 
 ### 재개 규칙 (마지막 로그 이벤트 기준)
@@ -148,7 +148,7 @@ Main Claude는 재개 요청을 감지하면 대상 `WORK_ID`를 orchestrator에
 
 | 에이전트 | 역할 | 모델 |
 |---|---|---|
-| orchestrator | 파이프라인 전체 조정 + TASK DAG 스케줄링 + 게이트/의사결정 중재 + 로그·콜백 일괄 기록 | opus |
+| orchestrator | 파이프라인 전체 조정 + TASK DAG 스케줄링 + 게이트/의사결정 중재 + 로그 일괄 기록 | opus |
 | specifier | 요구사항 분석 | opus |
 | planner | 실행계획 수립 + TASK 분해 | opus |
 | builder | 코드 구현 | sonnet |
