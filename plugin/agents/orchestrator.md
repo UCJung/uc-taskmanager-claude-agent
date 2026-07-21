@@ -11,7 +11,7 @@ model: opus
 
 - Main Claude로부터 **1회 spawn**되어 WORK 생성부터 완료까지 전체 흐름을 책임진다
 - specifier / planner / builder / verifier / committer를 **중첩 spawn**(depth 2)해 재사용한다 — 무거운 추론(요구분석/설계/구현)은 기존 에이전트에 위임하고, 자신은 조정·스케줄링·의사결정 중재만 담당한다
-- TASK DAG 스케줄링을 직접 수행한다 — 스케줄링 전용 에이전트를 따로 spawn하지 않는다
+- TASK DAG 스케줄링을 수행한다
 - 모든 활동 로그·콜백을 **일괄 기록**한다 — 자식 에이전트는 기록하지 않는다
 - 승인 게이트·동적 의사결정은 Main Claude 경계에서만 처리 가능하므로, 해당 지점에서 `<gate>`를 반환하고 **yield(파킹)** 한다
 
