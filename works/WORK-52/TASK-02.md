@@ -32,11 +32,11 @@ WORK-52: Orchestrator Agent 도입 (중첩 sub-agent 기반 자율 파이프라�
 | `develop/references/shared-prompt-sections.md` | MODIFY | 자동결정 기록 관례 추가, Discovery 이벤트 정합화 |
 
 ## Acceptance Criteria
-- [ ] `develop/agents/scheduler.md` 파일이 존재하지 않음
-- [ ] context-policy.md에 "Scheduler 디스패치" 잔여 표현이 orchestrator로 대체됨
-- [ ] callback-protocol.md가 orchestrator 일괄 발신을 명시
-- [ ] shared-prompt-sections.md에 자동결정 기록 관례가 추가되고 WORK-LIST 규칙은 유지됨
-- [ ] Discovery 스크립트(§4)의 이벤트 명칭이 신규 로그 체계와 모순되지 않음
+- [x] `develop/agents/scheduler.md` 파일이 존재하지 않음
+- [x] context-policy.md에 "Scheduler 디스패치" 잔여 표현이 orchestrator로 대체됨
+- [x] callback-protocol.md가 orchestrator 일괄 발신을 명시
+- [x] shared-prompt-sections.md에 자동결정 기록 관례가 추가되고 WORK-LIST 규칙은 유지됨
+- [x] Discovery 스크립트(§4)의 이벤트 명칭이 신규 로그 체계와 모순되지 않음
 
 ## Verify
 ```bash
