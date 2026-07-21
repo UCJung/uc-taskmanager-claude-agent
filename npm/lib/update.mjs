@@ -2,7 +2,7 @@ import { existsSync, copyFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
-import { AGENT_FILES, REFERENCE_FILES, getAgentsSrcDir, getReferencesSrcDir } from './constants.mjs';
+import { AGENT_FILES, REFERENCE_FILES, getAgentsSrcDir, getReferencesSrcDir, pruneObsolete } from './constants.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -40,9 +40,17 @@ export function update(isGlobal) {
     refCount++;
   }
 
+  const removed = pruneObsolete(baseDir);
+
   const label = isGlobal ? '~/.claude/' : '.claude/';
   console.log(`\n  Updating ${dim(label)} ...`);
   console.log(`    ${green('✓')} ${agentCount} agent files updated`);
   console.log(`    ${green('✓')} ${refCount} reference files updated`);
+  if (removed.length > 0) {
+    console.log(`    ${green('✓')} ${removed.length} obsolete files removed`);
+    for (const relPath of removed) {
+      console.log(`      ${dim('-')} ${dim(relPath)}`);
+    }
+  }
   console.log(`    ${dim('-')} CLAUDE.md untouched\n`);
 }

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, readd
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
-import { AGENT_FILES, REFERENCE_FILES, getAgentsSrcDir, getReferencesSrcDir, REQUIRED_PERMISSIONS } from './constants.mjs';
+import { AGENT_FILES, REFERENCE_FILES, getAgentsSrcDir, getReferencesSrcDir, REQUIRED_PERMISSIONS, pruneObsolete } from './constants.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -73,6 +73,15 @@ function copyPluginResources(destBaseDir) {
   return count;
 }
 
+function reportPruned(baseDir) {
+  const removed = pruneObsolete(baseDir);
+  if (removed.length === 0) return;
+  console.log(`    ${green('✓')} ${removed.length} obsolete files removed`);
+  for (const relPath of removed) {
+    console.log(`      ${dim('-')} ${dim(relPath)}`);
+  }
+}
+
 function ensureWorksDir(projectDir) {
   const worksDir = join(projectDir, 'works');
   if (existsSync(worksDir)) return false;
@@ -141,6 +150,7 @@ export async function init(isGlobal) {
     if (globalResCount > 0) {
       console.log(`    ${green('✓')} ${globalResCount} plugin resource files copied`);
     }
+    reportPruned(globalClaudeDir);
     console.log(`\n  ${dim('Next steps:')}`);
     console.log(`    1. Open any project and run ${dim("'claude'")}`);
     console.log(`    2. Type: ${dim(exampleTag)}\n`);
@@ -161,6 +171,8 @@ export async function init(isGlobal) {
   if (resCount > 0) {
     console.log(`    ${green('✓')} ${resCount} plugin resource files copied (.claude-plugin, skills)`);
   }
+
+  reportPruned(claudeDir);
 
   if (ensureWorksDir(projectDir)) {
     console.log(`    ${green('✓')} works/ directory created`);
