@@ -11,6 +11,7 @@
 | `TASK-XX.md` | § 2 | `parseTaskFilename()` DB 등록 누락 |
 | `TASK-XX_result.md` | § 3 | context-handoff 누락 |
 | `TASK-XX_result.md` (direct) | § 4 | result.md 인식 실패 |
+| `DECISIONS.md` | § 5 | 재개(resume) 시 PENDING 결정 재제시 불가 |
 
 ---
 
@@ -254,7 +255,50 @@ None
 
 ---
 
-## § 5. 파일 이름 규칙
+## § 5. DECISIONS.md
+
+경로: `works/{WORK_ID}/DECISIONS.md`
+
+orchestrator가 `<gate type="decision">` 또는 자식 에이전트의 `<needs-decision>`(→ `xml-schema.md` § 5, § 6)을 수신할 때마다 항목을 추가하는 결정 로그. 게이트가 yield된 시점에는 항목을 **PENDING**으로 먼저 기록하고, 승인/자동결정으로 해소되면 같은 항목을 **RESOLVED**로 갱신한다.
+
+```markdown
+# DECISIONS — WORK-NN
+
+## D-01
+> 시각: {YYYY-MM-DDTHH:MM:SSZ}
+> 단계: {specifier|planner|scheduler|builder|verifier|committer}
+> 상태: {PENDING|RESOLVED}
+
+### 배경
+{결정이 필요한 이유}
+
+### 선택지
+1. {선택지 1}
+2. {선택지 2}
+
+### 권고안
+{orchestrator/자식 에이전트가 제시한 권고}
+
+### 확정값
+{확정된 선택 — PENDING 상태에서는 공란 또는 "(대기 중)"}
+
+### 결정주체
+{user 승인 | auto}
+```
+
+| 필드 | PENDING (게이트 yield 시) | RESOLVED (해소 후) |
+|------|---------------------------|---------------------|
+| 확정값 | 공란 / `(대기 중)` | 채움 |
+| 결정주체 | 공란 | `user 승인` 또는 `auto` |
+
+- **재개(resume) 근거**: orchestrator가 중단 후 재개할 때 DECISIONS.md에서 `상태: PENDING` 항목을 찾아 동일한 배경·선택지·권고안으로 게이트를 다시 제시한다. 이 상태 필드가 없으면 재개 시 이미 물었던 결정인지 판단할 수 없어, 미승인 결정을 건너뛰거나 사용자에게 같은 질문을 중복 제시하는 오류가 발생한다.
+- 활동 로그의 `DECISION_WAIT`/`DECISION` 이벤트와 1:1로 대응한다 → `work-activity-log.md` 참조.
+
+생성 주체: orchestrator
+
+---
+
+## § 6. 파일 이름 규칙
 
 | 유형 | 형식 | 생성 주체 |
 |------|------|-----------|
@@ -262,6 +306,7 @@ None
 | WORK 계획 | `PLAN.md` | planner / specifier |
 | TASK 계획 | `TASK-NN.md` | planner / specifier |
 | TASK 결과 | `TASK-NN_result.md` | committer |
-| 활동 로그 | `work_WORK-NN.log` | 모든 에이전트 (추가) |
+| 결정 로그 | `DECISIONS.md` | orchestrator |
+| 활동 로그 | `work_WORK-NN.log` | orchestrator (추가) |
 
 `WORK-NN-TASK-NN.md` 형식 금지 → `parseTaskFilename()`이 인식할 수 없음.

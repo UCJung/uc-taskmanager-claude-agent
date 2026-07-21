@@ -1,4 +1,4 @@
-LAST_WORK_ID: WORK-51
+LAST_WORK_ID: WORK-52
 
 # WORK-LIST
 
@@ -8,3 +8,4 @@ LAST_WORK_ID: WORK-51
 | WORK-44 | README 문서 현행화 (v1.4.0) | IN_PROGRESS | 2026-03-28 | |
 | WORK-50 | _tmp 폴더에 Hello World 텍스트 파일 생성 | IN_PROGRESS | 2026-03-31 | |
 | WORK-51 | [WORK] 파이프라인 트리거 실패 원인 분석 보고서 | IN_PROGRESS | 2026-03-31 | |
+| WORK-52 | Orchestrator Agent 도입 (중첩 sub-agent 자율 파이프라인) | IN_PROGRESS | 2026-07-21 | |
