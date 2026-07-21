@@ -77,7 +77,7 @@ Requirement.md를 승인하시면 orchestrator가 Planner를 중첩 spawn하여 
 수정할 부분이 있으면 말씀해주세요.
 ```
 
-* **WORK 실행 계획**: **complex WORK**(여러 TASK로 구성)인 경우 orchestrator가 `planner`를 중첩 호출해 실행 계획을 수립하고 **[GATE-2]**에서 다시 일시 정지합니다. `works/WORK-NN/PLAN.md`와 `TASK-NN.md`를 검토하고 **"승인"**을 입력하면 다음 단계로 진행합니다.
+* **WORK 실행 계획**: orchestrator가 `planner`를 중첩 호출해 실행 계획을 수립하고 **[GATE-2]**에서 다시 일시 정지합니다. `works/WORK-NN/PLAN.md`와 `TASK-NN.md`를 검토하고 **"승인"**을 입력하면 다음 단계로 진행합니다.
 ```
 WORK-31 개발 승인 요청
 
@@ -85,8 +85,6 @@ WORK-31 개발 승인 요청
 
   ┌─────────┬─────────────────────────┐
   │  항목   │          내용           │
-  ├─────────┼─────────────────────────┤
-  │ Branch  │ complex WORK            │
   ├─────────┼─────────────────────────┤
   │ TASK 수 │ 6개 (TASK-00 ~ TASK-05) │
   └─────────┴─────────────────────────┘
@@ -127,7 +125,7 @@ WORK-31 개발 승인 요청
 **(1) 코드베이스 분석에 Serena MCP 사용.**
 이 Agent는 코드 탐색 시 [Serena MCP](https://github.com/oraios/serena)를 우선 사용합니다 — 파일 전체가 아니라 심볼 단위로 읽습니다. (Serena 팀에게 정말 감사합니다.)
 
-**(2) 단계별 왕복 대신 단일 중첩 orchestrator.** WORK-PIPELINE은 최대 6단계의 에이전트로 구성됩니다. Main Claude가 매 단계를 하나씩 호출하는 대신, Main Claude는 `orchestrator` 에이전트를 **한 번만** spawn하고, orchestrator가 specifier → (planner) → builder → verifier → committer를 자기 자신의 하위 spawn(Claude Code sub-agent nesting, depth 2)으로 중첩 호출합니다. orchestrator는 각 WORK를 **simple**(단일 TASK — planner를 완전히 건너뛰고 `orchestrator → specifier → builder → verifier → committer`) 또는 **complex**(다중 TASK — planner도 중첩 호출되고, orchestrator가 Main Claude를 거치지 않고 TASK DAG를 직접 스케줄링)로 분류합니다. 자세한 내용은 [개념: orchestrator 실행 모드](#개념-orchestrator-실행-모드-gated-vs-auto) 참고.
+**(2) 단계별 왕복 대신 단일 중첩 orchestrator.** WORK-PIPELINE은 최대 6단계의 에이전트로 구성됩니다. Main Claude가 매 단계를 하나씩 호출하는 대신, Main Claude는 `orchestrator` 에이전트를 **한 번만** spawn하고, orchestrator가 specifier → planner → builder → verifier → committer를 자기 자신의 하위 spawn(Claude Code sub-agent nesting, depth 2)으로 중첩 호출합니다. orchestrator는 Main Claude를 거치지 않고 TASK DAG를 직접 스케줄링합니다. 자세한 내용은 [개념: orchestrator 실행 모드](#개념-orchestrator-실행-모드-gated-vs-auto) 참고.
 
 **(3) 구조화된 XML 통신.** 중첩 구조라 하더라도 에이전트 사이의 모든 경계는 여전히 텍스트로 오갑니다 — 게이트 요약과 인계 내용도 결국 텍스트 덩어리입니다.
 * 수신 측은 이를 다시 해석해야 합니다. 그래서 통신 규격을 XML로 표준화했습니다.
@@ -163,23 +161,15 @@ WORK 내 TASK 간 의존성은 DAG로 관리됩니다. 병렬 실행은 TASK 간
 
 ## 사용법
 
-### 초단순 수정 (simple WORK)
+### 작은 수정
 
 ```
 > [bugfix] 로그인 에러 메시지 오타 수정
 ```
 
-Main Claude가 `orchestrator`를 한 번 spawn합니다(기본값 `mode=gated`). orchestrator는 specifier를 중첩 호출하고, specifier는 이를 **simple WORK**(단일 TASK, planner 불필요)로 분류해 dispatch XML을 반환합니다. **[GATE-1]** 승인 후 orchestrator는 builder(구현) → verifier → committer(커밋)를 중첩 호출합니다. WORK-NN 디렉토리 + PLAN + result.md + commit이 모두 동일한 orchestrator 실행 안에서 생성됩니다.
+Main Claude가 `orchestrator`를 한 번 spawn합니다(기본값 `mode=gated`). orchestrator는 specifier → **[GATE-1]** → planner → **[GATE-2]** → builder → verifier → committer를 중첩 호출합니다. WORK-NN 디렉토리 + PLAN + result.md + commit이 모두 동일한 orchestrator 실행 안에서 생성됩니다. 모든 WORK가 같은 경로를 타므로 한 줄짜리 변경도 계획되고 기록됩니다.
 
-### 간단한 작업 (simple WORK, 빌드/테스트 필요)
-
-```
-> [bugfix] 모바일에서 로그인 버튼이 반응하지 않는 문제 수정
-```
-
-orchestrator는 이 요청도 **simple WORK**(단일 TASK)로 분류하지만 빌드/테스트 검증이 필요하다고 표시합니다. **[GATE-1]** 승인 후 orchestrator는 builder → verifier → committer를 순차적으로 중첩 호출합니다.
-
-### 복잡한 기능 (WORK)
+### 기능 (WORK)
 
 #### 1. WORK 생성 (계획 수립)
 
@@ -187,7 +177,7 @@ orchestrator는 이 요청도 **simple WORK**(단일 TASK)로 분류하지만 �
 > [new-feature] 사용자 인증 기능을 만들거야. 계획 세워줘.
 ```
 
-orchestrator는 이를 **complex WORK**로 분류하고 specifier → planner를 중첩 호출합니다. planner는 프로젝트를 분석하고 WORK-01을 생성합니다:
+orchestrator가 specifier → planner를 중첩 호출합니다. planner는 프로젝트를 분석하고 WORK-01을 생성합니다:
 
 ```
 WORK-01: 사용자 인증 기능
@@ -375,16 +365,14 @@ User Request → Main Claude
               └──────┬───────┘
                      │ nested spawn (depth 2)
                      ▼
-              specifier  (always) → simple/complex 분류
+              specifier → Requirement.md          ← [GATE-1]
                      │
-      ├─ simple WORK  (단일 TASK)
-      │   → planner 생략 → STEP C: builder → verifier → committer
-      │
-      └─ complex WORK  (다중 TASK / DAG)
-          → planner 중첩 호출 → STEP C: DAG 순서로 [builder → verifier → committer] × N (READY 상태면 병렬)
+              planner   → PLAN.md + TASK DAG      ← [GATE-2]
+                     │
+              STEP C: DAG 순서로 [builder → verifier → committer] × N (READY 상태면 병렬)
 ```
 
-- `mode=gated`: specifier 이후(**[GATE-1]**) `<gate type="stage">`로 일시 정지하며, complex WORK의 경우 planner 이후(**[GATE-2]**)에도 정지합니다. 또한 orchestrator나 중첩된 자식이 사용자 판단이 필요할 때는 언제든 `<gate type="decision">`(배경 + 선택지 + 권고안)으로 정지합니다. Main Claude는 게이트를 사용자에게 중계하고 승인/선택을 기다린 뒤 `SendMessage`로 park된 orchestrator를 재개합니다(핸들이 소실된 경우 로그 기반 재spawn으로 폴백).
+- `mode=gated`: specifier 이후(**[GATE-1]**) `<gate type="stage">`로 일시 정지하며, planner 이후(**[GATE-2]**)에도 정지합니다. 또한 orchestrator나 중첩된 자식이 사용자 판단이 필요할 때는 언제든 `<gate type="decision">`(배경 + 선택지 + 권고안)으로 정지합니다. Main Claude는 게이트를 사용자에게 중계하고 승인/선택을 기다린 뒤 `SendMessage`로 park된 orchestrator를 재개합니다(핸들이 소실된 경우 로그 기반 재spawn으로 폴백).
 - `mode=auto`: **spawn 1회, 게이트 0회** — 모든 판단 지점을 권고안으로 자동 해결하고 `works/{WORK}/DECISIONS.md`와 최종 보고서의 `## 자동 결정 사항` 섹션에 기록합니다.
 - 실행 단계(STEP C: builder → verifier → committer)는 사용자에게 게이트를 걸지 않습니다 — WORK 생성(specifier)과 계획 수립(planner)만 게이트 대상입니다.
 
@@ -392,16 +380,15 @@ User Request → Main Claude
 
 | Branch | Main → Orchestrator | → Specifier | → Planner | → Builder | → Verifier | → Committer | 합계 |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| simple WORK (1 TASK) | 1 | 1 | — | 1 | 1 | 1 | **2 + 3N** |
-| complex WORK (N TASK) | 1 | 1 | 1 | N | N | N | **3 + 3N** |
+| 1 | 1 | 1 | N | N | N | **3 + 3N** |
 
 `gated`와 `auto`는 spawn 수에 영향을 주지 않습니다 — 실행이 승인 대기로 정지하는지 여부만 다릅니다([승인 게이트, 중첩 자율성, 그리고 DECISIONS.md](#승인-게이트-중첩-자율성-그리고-decisionsmd) 참고, `agent-flow.md` § 4).
 
 두 branch 모두 `works/WORK-NN/`에 산출물을 출력하고 `result.md` + `DECISIONS.md`를 보장합니다.
 
-### WORK (다중 작업, complex WORK)
+### WORK와 TASK
 
-복잡한 기능을 위한 2단계 계층 구조:
+2단계 계층 구조:
 
 ```
 WORK (일)                 하나의 목표. 사용자가 요청한 단위.
@@ -409,7 +396,7 @@ WORK (일)                 하나의 목표. 사용자가 요청한 단위.
     └── result            완료 증빙. 검증 통과 후 자동 생성.
 ```
 
-### complex WORK (다중 TASK, 중첩)
+### 실행 흐름
 
 orchestrator가 planner를 한 번 중첩 호출한 뒤, TASK별로 DAG 순서에 따라 builder → verifier → committer를 반복합니다.
 
@@ -419,22 +406,11 @@ orchestrator → planner(opus, nested)                 → PLAN.md + TASK DAG
               (각 중첩 spawn은 orchestrator가 생성, Main Claude가 아님)
 ```
 
-### simple WORK (초단순, 중첩)
-
-orchestrator는 planner를 건너뛰고, specifier가 생성한 단일 TASK에 대해 builder → verifier → committer를 바로 중첩 호출합니다.
-
-```
-orchestrator → specifier: 분석 → simple 분류 → dispatch XML
-             → builder: 구현 → self-check
-             → verifier: 검증
-             → committer: 커밋 → result.md
-```
-
 ---
 
 ## 파이프라인
 
-### WORK 파이프라인 (Complex WORK, 중첩)
+### WORK 파이프라인 (중첩)
 
 > Main Claude는 `orchestrator`를 **한 번만** spawn합니다. 아래의 다른 모든 호출은 orchestrator 자신이 생성하는 *중첩* 서브에이전트 spawn입니다 — Main Claude는 이 루프에 관여하지 않습니다.
 
@@ -456,11 +432,11 @@ Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
   로 재개)                              (orchestrator가 DAG를 직접 스케줄링 — STEP C, 게이트 없음)
 ```
 
-- `mode=gated`(기본값): **[GATE-1]**(specifier 이후)과 **[GATE-2]**(planner 이후, complex WORK만)에서 정지 + yield; `SendMessage(agentId, decision)`으로 재개하며, 실패 시 로그 기반 재spawn으로 폴백합니다.
+- `mode=gated`(기본값): **[GATE-1]**(specifier 이후)과 **[GATE-2]**(planner 이후)에서 정지 + yield; `SendMessage(agentId, decision)`으로 재개하며, 실패 시 로그 기반 재spawn으로 폴백합니다.
 - `mode=auto`: 게이트 없음 — orchestrator가 단일 spawn으로 전체 다이어그램을 완료하고, 판단이 필요했던 부분은 `DECISIONS.md`에 기록합니다.
 - STEP C(builder → verifier → committer 루프)는 어느 모드에서도 사용자 게이트를 걸지 않습니다.
 
-### complex WORK (중첩, 다중 TASK)
+### 단계 상세
 
 ```
   specifier   →  planner  →  [builder → verifier → committer] × N
@@ -472,16 +448,6 @@ Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
               ← 모든 중첩 spawn은 orchestrator가 생성 →
 ```
 
-### simple WORK (중첩, 초단순)
-
-```
-  specifier        builder                    verifier      committer
- ┌──────────┐     ┌──────────────────────┐     ┌────────┐   ┌──────────────┐
- │ 분석     │────▶│ 구현 → Self-chk       │────▶│ 검증   │──▶│커밋→ result  │
- │ dispatch │     └──────────────────────┘     └────────┘   └──────────────┘
- └──────────┘      (planner 생략 — 단일 TASK, DAG 불필요)
-```
-
 ### 에이전트
 
 여섯 개의 에이전트가 깔끔하게 격리된 파이프라인으로 협업합니다 — Main Claude는 `orchestrator`만 spawn하고, orchestrator가 나머지를 중첩 호출합니다:
@@ -489,8 +455,8 @@ Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
 | 에이전트 | 역할 | 모델 | 권한 | MCP | Spawn |
 |-------|------|-------|------------|-----|-------|
 | **orchestrator** | specifier→(planner)→builder→verifier→committer를 중첩 호출; TASK DAG 스케줄링(STEP C); 고정/동적 게이트 중재; 활동 로그 일괄 기록 | **opus** | read + nested spawn | Serena (선택) | Main Claude가 WORK당 **한 번만** spawn |
-| **specifier** | `[]` 태그 감지, simple/complex 분류, PLAN seed, WORK-LIST 관리, dispatch XML 반환 | **opus** | read + dispatch | Serena(코드베이스 탐색), sequential-thinking(복잡도 판정) | orchestrator가 중첩 호출 |
-| **planner** | WORK 생성 + TASK 분해 + PLAN.md 생성(complex WORK만) + progress 템플릿 선생성 | **opus** | read-only | Serena(코드베이스 탐색), sequential-thinking(작업 분해) | orchestrator가 중첩 호출(complex WORK만) |
+| **specifier** | `[]` 태그 감지, 요구사항 분석, 복잡도 판정, WORK-LIST 관리, dispatch XML 반환 | **opus** | read + dispatch | Serena(코드베이스 탐색), sequential-thinking(복잡도 판정) | orchestrator가 중첩 호출 |
+| **planner** | WORK 생성 + TASK 분해 + PLAN.md 생성 + progress 템플릿 선생성 | **opus** | read-only | Serena(코드베이스 탐색), sequential-thinking(작업 분해) | orchestrator가 중첩 호출 |
 | **builder** | 코드 구현 + progress.md 체크포인트 기록 | **sonnet** | full access | Serena(심볼 단위 탐색/편집) | orchestrator가 TASK별로 중첩 호출 |
 | **verifier** | progress gate(Status=COMPLETED) 검사 → 빌드/린트/테스트 검증 (읽기 전용) | **haiku** | read + execute | — | orchestrator가 TASK별로 중첩 호출 |
 | **committer** | gate 검사(progress.md) → result.md 작성 → git commit | **haiku** | read + write + git | — | orchestrator가 TASK별로 중첩 호출 |
@@ -617,10 +583,10 @@ User: [new-feature] 블로그 시스템의 댓글 기능을 만들거야.
 Claude: [Main Claude가 orchestrator를 한 번 spawn, mode=gated]
 
 Claude: [orchestrator가 specifier를 중첩 호출 → WORK 경로]
-  복잡도: 4+ 파일, DB 스키마 변경, 다중 모듈 → complex WORK
+  복잡도: 4+ 파일, DB 스키마 변경, 다중 모듈 → Large
   → 새 WORK 생성
 
-  [GATE-1] 요구사항 암묵적 승인 — complex WORK, planner로 계속 진행
+  [GATE-1] 요구사항 승인 — planner로 계속 진행
 
 Claude: [orchestrator가 planner를 중첩 호출]
   프로젝트 분석
@@ -694,7 +660,7 @@ Claude: [SendMessage로 orchestrator 재개 → STEP C: DAG 실행, 추가 게�
 
 프로토콜 자체는 `references/ref-cache-protocol.md`(4단계)에 정의되어 있습니다. Phase 2(선택적 전달)는 각 에이전트가 필요로 하는 섹션만 전달함으로써(파일 전체가 아니라) 토큰 사용량을 추가로 절감합니다. 에이전트별 섹션 매핑은 `agent-flow.md`에 정의되어 있습니다.
 
-**측정된 효과** (simple WORK, 3개 에이전트 기준):
+**측정된 효과** (3개 에이전트 기준):
 - 파일 읽기: 14 → 5 (**-64%**)
 - 토큰 사용량: ~85K → ~72K (**-15%**)
 
@@ -742,7 +708,7 @@ orchestrator's context after 5 TASKs:
 
 Main Claude는 WORK당 정확히 한 번만 `orchestrator`를 spawn합니다. specifier/planner/builder/verifier/committer를 언제 중첩 호출할지, 그리고 언제 정지하여 사람에게 물어볼지는 오로지 orchestrator가 결정합니다. 중첩된 서브에이전트는 사용자에게 직접 프롬프트를 띄울 수 없으므로, **모든 승인/결정은 Main Claude 경계에서 표면화**됩니다:
 
-- **고정 게이트** (`<gate type="stage">`) — 정확히 두 개이며, `mode=gated`(기본값)에서만 발생합니다: specifier 직후(Requirement.md 준비 완료)의 **[GATE-1]**, planner 직후(PLAN.md + TASK DAG 준비 완료, complex WORK만)의 **[GATE-2]**. simple WORK는 [GATE-1]만 거칩니다.
+- **고정 게이트** (`<gate type="stage">`) — 정확히 두 개이며, `mode=gated`(기본값)에서만 발생합니다: specifier 직후(Requirement.md 준비 완료)의 **[GATE-1]**, planner 직후(PLAN.md + TASK DAG 준비 완료)의 **[GATE-2]**.
 - **동적 게이트** (`<gate type="decision">`) — orchestrator나 중첩된 자식이 *어느 시점에서든* 제기할 수 있습니다(설계 트레이드오프, 범위 확장, 파괴적 변경, 3회 재시도 실패, 모호한 요구사항 등). `<context>` + `<options>` + `<recommended>`를 포함합니다.
 - 게이트에서 orchestrator는 종료하지 않고 **yield(park)** 합니다. Main Claude는 게이트를 제시하고 사람의 응답을 기다린 뒤, `SendMessage(agentId, decision)`으로 park된 orchestrator를 재개합니다 — 컨텍스트가 보존되어 파일을 다시 읽을 필요가 없습니다. 핸들이 소실된 경우(새 세션, 터미널 종료 등) Main Claude는 `WORK_ID`로 orchestrator를 재spawn하고, orchestrator는 `work_{WORK}.log`를 재생해 해소되지 않은 동일한 게이트를 다시 제시합니다 — **승인되지 않은 게이트는 절대 조용히 건너뛰지 않습니다**. `STAGE_DONE`은 게이트가 해소된 *이후*에만 기록되기 때문입니다.
 - 최종 보고서가 도착하면 Main Claude는 park된 핸들을 해제하기 위해 `TaskStop(agentId)`를 호출합니다.
@@ -750,7 +716,7 @@ Main Claude는 WORK당 정확히 한 번만 `orchestrator`를 spawn합니다. sp
 
 모든 결정 — 사람이 승인했든 orchestrator가 자동으로 해결했든 — 은 `works/{WORK_ID}/DECISIONS.md`에 기록되며(park 중에는 `PENDING`, 해소 후 `RESOLVED`), 최종 보고서의 `## 자동 결정 사항` 섹션에 요약됩니다. STEP C 자체(builder → verifier → committer TASK 루프)는 어느 모드에서도 게이트를 걸지 않습니다 — 아무도 승인할 필요가 없는 파이프라인 구간이기 때문입니다.
 
-두 branch(simple/complex WORK)와 두 모드(gated/auto) 모두 동일한 산출물 구조(PLAN.md + result.md + `DECISIONS.md`)로 `works/WORK-NN/`에 출력되므로, branch나 모드와 무관하게 다운스트림 연동이 동작합니다.
+두 모드(gated/auto) 모두 동일한 산출물 구조(PLAN.md + result.md + `DECISIONS.md`)로 `works/WORK-NN/`에 출력되므로, 모드와 무관하게 다운스트림 연동이 동작합니다.
 
 ### 구조화된 에이전트 통신
 
@@ -909,8 +875,8 @@ uc-taskmanager/
 ├── develop/                 ← 소스 오브 트루스 (여기서 편집)
 │   ├── agents/              ← 6개 에이전트 프롬프트 (언어 독립)
 │   │   ├── orchestrator.md  ← 중첩 spawn 코디네이터: specifier→(planner)→builder→verifier→committer, TASK DAG 스케줄링, 게이트/결정, 로그 일괄 처리
-│   │   ├── specifier.md     ← [] 태그 감지 + simple/complex 분류
-│   │   ├── planner.md       ← WORK 생성 + TASK 분해 (complex WORK만)
+│   │   ├── specifier.md     ← [] 태그 감지 + 요구사항 분석
+│   │   ├── planner.md       ← WORK 생성 + TASK 분해
 │   │   ├── builder.md       ← 코드 구현
 │   │   ├── verifier.md      ← 빌드/린트/테스트 검증
 │   │   └── committer.md     ← git commit + result.md
@@ -967,7 +933,7 @@ uc-taskmanager/
 │   └── _archive/                           ← 레거시 문서 (Router 기반)
 └── works/                   ← WORK 디렉토리 (자동 생성)
     ├── WORK-LIST.md          ← 마스터 인덱스
-    ├── WORK-01/              ← 모든 branch의 산출물 (simple/complex WORK)
+    ├── WORK-01/              ← 모든 WORK의 산출물
     └── ...
 ```
 

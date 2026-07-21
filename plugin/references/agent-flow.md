@@ -37,13 +37,11 @@ Main Claude가 관여하지 않는 orchestrator 내부 진행이다. 상세 절�
 - `mode=gated`: 활동 로그에 `GATE_WAIT — stage=specifier` 기록 → `<gate type="stage" work="{WORK}" stage="specifier">` 반환 후 **yield**.
 - `mode=auto`: 게이트 생략, `STAGE_DONE — stage=specifier` 즉시 기록 후 STEP B로 진행.
 
-### STEP B. Planner spawn — 복잡 WORK만 (단순/복잡 내부 분기)
+### STEP B. Planner spawn
 
-- **복잡 WORK**(요구사항 규모가 커서 설계 분해가 필요한 경우)만 planner를 중첩 spawn → `PLAN.md` + TASK DAG 생성.
-- **단순 WORK**는 planner 호출을 생략하고 specifier가 이미 만든 단일 TASK를 그대로 사용한다.
-  - 단순/복잡은 사용자가 미리 지정하지 않고 orchestrator가 specifier 판정을 근거로 자율 결정한다.
-- `mode=gated`(복잡 WORK만 해당): `GATE_WAIT — stage=planner` 기록 → `<gate type="stage" work="{WORK}" stage="planner">` 반환 후 **yield**.
-- `mode=auto`: 게이트 생략, `STAGE_DONE — stage=planner` 즉시 기록 후 STEP C로 진행. 단순 WORK는 이 STEP 자체를 건너뛴다.
+- planner를 중첩 spawn → `PLAN.md` + TASK DAG 생성.
+- `mode=gated`: `GATE_WAIT — stage=planner` 기록 → `<gate type="stage" work="{WORK}" stage="planner">` 반환 후 **yield**.
+- `mode=auto`: 게이트 생략, `STAGE_DONE — stage=planner` 즉시 기록 후 STEP C로 진행.
 
 ### STEP C. TASK DAG 실행 — 게이트 없음
 
@@ -95,10 +93,8 @@ orchestrator가 자식 프롬프트를 구성할 때 이전 단계 결과를 다
 
 | 게이트 | 발생 지점 | `stage` 값 | 승인 후 다음 |
 |---|---|---|---|
-| GATE-1 | specifier 완료 후 | `specifier` | 복잡 WORK → planner spawn / 단순 WORK → STEP C(builder) |
-| GATE-2 | planner 완료 후 (복잡 WORK만) | `planner` | STEP C(builder) |
-
-단순 WORK는 GATE-2가 없다 — GATE-1 승인만으로 STEP C까지 진행한다.
+| GATE-1 | specifier 완료 후 | `specifier` | planner spawn |
+| GATE-2 | planner 완료 후 | `planner` | STEP C(builder) |
 
 ### 동적 게이트 (`type="decision"`)
 
@@ -124,10 +120,9 @@ orchestrator가 자식 프롬프트를 구성할 때 이전 단계 결과를 다
 
 ## 4. 모드/스폰 수
 
-| 내부 분기 | Main → Orchestrator | Orchestrator → Specifier | → Planner | → Builder | → Verifier | → Committer | 합계 |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| 단순 WORK | 1 | 1 | — | N | N | N | **2 + 3N** |
-| 복잡 WORK (N TASK) | 1 | 1 | 1 | N | N | N | **3 + 3N** |
+| Main → Orchestrator | Orchestrator → Specifier | → Planner | → Builder | → Verifier | → Committer | 합계 |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| 1 | 1 | 1 | N | N | N | **3 + 3N** |
 
 - `gated`/`auto` 여부는 spawn 수에 영향을 주지 않는다 — 게이트 정지 발생 여부만 다르다(§3).
 - 위 표는 orchestrator 내부 자식 spawn만 집계한다. Main Claude가 spawn하는 대상은 오직 orchestrator 1개다.

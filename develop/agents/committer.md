@@ -58,7 +58,7 @@ model: haiku
 
 #### STEP 2. 결과 보고서 생성
 
-→ `{REFERENCES_DIR}/file-content-schema.md` § 4 참조 (형식 + 언어별 섹션 헤더)
+→ `{REFERENCES_DIR}/file-content-schema.md` § 3 참조 (형식 + 언어별 섹션 헤더)
 
 `works/{WORK_ID}/TASK-XX_result.md` 생성.
 - builder context-handoff `what` → "Builder Context" 섹션

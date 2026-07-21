@@ -26,7 +26,7 @@ model: opus
 | 입력 파싱 | `mode=gated\|auto`, 사용자 요청 원문, `REFERENCES_DIR`, (재개 시) `WORK_ID` 확인 |
 | 재개 판정 | `work_{WORK}.log` 마지막 이벤트로 중단 지점 판정 — 자식 재실행 여부 결정 |
 | WORK 생성 조정 | specifier 중첩 spawn → Requirement.md/WORK 폴더/WORK-LIST 반영 확인 |
-| 설계 분기 조정 | 복잡 WORK만 planner 중첩 spawn → PLAN.md + TASK DAG |
+| 설계 조정 | planner 중첩 spawn → PLAN.md + TASK DAG |
 | TASK 스케줄링 | DAG 해석 → READY 판정 → TASK별 builder→verifier→committer 중첩 spawn, 재시도 |
 | 게이트 처리 | 고정 게이트 2종 + 동적 `<gate type="decision">` 반환 후 yield, 승인/결정 주입 시 재개 |
 | 의사결정 에스컬레이션 | 자식의 `<needs-decision>` 수신 → 자동결정 또는 게이트 승격 판단 |
@@ -87,17 +87,16 @@ model: opus
 
 - 활동 로그 `STAGE_START — stage=specifier` 기록.
 - specifier를 중첩 spawn. 프롬프트에 `REFERENCES_DIR`, 사용자 요청 원문, (있으면) `<ref-cache>`를 포함.
-- 반환값에서 WORK 폴더/Requirement.md 생성 여부, 복잡도 판정(Small/Medium/Large)을 확인.
+- 반환값에서 WORK 폴더/Requirement.md 생성 여부를 확인.
 - **게이트 처리**:
-  - `mode=gated`: `GATE_WAIT — stage=specifier` 기록 → `[GATE-1] <gate type="stage" work="{WORK}" stage="specifier">` + Requirement 요약(`<next-stage>`는 복잡도에 따라 `planner` 또는 `builder`) 반환 후 **yield**.
+  - `mode=gated`: `GATE_WAIT — stage=specifier` 기록 → `[GATE-1] <gate type="stage" work="{WORK}" stage="specifier">` + Requirement 요약(`<next-stage>planner</next-stage>`) 반환 후 **yield**.
   - `mode=auto`: 게이트 생략, `STAGE_DONE — stage=specifier` 즉시 기록 후 STEP B로 진행.
 
-#### STEP B. Planner 중첩 spawn (복잡 WORK만)
+#### STEP B. Planner 중첩 spawn
 
-- specifier 복잡도 판정이 **Medium/Large** → 복잡 WORK. planner를 중첩 spawn → `PLAN.md` + `TASK-NN.md` DAG 생성.
-- **Small** → 단순 WORK. planner 생략, specifier가 이미 생성한 단일 TASK를 그대로 사용.
-- 활동 로그 `STAGE_START — stage=planner` (planner를 spawn하는 경우만).
-- **게이트 처리** (복잡 WORK만 해당):
+- planner를 중첩 spawn → `PLAN.md` + `TASK-NN.md` DAG 생성.
+- 활동 로그 `STAGE_START — stage=planner`.
+- **게이트 처리**:
   - `mode=gated`: `GATE_WAIT — stage=planner` 기록 → `[GATE-2] <gate type="stage" work="{WORK}" stage="planner">` + PLAN/TASK 요약(`<next-stage>builder</next-stage>`) 반환 후 **yield**.
   - `mode=auto`: 게이트 생략, `STAGE_DONE — stage=planner` 즉시 기록 후 STEP C로 진행.
 
@@ -139,17 +138,15 @@ model: opus
 
 | 플래그 | 동작 |
 |--------|------|
-| `mode=gated` (기본값) | 고정 게이트(①specifier 후 ②planner 후, 복잡 WORK만) 통과 직후 `<gate type="stage">` + 요약 반환 후 **yield**. 그 외 어느 단계에서든 자율 판단상 사용자 결정이 필요하면 `<gate type="decision">`(배경+선택지+권고안) 반환 후 **yield**. 승인/결정은 Main Claude가 처리하며 **`SendMessage`로 컨텍스트 유지 재개**(폴백: 로그+`DECISIONS.md` 기반 re-spawn). 재개 시 주입된 결정을 반영해 이어간다. |
+| `mode=gated` (기본값) | 고정 게이트(①specifier 후 ②planner 후) 통과 직후 `<gate type="stage">` + 요약 반환 후 **yield**. 그 외 어느 단계에서든 자율 판단상 사용자 결정이 필요하면 `<gate type="decision">`(배경+선택지+권고안) 반환 후 **yield**. 승인/결정은 Main Claude가 처리하며 **`SendMessage`로 컨텍스트 유지 재개**(폴백: 로그+`DECISIONS.md` 기반 re-spawn). 재개 시 주입된 결정을 반영해 이어간다. |
 | `mode=auto` | 게이트/의사결정 정지 없이 전 구간 완주(**1회 spawn**). 모든 판단 지점은 권고안으로 자동결정 후 결과보고서 `## 자동 결정 사항`에 기록하고 `DECISIONS.md`에도 반영. |
 
 #### 고정 게이트 2종
 
 | 게이트 | 발생 지점 | stage 값 | 승인 후 다음 |
 |--------|----------|----------|-------------|
-| GATE-1 | specifier 완료 후 | `specifier` | 복잡 WORK → planner / 단순 WORK → STEP C(builder) |
-| GATE-2 | planner 완료 후 (복잡 WORK만) | `planner` | STEP C(builder) |
-
-단순 WORK는 GATE-2가 없다 — GATE-1 승인만으로 STEP C까지 진행.
+| GATE-1 | specifier 완료 후 | `specifier` | planner |
+| GATE-2 | planner 완료 후 | `planner` | STEP C(builder) |
 
 #### 동적 `<gate type="decision">` — 발생 및 에스컬레이션 규칙
 

@@ -10,8 +10,7 @@
 | `PLAN.md` | § 1 | `parsePlanMd()` 파싱 실패, orchestrator 파이프라인 작동 불가 |
 | `TASK-XX.md` | § 2 | `parseTaskFilename()` DB 등록 누락 |
 | `TASK-XX_result.md` | § 3 | context-handoff 누락 |
-| `TASK-XX_result.md` (단순 WORK) | § 4 | result.md 인식 실패 |
-| `DECISIONS.md` | § 5 | 재개(resume) 시 PENDING 결정 재제시 불가 |
+| `DECISIONS.md` | § 4 | 재개(resume) 시 PENDING 결정 재제시 불가 |
 
 ---
 
@@ -178,7 +177,7 @@
 
 ---
 
-## § 3. TASK-XX_result.md (복잡 WORK)
+## § 3. TASK-XX_result.md
 
 경로: `works/{WORK_ID}/TASK-XX_result.md`
 
@@ -231,29 +230,7 @@ None
 
 ---
 
-## § 4. TASK-XX_result.md (단순 WORK)
-
-```markdown
-# TASK-00 Result
-
-> WORK: WORK-NN — {제목}
-> Completed: {YYYY-MM-DD HH:MM}
-> Status: **DONE**
-
-## 요약
-{1줄}
-
-## 변경 파일
-- `{path}` — {설명}
-
-## 검증
-- Build: PASS (self-check)
-- Lint: PASS (self-check)
-```
-
----
-
-## § 5. DECISIONS.md
+## § 4. DECISIONS.md
 
 경로: `works/{WORK_ID}/DECISIONS.md`
 
@@ -296,7 +273,7 @@ orchestrator가 `<gate type="decision">` 또는 자식 에이전트의 `<needs-d
 
 ---
 
-## § 6. 파일 이름 규칙
+## § 5. 파일 이름 규칙
 
 | 유형 | 형식 | 생성 주체 |
 |------|------|-----------|

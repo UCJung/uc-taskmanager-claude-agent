@@ -55,7 +55,7 @@
 1. builder 성공 여부 확인 (context-handoff 상태 확인)
 2. result.md 작성 + git commit
 
-출력: → `{REFERENCES_DIR}/file-content-schema.md` § 4 참조
+출력: → `{REFERENCES_DIR}/file-content-schema.md` § 3 참조
 
 ## TASK 간 의존성 전달
 

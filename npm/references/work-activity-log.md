@@ -30,4 +30,4 @@
 
 - `stage` 값: `specifier`/`planner`/`builder`/`verifier`/`committer`.
 - `by` 값: `user`/`auto`. `<decision>`(§ 7, `xml-schema.md`)의 `by` 속성과 동일한 값 체계를 사용.
-- 확정된 결정의 상세 내용(배경/선택지/권고안/확정값)은 로그가 아니라 `works/{WORK_ID}/DECISIONS.md`에 기록한다 → `file-content-schema.md` § 5 참조. 로그의 `DECISION` 이벤트는 "언제·누가 결정했는지"만 남긴다.
+- 확정된 결정의 상세 내용(배경/선택지/권고안/확정값)은 로그가 아니라 `works/{WORK_ID}/DECISIONS.md`에 기록한다 → `file-content-schema.md` § 4 참조. 로그의 `DECISION` 이벤트는 "언제·누가 결정했는지"만 남긴다.

@@ -120,7 +120,7 @@ works/{WORK_ID}/
 - **기록 시점**: 결정 확정 즉시 `RESOLVED`로 기록. `mode=auto`뿐 아니라 `mode=gated`에서 orchestrator가 경미한 사항으로 판단해 게이트 없이 자체 확정(`by=auto`)한 경우도 동일하게 기록.
 - **최소 기재 항목**: 대상(stage 또는 task) · 확정값 · 근거 1줄.
 
-→ 상세 포맷: `file-content-schema.md` § 5 참조. 기록 주체·이벤트: `work-activity-log.md`의 `DECISION` 이벤트 참조.
+→ 상세 포맷: `file-content-schema.md` § 4 참조. 기록 주체·이벤트: `work-activity-log.md`의 `DECISION` 이벤트 참조.
 
 ---
 
