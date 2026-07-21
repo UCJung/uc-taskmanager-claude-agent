@@ -37,14 +37,14 @@ WORK-53: WORK-52 반영 README 3종 현행화
 
 ## Acceptance Criteria
 
-- [ ] AC-01: `README.md`, `npm/README.md`, `README_KO.md` 모두 `scheduler` 언급 0건
-- [ ] AC-02: `diff README.md npm/README.md` 출력 없음
-- [ ] AC-03: `README.md` / `README_KO.md`의 참조 문서 표가 `develop/references/`의 실제 8개 파일과 일치
-- [ ] AC-04: 3종 문서에 기재된 저장소 내부 경로가 모두 실제로 존재하고, 폐기 경로(`develop/hooks`, `plugin/README.md`, `plugin/skills/init`, `plugin/skills/sdd-pipeline/references`)는 어느 문서에도 남아 있지 않음
-- [ ] AC-05: `README_KO.md`의 `##` 헤더 목록이 `README.md`와 1:1 대응
-- [ ] AC-06: 3종 모두 6개 에이전트가 orchestrator / specifier / planner / builder / verifier / committer로 기재됨
-- [ ] AC-07: 배지, License, Serena MCP, 산출물 언어(Output Language) 등 기존 섹션이 3종 모두에 보존됨
-- [ ] Out-of-Scope 파일이 변경되지 않음
+- [x] AC-01: `README.md`, `npm/README.md`, `README_KO.md` 모두 `scheduler` 언급 0건
+- [x] AC-02: `diff README.md npm/README.md` 출력 없음
+- [x] AC-03: `README.md` / `README_KO.md`의 참조 문서 표가 `develop/references/`의 실제 8개 파일과 일치
+- [x] AC-04: 3종 문서에 기재된 저장소 내부 경로가 모두 실제로 존재하고, 폐기 경로(`develop/hooks`, `plugin/README.md`, `plugin/skills/init`, `plugin/skills/sdd-pipeline/references`)는 어느 문서에도 남아 있지 않음
+- [x] AC-05: `README_KO.md`의 `##` 헤더 목록이 `README.md`와 1:1 대응
+- [x] AC-06: 3종 모두 6개 에이전트가 orchestrator / specifier / planner / builder / verifier / committer로 기재됨
+- [x] AC-07: 배지, License, Serena MCP, 산출물 언어(Output Language) 등 기존 섹션이 3종 모두에 보존됨
+- [x] Out-of-Scope 파일이 변경되지 않음 (본 builder 작업으로 인한 변경 없음; 세션 시작 전부터 존재하던 npm/bin/cli.mjs·AGENTS.md 변경 및 병렬 프로세스로 추정되는 work_WORK-53.log 변경은 무관)
 
 ## Verify
 
