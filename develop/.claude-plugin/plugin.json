@@ -2,9 +2,9 @@
   "name": "uc-taskmanager",
   "version": "1.6.0",
   "agents": [
+    "./agents/orchestrator.md",
     "./agents/specifier.md",
     "./agents/planner.md",
-    "./agents/scheduler.md",
     "./agents/builder.md",
     "./agents/verifier.md",
     "./agents/committer.md"
