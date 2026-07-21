@@ -338,10 +338,11 @@ uctm update --lang en
 
 ```bash
 git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
-mkdir -p .claude/agents
-cp /tmp/uc-tm/npm/agents/*.md .claude/agents/
+mkdir -p .claude/agents .claude/references
+cp /tmp/uc-tm/npm/agents/*.md .claude/agents/          # 6 agents (orchestrator, specifier, planner, builder, verifier, committer)
+cp /tmp/uc-tm/npm/references/*.md .claude/references/   # 8 reference files
 rm -rf /tmp/uc-tm
-git add .claude/agents/ && git commit -m "chore: add uc-taskmanager agents"
+git add .claude/agents/ .claude/references/ && git commit -m "chore: add uc-taskmanager agents"
 ```
 
 ### Local Plugin Test
@@ -498,15 +499,17 @@ Six agents work together in a clean, isolated pipeline — Main Claude spawns on
 
 ### Support Files (included in Plugin)
 
-In addition to the 6 pipeline agents, the plugin includes 6 support files that agents reference at startup.
-These are located in `plugin/skills/sdd-pipeline/references/` (synced from `develop/references/`):
+In addition to the 6 pipeline agents, the plugin includes 8 support files that agents reference at startup.
+These are located in `plugin/references/` (synced from `develop/references/`); when installed via npm they land in `.claude/references/`:
 
 | File | Purpose |
 |------|---------|
 | `agent-flow.md` | Pipeline orchestration rules — Main Claude's trigger/gate boundary + orchestrator's internal nested-spawn flow |
-| `file-content-schema.md` | Single source of truth for all file formats (PLAN.md, TASK.md, progress.md, result.md) |
-| `shared-prompt-sections.md` | Shared prompt sections with cache_control — reduces repeated token cost up to 90% |
+| `callback-protocol.md` | External callback protocol — orchestrator batch-sends STAGE START/DONE/FAILED events; all callbacks are skipped if no callback URL is set in `CLAUDE.md` |
 | `context-policy.md` | Sliding window context transfer rules between agents |
+| `file-content-schema.md` | Single source of truth for all file formats (PLAN.md, TASK.md, progress.md, result.md) |
+| `ref-cache-protocol.md` | 4-step ref-cache protocol — checks `<ref-cache>` in the dispatch XML and skips disk reads when cached references are present |
+| `shared-prompt-sections.md` | Shared prompt sections with cache_control — reduces repeated token cost up to 90% |
 | `work-activity-log.md` | Activity log format for builder stage tracking |
 | `xml-schema.md` | XML communication format for dispatch and task-result messages |
 
@@ -690,7 +693,7 @@ Each agent reads 4-5 shared reference files (shared-prompt-sections.md, file-con
 2. **Orchestrator** copies ref-cache into each nested child's dispatch instead of Main Claude relaying it
 3. **Subsequent nested agents** use cached content instead of reading files from disk
 
-Phase 2 (selective delivery) further reduces token usage by passing only the sections each agent needs — not the full file contents. The section mapping per agent is defined in `agent-flow.md`.
+The protocol itself is defined in `references/ref-cache-protocol.md` (4 steps). Phase 2 (selective delivery) further reduces token usage by passing only the sections each agent needs — not the full file contents. The section mapping per agent is defined in `agent-flow.md`.
 
 **Measured impact** (simple WORK, 3 agents):
 - File reads: 14 → 5 (**-64%**)
@@ -875,7 +878,7 @@ Instead of ambiguous natural language prompts, agents communicate using structur
 <task-result work="WORK-03" task="TASK-00" agent="builder" status="PASS">
   <summary>Created shared-prompt-sections.md and xml-schema.md</summary>
   <files-changed>
-    <file action="created" path="agents/shared-prompt-sections.md">Common sections with cache_control</file>
+    <file action="created" path="references/shared-prompt-sections.md">Common sections with cache_control</file>
   </files-changed>
   <verification>
     <check name="file_existence" status="PASS">Both files created</check>
@@ -889,7 +892,7 @@ Instead of ambiguous natural language prompts, agents communicate using structur
 - **Prompt Caching**: Common sections (Output Language Rule, Build Commands) are marked with Anthropic API `cache_control`, saving up to **90% on repeated tokens**
 - **Scalability**: Cache hit rates improve with WORK count (5 TASKs at ~0.03 tokens/token vs 2K+ tokens without cache)
 
-See `agents/xml-schema.md` for complete format, and `agents/shared-prompt-sections.md` for cacheable sections.
+See `references/xml-schema.md` for complete format, and `references/shared-prompt-sections.md` for cacheable sections.
 
 ### Sliding Window Context Transfer
 
@@ -1030,21 +1033,29 @@ uc-taskmanager/
 │   │   ├── builder.md       ← Code implementation
 │   │   ├── verifier.md      ← Build/lint/test verification
 │   │   └── committer.md     ← git commit + result.md
-│   ├── references/          ← 6 support files (shared across agents)
-│   │   ├── agent-flow.md    ← Pipeline orchestration rules
-│   │   ├── file-content-schema.md  ← File format definitions
-│   │   ├── shared-prompt-sections.md  ← Cacheable shared sections
-│   │   ├── context-policy.md    ← Sliding window context rules
-│   │   ├── work-activity-log.md ← Activity log format
-│   │   └── xml-schema.md    ← XML communication format
-│   ├── skills/              ← Skill definitions
-│   └── hooks/               ← Hook scripts
+│   ├── references/          ← 8 support files (shared across agents)
+│   │   ├── agent-flow.md          ← Pipeline orchestration rules
+│   │   ├── callback-protocol.md   ← External callback protocol (batch STAGE events)
+│   │   ├── context-policy.md      ← Sliding window context rules
+│   │   ├── file-content-schema.md ← File format definitions
+│   │   ├── ref-cache-protocol.md  ← ref-cache protocol (4 steps)
+│   │   ├── shared-prompt-sections.md ← Cacheable shared sections
+│   │   ├── work-activity-log.md   ← Activity log format
+│   │   └── xml-schema.md          ← XML communication format
+│   ├── skills/              ← Skill definitions (sdd-pipeline, uctm-init, work-pipeline, work-status)
+│   └── .claude-plugin/
+│       └── plugin.json      ← Plugin manifest source (name, version, agents array)
 ├── npm/                     ← npm package (published as `uctm`)
-│   ├── agents/              ← Synced from develop/agents/ + develop/references/
+│   ├── agents/              ← Synced from develop/agents/
+│   ├── references/          ← Synced from develop/references/ (8 files)
+│   ├── skills/              ← Synced from develop/skills/ (4 SKILL.md)
 │   ├── bin/cli.mjs          ← CLI entry point (uctm init/update)
 │   ├── lib/                 ← CLI implementation (constants.mjs, init.mjs, update.mjs)
 │   ├── .agent/              ← Default router config bundled with npm
 │   │   └── router_rule_config.json
+│   ├── .claude-plugin/
+│   │   └── plugin.json      ← Synced from develop/.claude-plugin/plugin.json
+│   ├── README.md            ← Synced from README.md (exposed on npmjs.com)
 │   ├── package.json         ← npm package config
 │   ├── .npmignore
 │   └── LICENSE
@@ -1053,17 +1064,15 @@ uc-taskmanager/
 │   ├── references/          ← Synced from develop/references/
 │   ├── skills/              ← Plugin skills
 │   │   ├── sdd-pipeline/
-│   │   │   ├── SKILL.md     ← Skill manifest
-│   │   │   └── references/  ← Synced from develop/references/
+│   │   │   └── SKILL.md     ← Skill manifest
+│   │   ├── uctm-init/
+│   │   │   └── SKILL.md     ← /uctm-init (setup works/, CLAUDE.md, permissions)
 │   │   ├── work-pipeline/
 │   │   │   └── SKILL.md
-│   │   ├── work-status/
-│   │   │   └── SKILL.md
-│   │   └── init/
-│   │       └── SKILL.md     ← /uctm-init (setup works/, CLAUDE.md, permissions)
-│   ├── .claude-plugin/
-│   │   └── plugin.json      ← Plugin manifest (name, version, agents array)
-│   └── README.md
+│   │   └── work-status/
+│   │       └── SKILL.md
+│   └── .claude-plugin/
+│       └── plugin.json      ← Plugin manifest (name, version, agents array)
 ├── .claude/                 ← Local Claude settings (not committed)
 │   └── settings.local.json
 ├── README.md                ← English (default, this file)
