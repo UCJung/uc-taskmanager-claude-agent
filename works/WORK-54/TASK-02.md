@@ -45,11 +45,11 @@ WORK-54: uctm update 갱신 범위 누락 수정
 
 ## Acceptance Criteria
 
-- [ ] `constants.mjs` 에 `removed in 2.0.1 — protocol folded into xml-schema.md § 4` 주석이 존재
-- [ ] `constants.mjs` 에 `2.1.0` 문자열이 남아 있지 않음
-- [ ] `OBSOLETE_PATHS` 배열의 원소 값 4개가 변경 전과 동일
-- [ ] `node --check` 통과, `uctm --version` 정상 동작
-- [ ] git diff 가 1행 변경(주석)만 포함
+- [x] `constants.mjs` 에 `removed in 2.0.1 — protocol folded into xml-schema.md § 4` 주석이 존재
+- [x] `constants.mjs` 에 `2.1.0` 문자열이 남아 있지 않음
+- [x] `OBSOLETE_PATHS` 배열의 원소 값 4개가 변경 전과 동일
+- [x] `node --check` 통과, `uctm --version` 정상 동작
+- [x] git diff 가 1행 변경(주석)만 포함
 
 ## Verify
 
