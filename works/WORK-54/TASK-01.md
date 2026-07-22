@@ -47,15 +47,15 @@ WORK-54: uctm update 갱신 범위 누락 수정
 
 ## Acceptance Criteria
 
-- [ ] `update.mjs` 에서 `copyPluginResources(baseDir)` 호출이 `pruneObsolete(baseDir)` 보다 앞에 위치
-- [ ] `copyPluginResources` 호출이 코드상 1곳이며 global/project 분기 밖 (두 경로가 동일 코드 경로)
-- [ ] update 실행 후 설치처 `.claude-plugin/plugin.json` 내용이 `npm/.claude-plugin/plugin.json` 과 일치
-- [ ] update 실행 후 설치처 `skills/` 하위 파일이 `npm/skills/` 와 일치 (4개 SKILL.md)
-- [ ] 출력에 `plugin resource files updated` 문자열과 개수가 포함
-- [ ] 기존 출력 라인 4종이 그대로 유지되고 순서가 동일
-- [ ] update 를 2회 연속 실행해도 출력과 결과가 동일 (NFR-02)
-- [ ] 설치처에 `CLAUDE.md` 를 두어도 update 후 변경되지 않음 (NFR-01)
-- [ ] 소스 `.claude-plugin/`·`skills/` 부재 상황에서도 예외 없이 exit code 0 (NFR-02)
+- [x] `update.mjs` 에서 `copyPluginResources(baseDir)` 호출이 `pruneObsolete(baseDir)` 보다 앞에 위치
+- [x] `copyPluginResources` 호출이 코드상 1곳이며 global/project 분기 밖 (두 경로가 동일 코드 경로)
+- [x] update 실행 후 설치처 `.claude-plugin/plugin.json` 내용이 `npm/.claude-plugin/plugin.json` 과 일치
+- [x] update 실행 후 설치처 `skills/` 하위 파일이 `npm/skills/` 와 일치 (4개 SKILL.md)
+- [x] 출력에 `plugin resource files updated` 문자열과 개수가 포함
+- [x] 기존 출력 라인 4종이 그대로 유지되고 순서가 동일
+- [x] update 를 2회 연속 실행해도 출력과 결과가 동일 (NFR-02)
+- [x] 설치처에 `CLAUDE.md` 를 두어도 update 후 변경되지 않음 (NFR-01)
+- [x] 소스 `.claude-plugin/`·`skills/` 부재 상황에서도 예외 없이 exit code 0 (NFR-02)
 
 ## Verify
 
