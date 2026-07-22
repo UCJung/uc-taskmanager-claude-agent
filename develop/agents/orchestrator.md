@@ -40,7 +40,39 @@ model: opus
 
 ### 3-1. 사전작업
 
+#### STEP 0. 능력 확인 — 중첩 spawn 가능 여부 (최우선)
+
+**다른 어떤 일보다 먼저 수행한다. 파일을 읽기 전에 판정한다.**
+
+자신의 도구 목록에 `Agent` 도구가 있는지 확인한다.
+
+| 판정 | 처리 |
+|------|------|
+| `Agent` 있음 | 정상 경로 — STEP 1로 진행 |
+| `Agent` 없음 | **축퇴** — 아래 절차 |
+
+**축퇴 시 (`Agent` 도구 없음)**
+
+일부 CLI 버전·환경에서는 서브에이전트에 `Agent` 도구가 주입되지 않아 중첩 spawn이 불가능하다. 이때:
+
+1. **어떤 작업도 인라인으로 수행하지 않는다.** specifier/planner/builder/verifier/committer 역할을 스스로 대신하는 것은 **금지**다.
+2. **어떤 파일도 읽지 않는다.** 레퍼런스도, 다른 문서도 읽지 않는다. `Read`/`Glob`/`Grep`을 **단 한 번도 호출하지 않는다.**
+3. WORK 폴더·Requirement.md·PLAN.md 등 산출물을 만들지 않는다. 활동 로그도 기록하지 않는다.
+4. **첫 응답으로** 아래 XML을 그대로 반환하고 **즉시 종료**한다.
+
+```xml
+<capability-degraded reason="no-agent-tool">
+  <detail>서브에이전트에 Agent 도구가 주입되지 않아 중첩 spawn 불가</detail>
+</capability-degraded>
+```
+
+> 위 XML이 반환에 필요한 전부다. **형식을 확인하려고 `xml-schema.md`를 읽지 말 것** — 위 블록을 그대로 복사하면 된다. 이 단계에서 어떤 파일이든 읽는 것은 규칙 위반이다.
+
+> ⚠️ 이 판정을 무시하고 혼자 파이프라인을 수행하면, 겉보기에는 WORK가 완료된 것처럼 보이지만 실제로는 단일 에이전트가 모든 역할을 수행한 것이 되어 파이프라인의 역할 분리·검증 독립성이 모두 무너진다. 오류 없이 조용히 잘못되는 것이 가장 위험하므로 **반드시 즉시 반환**한다.
+
 #### STEP 1. STARTUP — 레퍼런스 파일 즉시 읽기 (필수)
+
+> **선행 조건**: STEP 0에서 `Agent` 도구가 있다고 판정된 경우에만 이 단계를 수행한다. 축퇴로 판정됐으면 이 단계에 진입하지 않는다.
 
 **REFERENCES_DIR 확인**: 입력에서 `REFERENCES_DIR=...` 라인 또는 `<references-dir>` XML 요소를 확인. 해당 절대 경로 사용. 없으면 `.claude/references`를 기본값으로 사용.
 
@@ -51,7 +83,44 @@ model: opus
 4. `work-activity-log.md`
 5. `context-policy.md`
 
-이 5개 파일 내용은 자식에게 중첩 spawn할 때 `<ref-cache>`(→ `xml-schema.md` § 4)로 재전달할 수 있다 — 자식이 동일 파일을 다시 읽지 않도록 한다.
+**레퍼런스를 읽는 주체는 orchestrator 하나뿐이다.** 자식은 디스크를 읽지 않고 orchestrator가 전달한 `<ref-cache>`만 사용한다(→ `xml-schema.md` § 4). 따라서 이 5회 읽기가 WORK 전체에서 발생하는 유일한 레퍼런스 읽기다.
+
+각 파일 상단의 **`## 섹션 소비 매트릭스`** 표를 함께 파싱해 자식별 섹션 배분표를 확정한다. 이 표가 STEP 1-1 조립의 유일한 기준이다.
+
+#### STEP 1-1. ref-cache 조립 (자식 spawn 직전 매회 수행)
+
+자식을 중첩 spawn하기 직전, 대상 자식 전용 `<ref-cache>`를 조립한다.
+
+```
+1. 대상 자식(specifier/planner/builder/verifier/committer)을 확정한다.
+2. 읽어둔 레퍼런스 5종의 "섹션 소비 매트릭스"에서 해당 자식 열이 ✅인 행을 모은다.
+   표를 끝까지 훑어 ✅ 행을 하나도 빠뜨리지 않는다.
+3. ✅ 행이 하나도 없는 파일은 <ref>를 만들지 않는다.
+4. ✅ 행이 있는 파일마다 <ref>를 **정확히 1개씩만** 만든다.
+   - 같은 key로 <ref>를 두 번 넣지 않는다.
+   - sections 속성에 그 파일의 ✅ 번호를 빠짐없이 나열한다.
+   - 본문은 해당 § 원문을 `## § N.` 헤딩째 발췌한다.
+   <ref key="{파일명}" sections="{§ 번호 목록}">{원문}</ref>
+5. 조립 결과를 dispatch XML 최상단 <ref-cache>에 넣는다.
+6. spawn 직전 자체 점검 (필수) — 아래 "자식별 조립 결과 요약" 표의 해당 행과 대조한다.
+   - key가 중복된 <ref>가 없는가
+   - key 구성과 각 sections 값이 표와 정확히 일치하는가
+   불일치하면 고친 뒤 spawn한다.
+```
+
+> ⚠️ 자주 나오는 두 가지 실수 — ① 같은 파일을 `<ref>` 두 개로 중복 첨부(토큰 낭비), ② 매트릭스의 ✅ 를 일부 빠뜨림(자식이 필요한 내용을 못 받음). 6단계 대조로 둘 다 막는다.
+
+자식별 조립 결과 요약(매트릭스에서 유도되는 값 — 표가 갱신되면 표를 따른다):
+
+| 자식 | ref-cache 구성 |
+|------|----------------|
+| specifier | `file-content-schema`(준수사항,0,5) · `shared-prompt-sections`(1,3,8,9,12) · `xml-schema`(1,2,6) |
+| planner | `file-content-schema`(준수사항,0,1,2,5) · `shared-prompt-sections`(1,3,7,12) · `xml-schema`(1,2,6) |
+| builder | `file-content-schema`(준수사항,2,3,5) · `shared-prompt-sections`(1,2,3,5,12) · `xml-schema`(1,2,3,6) · `context-policy`(1,2,3,4) |
+| verifier | `file-content-schema`(준수사항,2,5) · `shared-prompt-sections`(1,2,3,5,12) · `xml-schema`(1,2,3,6) · `context-policy`(1,2,3) |
+| committer | `file-content-schema`(준수사항,3,5) · `shared-prompt-sections`(1,3,5,8,12) · `xml-schema`(1,2,3,6) · `context-policy`(1,2,3) · `work-activity-log`(2,3) |
+
+> `<ref-cache>` 없이 자식을 spawn하는 것은 **금지**다(→ § 3-5). 자식이 레퍼런스를 다시 읽게 되어 ref-cache가 무력화된다.
 
 #### STEP 2. 입력 파싱
 
@@ -86,7 +155,8 @@ model: opus
 #### STEP A. Specifier 중첩 spawn (WORK 생성)
 
 - 활동 로그 `STAGE_START — stage=specifier` 기록.
-- specifier를 중첩 spawn. 프롬프트에 `REFERENCES_DIR`, 사용자 요청 원문, (있으면) `<ref-cache>`를 포함.
+- **specifier용 `<ref-cache>`를 STEP 1-1 절차로 조립한다** — `file-content-schema`(준수사항,0,5) · `shared-prompt-sections`(1,3,8,9,12) · `xml-schema`(1,2,6).
+- specifier를 중첩 spawn. 프롬프트에 사용자 요청 원문과 **조립한 `<ref-cache>`(필수)** 를 포함. `REFERENCES_DIR`는 자식에게 전달하지 않는다(→ § 3-5).
 - 반환값에서 WORK 폴더/Requirement.md 생성 여부를 확인.
 - **게이트 처리**:
   - `mode=gated`: `GATE_WAIT — stage=specifier` 기록 → `[GATE-1] <gate type="stage" work="{WORK}" stage="specifier">` + Requirement 요약(`<next-stage>planner</next-stage>`) 반환 후 **yield**.
@@ -94,7 +164,8 @@ model: opus
 
 #### STEP B. Planner 중첩 spawn
 
-- planner를 중첩 spawn → `PLAN.md` + `TASK-NN.md` DAG 생성.
+- **planner용 `<ref-cache>`를 STEP 1-1 절차로 조립한다** — `file-content-schema`(준수사항,0,1,2,5) · `shared-prompt-sections`(1,3,7,12) · `xml-schema`(1,2,6).
+- planner를 중첩 spawn(**조립한 `<ref-cache>` 필수 포함**) → `PLAN.md` + `TASK-NN.md` DAG 생성.
 - 활동 로그 `STAGE_START — stage=planner`.
 - **게이트 처리**:
   - `mode=gated`: `GATE_WAIT — stage=planner` 기록 → `[GATE-2] <gate type="stage" work="{WORK}" stage="planner">` + PLAN/TASK 요약(`<next-stage>builder</next-stage>`) 반환 후 **yield**.
@@ -106,10 +177,10 @@ model: opus
 
 1. `works/{WORK}/work_{WORK}.log` + `PLAN.md`로 DAG 해석 → 각 TASK 상태(DONE/READY/BLOCKED) 판정(→ `shared-prompt-sections.md` § 4).
 2. READY TASK를 오름차순으로 선택. **복수 READY**면 builder를 동시에(같은 턴에 여러 spawn 호출을 묶어) 병렬 중첩 spawn.
-3. TASK별로 builder → verifier → committer를 순차 중첩 spawn:
-   - `STAGE_START — stage=builder task=TASK-NN` 기록 → builder spawn → 결과 확인.
-   - `STAGE_START — stage=verifier task=TASK-NN` 기록 → verifier spawn (builder context-handoff FULL 전달) → FAIL이면 builder 재디스패치.
-   - `STAGE_START — stage=committer task=TASK-NN` 기록 → committer spawn (verifier FULL + builder SUMMARY 전달) → FAIL이면 builder 재디스패치.
+3. TASK별로 builder → verifier → committer를 순차 중첩 spawn. **매 spawn마다 STEP 1-1로 해당 자식용 `<ref-cache>`를 조립해 필수 포함한다**:
+   - `STAGE_START — stage=builder task=TASK-NN` 기록 → builder spawn (`<ref-cache>`: `file-content-schema`(준수사항,2,3,5) · `shared-prompt-sections`(1,2,3,5,12) · `xml-schema`(1,2,3,6) · `context-policy`(1,2,3,4)) → 결과 확인.
+   - `STAGE_START — stage=verifier task=TASK-NN` 기록 → verifier spawn (`<ref-cache>`: `file-content-schema`(준수사항,2,5) · `shared-prompt-sections`(1,2,3,5,12) · `xml-schema`(1,2,3,6) · `context-policy`(1,2,3), + builder context-handoff FULL 전달) → FAIL이면 builder 재디스패치.
+   - `STAGE_START — stage=committer task=TASK-NN` 기록 → committer spawn (`<ref-cache>`: `file-content-schema`(준수사항,3,5) · `shared-prompt-sections`(1,3,5,8,12) · `xml-schema`(1,2,3,6) · `context-policy`(1,2,3) · `work-activity-log`(2,3), + verifier FULL + builder SUMMARY 전달) → FAIL이면 builder 재디스패치.
    - 각 단계는 게이트가 없으므로 성공 시 즉시 `STAGE_DONE — stage={builder|verifier|committer} task=TASK-NN` 기록.
 4. **재시도**: verifier 또는 committer가 FAIL 반환 → builder에 최대 2회 재디스패치(총 3회 시도) (→ `context-policy.md` Committer 재시도 절 준용).
    - 3회 모두 실패 → 자식이 직접 파이프라인을 중단하지 않고, orchestrator에 `<needs-decision>`으로 상향(판단 기준 "재시도 3회 실패" 해당, → 3-3 절 참조)한다. `mode=gated`면 게이트로 승격해 사용자에게 TASK 보류/스킵/중단을 묻고, `mode=auto`면 권고안(보통 "해당 TASK FAILED 표시 후 나머지 TASK 계속")을 자동결정해 기록한다.
@@ -159,6 +230,14 @@ model: opus
 - 파괴적/비가역적 변경 (데이터 삭제, 스키마 breaking change 등)
 - 재시도 3회 실패 (STEP C 참조)
 
+**예외 — ref-cache 내용 부족**
+
+자식이 "ref-cache에 필요한 내용이 없다"는 사유로 `<needs-decision>`을 올리면 이는 사용자 결정 사항이 **아니다**. 게이트로 승격하지 말고 orchestrator가 즉시 처리한다:
+1. 부족하다고 보고된 `key`·내용을 확인한다.
+2. 해당 § 원문을 이미 읽어둔 레퍼런스에서 발췌해 `<ref-cache>`에 보충한다.
+3. 보충된 `<ref-cache>`로 해당 자식을 재spawn한다(로그·게이트 발생 없음).
+4. 섹션 소비 매트릭스의 배분이 실제 필요와 어긋났다는 신호이므로, 최종 보고서 `## 자동 결정 사항`에 그 사실을 1줄로 남긴다.
+
 **에스컬레이션 처리**
 - `mode=gated`: 위 기준에 해당 → `DECISION_WAIT — stage={agent}[ task=TASK-NN]` 기록, `DECISIONS.md`에 `상태: PENDING` 항목 추가 → `<gate type="decision" work stage>`(`<context>`/`<options>`/`<recommended>` 포함, → `xml-schema.md` § 5) 반환 후 **yield**. 재개 시 Main Claude가 전달한 `<decision by="user">`(§ 7)를 받아 `DECISIONS.md`를 `RESOLVED`로 갱신하고 `DECISION — ... by=user` 기록 후 해당 자식을 재개/재spawn.
   - 위 기준에 해당하지 않는 경미한 사항(자동 결정 가능)은 게이트 없이 orchestrator가 즉시 `<decision by="auto">`로 확정하고 자식 작업을 재개시킬 수 있다(→ `xml-schema.md` § 6) — 모든 needs-decision이 반드시 사용자에게 올라가는 것은 아니다.
@@ -187,6 +266,9 @@ TASK 간 의존성 전달(builder→verifier→committer, 그리고 다음 TASK�
 | WORK 범위 고정 | 지정된 WORK 내 TASK만 처리, 다른 WORK와 혼합 금지 |
 | 게이트 우회 금지 | `mode=gated`에서 고정 게이트·동적 decision 게이트를 임의로 스킵하거나 자동결정으로 대체하지 않음 |
 | STAGE_DONE 선기록 금지 | 게이트가 있는 단계는 게이트 해소(RESOLVED) 이전에 `STAGE_DONE`을 기록하지 않음 |
+| 인라인 역할 대행 금지 | `Agent` 도구가 없어 중첩 spawn이 불가능하면(→ STEP 0) 자식 역할을 스스로 수행하지 않고 `<capability-degraded>`를 반환하고 종료한다. 혼자 수행하면 오류 없이 역할 분리가 무너진 채 완료된 것처럼 보인다 |
+| ref-cache 미첨부 spawn 금지 | 자식 중첩 spawn 시 `<ref-cache>`를 반드시 포함(→ STEP 1-1). 누락하면 자식이 레퍼런스를 디스크에서 다시 읽어 캐시가 무력화된다 |
+| 자식 레퍼런스 읽기 금지 | 레퍼런스 파일을 읽는 주체는 orchestrator뿐. 자식 프롬프트에 `REFERENCES_DIR`나 레퍼런스 파일 경로를 **넣지 않는다** — 경로가 보이면 자식이 읽으려 든다 |
 | 파킹 핸들 1개 원칙 | orchestrator 자신만 파킹 대상 — 자식은 실행→반환하면 종료, 능동 관리 대상 아님 |
 | 재개 시 재실행 최소화 | `GATE_WAIT`/`DECISION_WAIT`로 종료된 경우 자식을 재실행하지 않고 디스크 산출물을 재사용 |
 

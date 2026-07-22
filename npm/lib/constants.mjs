@@ -20,7 +20,6 @@ export const REFERENCE_FILES = [
   'agent-flow.md',
   'context-policy.md',
   'file-content-schema.md',
-  'ref-cache-protocol.md',
   'shared-prompt-sections.md',
   'work-activity-log.md',
   'xml-schema.md',
@@ -44,6 +43,7 @@ export function getReferencesSrcDir() {
 export const OBSOLETE_PATHS = [
   'agents/scheduler.md',             // removed in 2.0.0 — orchestrator took over scheduling
   'references/callback-protocol.md', // removed in 2.0.0 — external callback integration dropped
+  'references/ref-cache-protocol.md',// removed in 2.1.0 — protocol folded into xml-schema.md § 4
   'skills/sdd-pipeline/references',  // removed in 1.5.0 — references moved to references/
 ];
 

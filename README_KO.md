@@ -465,7 +465,7 @@ Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
 
 ### 참조 문서 (Plugin에 포함)
 
-6개 파이프라인 에이전트 외에도 plugin에는 에이전트가 시작 시 참조하는 8개 지원 문서가 포함되어 있습니다.
+6개 파이프라인 에이전트 외에도 plugin에는 6개 지원 문서가 포함되어 있습니다. **이 문서들을 읽는 주체는 orchestrator뿐이며**, 자식 에이전트는 필요한 섹션만 ref-cache로 전달받습니다(아래 참조).
 이 파일들은 `plugin/references/`에 위치합니다(`develop/references/`에서 동기화). npm으로 설치하면 `.claude/references/`에 배치됩니다:
 
 | 파일 | 용도 |
@@ -473,10 +473,11 @@ Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
 | `agent-flow.md` | 파이프라인 오케스트레이션 규칙 — Main Claude의 트리거/게이트 경계 + orchestrator 내부의 중첩 spawn 흐름 |
 | `context-policy.md` | 에이전트 간 슬라이딩 윈도우 컨텍스트 전달 규칙 |
 | `file-content-schema.md` | 모든 파일 포맷(PLAN.md, TASK.md, progress.md, result.md)의 단일 정보원 |
-| `ref-cache-protocol.md` | 4단계 ref-cache 프로토콜 — dispatch XML의 `<ref-cache>`를 확인하고, 캐시된 참조가 있으면 디스크 읽기를 생략 |
-| `shared-prompt-sections.md` | cache_control이 적용된 공통 프롬프트 섹션 — 반복 토큰 비용을 최대 90% 절감 |
+| `shared-prompt-sections.md` | 에이전트 간 공통 재사용 프롬프트 섹션 |
 | `work-activity-log.md` | builder 단계 추적을 위한 Activity log 포맷 |
-| `xml-schema.md` | dispatch 및 task-result 메시지의 XML 통신 포맷 |
+| `xml-schema.md` | dispatch 및 task-result 메시지의 XML 통신 포맷 — ref-cache 프로토콜 정본(§ 4) 포함 |
+
+ref-cache로 전달되는 5개 파일(`context-policy`, `file-content-schema`, `shared-prompt-sections`, `work-activity-log`, `xml-schema`)은 각각 상단에 **섹션 소비 매트릭스**를 두어 어떤 에이전트가 어떤 `§` 섹션을 필요로 하는지 선언합니다. orchestrator는 이 표를 기준으로 섹션을 잘라냅니다.
 
 ---
 
@@ -652,17 +653,17 @@ Claude: [SendMessage로 orchestrator 재개 → STEP C: DAG 실행, 추가 게�
 
 ### ref-cache: 참조 파일 캐싱
 
-각 에이전트는 시작 시 4~5개의 공유 참조 파일(shared-prompt-sections.md, file-content-schema.md, xml-schema.md 등)을 읽습니다 — 전체 파이프라인 기준 약 26회의 파일 읽기가 발생합니다. **ref-cache**는 이 중복을 제거합니다:
+캐싱이 없으면 모든 에이전트가 시작 시 3~5개의 공유 참조 파일을 다시 읽어 3-TASK 파이프라인 기준 40회 이상의 읽기가 발생합니다. **ref-cache**는 orchestrator를 유일한 독자로 만듭니다:
 
-1. **첫 번째 에이전트**(orchestrator 자신, STARTUP 단계에서)가 참조 파일을 정상적으로 읽고, 다음 에이전트를 중첩 호출할 때 `<ref-cache>`를 반환할 수 있습니다
-2. **orchestrator**는 Main Claude가 중계하는 대신 ref-cache를 각 중첩 자식의 dispatch에 직접 복사합니다
-3. **이후 중첩 에이전트**는 디스크에서 파일을 읽는 대신 캐시된 내용을 사용합니다
+1. **orchestrator**가 기동 시 5개 참조 파일을 1회 읽고, 각 파일의 섹션 소비 매트릭스를 파싱합니다
+2. **자식을 중첩 spawn하기 직전마다**, 그 자식에게 필요한 `§` 섹션만 잘라내어 파일별 `sections="..."` 속성이 붙은 `<ref-cache>`를 조립합니다
+3. **자식 에이전트는 레퍼런스를 위해 디스크를 읽지 않습니다** — `{REFERENCES_DIR}` 하위 접근은 금지입니다. 각 자식은 수신한 `sections`를 자신의 필요 섹션 목록과 대조하고, 누락이 있으면 디스크 읽기로 폴백하는 대신 `<needs-decision>`으로 상향합니다
 
-프로토콜 자체는 `references/ref-cache-protocol.md`(4단계)에 정의되어 있습니다. Phase 2(선택적 전달)는 각 에이전트가 필요로 하는 섹션만 전달함으로써(파일 전체가 아니라) 토큰 사용량을 추가로 절감합니다. 에이전트별 섹션 매핑은 `agent-flow.md`에 정의되어 있습니다.
+프로토콜 정본은 `references/xml-schema.md` § 4입니다. 에이전트별 섹션 매핑은 별도 매핑 문서가 아니라 **각 참조 파일 상단의 섹션 소비 매트릭스**에 있습니다 — 파일과 그 배분 규칙이 함께 유지되도록 하기 위함입니다.
 
-**측정된 효과** (3개 에이전트 기준):
-- 파일 읽기: 14 → 5 (**-64%**)
-- 토큰 사용량: ~85K → ~72K (**-15%**)
+**설계 목표** (3-TASK WORK 기준):
+- 참조 파일 읽기: 약 42회 → **5회** (orchestrator 기동 시 1회분)
+- 토큰 사용량: 섹션 슬라이싱만큼 감소 — 각 자식은 파일 전체가 아니라 자기 섹션만 수신
 
 ### WORK ID 할당 전략
 
@@ -880,14 +881,13 @@ uc-taskmanager/
 │   │   ├── builder.md       ← 코드 구현
 │   │   ├── verifier.md      ← 빌드/린트/테스트 검증
 │   │   └── committer.md     ← git commit + result.md
-│   ├── references/          ← 7개 지원 문서 (에이전트 간 공유)
+│   ├── references/          ← 6개 지원 문서 (orchestrator만 읽음)
 │   │   ├── agent-flow.md          ← 파이프라인 오케스트레이션 규칙
 │   │   ├── context-policy.md      ← 슬라이딩 윈도우 컨텍스트 규칙
 │   │   ├── file-content-schema.md ← 파일 포맷 정의
-│   │   ├── ref-cache-protocol.md  ← ref-cache 프로토콜 (4단계)
-│   │   ├── shared-prompt-sections.md ← 캐시 가능한 공통 섹션
+│   │   ├── shared-prompt-sections.md ← 공통 재사용 섹션
 │   │   ├── work-activity-log.md   ← Activity log 포맷
-│   │   └── xml-schema.md          ← XML 통신 포맷
+│   │   └── xml-schema.md          ← XML 통신 포맷 + ref-cache 프로토콜(§ 4)
 │   ├── skills/              ← Skill 정의 (sdd-pipeline, uctm-init, work-pipeline, work-status)
 │   └── .claude-plugin/
 │       └── plugin.json      ← Plugin 매니페스트 소스 (name, version, agents 배열)

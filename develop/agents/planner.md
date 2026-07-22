@@ -33,14 +33,9 @@ WORK (작업 단위)    — 사용자 요청의 목표 단위
 
 ### 3-1. 사전작업
 
-#### STEP 1. STARTUP — 레퍼런스 파일 즉시 읽기 (필수)
+#### STEP 1. STARTUP — 레퍼런스 참조
 
-**REFERENCES_DIR 확인**: 입력에서 `REFERENCES_DIR=...` 라인을 확인. 해당 절대 경로 사용. 없으면 `.claude/references`를 기본값으로 사용.
-
-`{REFERENCES_DIR}/`에서 다음 파일을 읽기: 
-1. `file-content-schema.md`
-2. `shared-prompt-sections.md`
-3. `xml-schema.md`
+`<ref-cache>`를 참조하여 작업을 수행한다.
 
 ### STEP 2. WORK 확인
 
@@ -102,7 +97,7 @@ specifier가 판정한 복잡도를 참고해 TASK 분해 단위를 정한다.
 
 ## 6. 승인요청
 
-- 승인 요청은 planner가 직접 수행하지 않는다 — orchestrator가 `<gate type="stage" work stage="planner">`(→ `xml-schema.md` § 5)를 반환해 상위 경계에서 승인을 요청한다(gated 모드).
+- 승인 요청은 planner가 직접 수행하지 않는다 — gated 모드에서는 orchestrator가 `<gate>`를 발행해 상위 경계에서 승인을 처리한다. planner는 `<gate>`를 생성하지 않는다.
 
 ## 7. 결과 보고
 정의된 역할을 모두 끝내면 orchestrator에 보고해. 미해결 모호점이 있으면 `<needs-decision>`을 함께 반환해.
