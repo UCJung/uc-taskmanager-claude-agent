@@ -1,4 +1,4 @@
-import { readFileSync, existsSync, rmSync } from 'node:fs';
+import { readFileSync, existsSync, rmSync, mkdirSync, copyFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -60,6 +60,49 @@ export function pruneObsolete(baseDir) {
     removed.push(relPath);
   }
   return removed;
+}
+
+/**
+ * Recursively copy a directory tree. Shared by init and update.
+ * Returns the number of files copied.
+ */
+export function copyDirRecursive(src, dest) {
+  mkdirSync(dest, { recursive: true });
+  let count = 0;
+  for (const entry of readdirSync(src)) {
+    const srcPath = join(src, entry);
+    const destPath = join(dest, entry);
+    if (statSync(srcPath).isDirectory()) {
+      count += copyDirRecursive(srcPath, destPath);
+    } else {
+      copyFileSync(srcPath, destPath);
+      count++;
+    }
+  }
+  return count;
+}
+
+/**
+ * Copy plugin resources (.claude-plugin/, skills/) from the package root
+ * into the install destination. Shared by init and update.
+ */
+export function copyPluginResources(destBaseDir) {
+  const pkgRoot = join(__dirname, '..');
+  let count = 0;
+
+  // .claude-plugin/
+  const pluginSrc = join(pkgRoot, '.claude-plugin');
+  if (existsSync(pluginSrc)) {
+    count += copyDirRecursive(pluginSrc, join(destBaseDir, '.claude-plugin'));
+  }
+
+  // skills/
+  const skillsSrc = join(pkgRoot, 'skills');
+  if (existsSync(skillsSrc)) {
+    count += copyDirRecursive(skillsSrc, join(destBaseDir, 'skills'));
+  }
+
+  return count;
 }
 
 
