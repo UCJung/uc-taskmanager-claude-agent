@@ -71,14 +71,14 @@ WORK-54: uctm update 갱신 범위 누락 수정
 
 ## Acceptance Criteria
 
-- [ ] `TODO/todo_uctm-update-coverage.md` 가 스테이징되어 untracked 상태가 아님
-- [ ] 문서 상단에 §1~§4 상태 요약 표가 존재
-- [ ] §1 헤딩 직하에 `✅ **해결 — WORK-54.**` 인용문 존재
-- [ ] §2 헤딩 직하에 `✅ **해결 — WORK-54.**` 인용문 존재하며 확정 경로 `docs/guide_release-verification.md` 가 기재됨 (자리표시자 문구가 남아 있지 않음)
-- [ ] §3 헤딩 직하에 `✅ **해결 — WORK-54.**` 인용문 존재
-- [ ] §4 헤딩 직하에 `⬜ **미처리 — WORK-54 범위 밖.**` 인용문 존재하고 ✅ 표시가 없음
-- [ ] 기존 본문(현상/원인/관련 파일/코드 블록)이 삭제되지 않음
-- [ ] `TODO/ref-cache-phase2-selective-sections.md`, `README_KO.md` 가 변경되지 않음
+- [x] `TODO/todo_uctm-update-coverage.md` 가 스테이징되어 untracked 상태가 아님
+- [x] 문서 상단에 §1~§4 상태 요약 표가 존재
+- [x] §1 헤딩 직하에 `✅ **해결 — WORK-54.**` 인용문 존재
+- [x] §2 헤딩 직하에 `✅ **해결 — WORK-54.**` 인용문 존재하며 확정 경로 `docs/guide_release-verification.md` 가 기재됨 (자리표시자 문구가 남아 있지 않음)
+- [x] §3 헤딩 직하에 `✅ **해결 — WORK-54.**` 인용문 존재
+- [x] §4 헤딩 직하에 `⬜ **미처리 — WORK-54 범위 밖.**` 인용문 존재하고 ✅ 표시가 없음
+- [x] 기존 본문(현상/원인/관련 파일/코드 블록)이 삭제되지 않음
+- [x] `TODO/ref-cache-phase2-selective-sections.md`, `README_KO.md` 가 변경되지 않음
 
 ## Verify
 
