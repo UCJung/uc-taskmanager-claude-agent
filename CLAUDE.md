@@ -38,6 +38,53 @@ README 업데이트 범위:
 3. `npm version patch|minor|major` 실행
 4. `npm publish`
 
+## 레퍼런스 수정 절차 (ref-cache 연동 — 필수)
+
+`develop/references/*.md`를 수정하면 **ref-cache 배분이 함께 깨진다.** 레퍼런스는 orchestrator가 1회 읽고 각 파일 상단의 **섹션 소비 매트릭스**를 기준으로 잘라 자식에게 전달하기 때문이다(→ `develop/references/xml-schema.md` § 4). 아래 절차를 반드시 함께 수행한다.
+
+### 1. 섹션 번호 규칙
+
+- **기존 § 번호를 재번호하거나 재사용하지 않는다.** 문서 전반에 § 상호참조가 40건 이상 걸려 있어 전부 깨진다.
+- 섹션을 삭제하면 그 번호는 **결번으로 남긴다** (예: `shared-prompt-sections.md`의 § 10·§ 11).
+- 새 섹션은 **맨 끝 번호 다음**으로 부여한다.
+
+### 2. 매트릭스 갱신
+
+| 변경 유형 | 수행할 것 |
+|-----------|----------|
+| 섹션 **추가** | 해당 파일 상단 매트릭스에 행 추가 + 어느 에이전트가 쓸지 ✅ 표기 |
+| 섹션 **삭제** | 매트릭스 행 삭제 + 그 섹션을 가리키던 상호참조 전부 정리 |
+| 섹션 **내용 변경** | 다른 § 를 새로 가리키게 됐으면, 그 § 도 같은 에이전트에게 배분돼 있는지 확인(전이적 참조) |
+| 에이전트가 새 섹션을 **필요로 하게 됨** | 매트릭스 ✅ 추가 + **`orchestrator.md` 갱신**(아래 3) |
+
+### 3. orchestrator.md 동기화 (중복 기재 지점)
+
+자식별 섹션 목록이 `orchestrator.md`에 **2곳 중복 기재**되어 있다. 매트릭스를 바꾸면 반드시 함께 고친다.
+
+- **STEP 1-1** 의 "자식별 조립 결과 요약" 표 (5행)
+- **STEP A / STEP B / STEP C** 의 각 spawn 지시 라인 (specifier·planner·builder·verifier·committer 5곳)
+
+### 4. 자식 에이전트 정의
+
+자식(`specifier`/`planner`/`builder`/`verifier`/`committer`)의 STARTUP은 **`<ref-cache>`를 참조하여 작업을 수행한다** 한 줄뿐이다. 필요 섹션 목록을 자식 정의에 다시 적지 않는다 — 정본은 매트릭스 하나다.
+
+**자식 정의 본문에 `xxx.md § N` 참조를 새로 넣으면**, 그 § 가 매트릭스에서 해당 자식에게 배분돼 있어야 한다. 배분 없이 참조만 넣으면 자식이 볼 수 없는 내용을 가리키게 된다.
+
+### 5. 검증 (수정 후 필수)
+
+```bash
+# ① 매트릭스에 적힌 섹션이 실제로 존재하는가
+grep -n "^## §" develop/references/*.md
+
+# ② § 상호참조가 깨지지 않았는가 / 자식 본문 참조가 배분됐는가 / 전이적 누락이 없는가
+#    → 아래 3가지를 확인한다
+#    - 모든 "xxx.md § N" 참조의 대상 섹션이 존재
+#    - 자식 정의가 참조하는 § 가 매트릭스에서 그 자식에게 ✅
+#    - 자식이 받는 섹션의 본문이 가리키는 § 도 그 자식에게 ✅ (전이적)
+```
+
+> 전이적 누락 예: `xml-schema.md` § 6 본문이 `file-content-schema.md` § 4를 가리키는데 § 4는 orchestrator에게만 배분된 경우 → 참조를 없애거나 배분을 추가한다.
+
 ## Agent 테스트
 
 Agent/Skill/Hook 변경 시 파이프라인 동작 검증 방법: [docs/guide_agent-testing.md](docs/guide_agent-testing.md)
@@ -48,13 +95,6 @@ Agent/Skill/Hook 분리 리펙토링 진행 중: [TODO/todo_refactoring_seperate
 - § 5.1: 완료된 변경 (develop/ 구조 개편, en/ko 통합, hook 구현, 테스트)
 - § 5.2: 남은 변경 대상 (REFERENCES_DIR 경로, Agent description 정비, plugin/npm 동기화)
 - 이전 세션의 작업을 이어서 진행할 것
-
-## 다음 작업: ref-cache 정상화
-
-ref-cache가 설계만 되어있고 실제 동작하지 않음 (3회 테스트 실패 확인): [TODO/todo_ref-cache-fix.md](TODO/todo_ref-cache-fix.md)
-- 문제점: specifier가 ref-cache XML 미반환, Main Claude가 다음 agent에 미전달, agent 정의의 간접 참조(`see protocol.md`)를 LLM이 무시
-- 개선 방향: Combined Agent Invocation 프롬프트 템플릿에 ref-cache 생성/반환을 직접 명시
-- `test/with-ref-cache` 브랜치에서 작업 후 dev에 머지 여부 결정
 
 ## Language
 

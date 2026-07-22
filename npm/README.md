@@ -434,6 +434,20 @@ Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
 - `mode=auto`: no gates — orchestrator completes the entire diagram in one spawn and records any judgment calls to `DECISIONS.md`.
 - STEP C (the builder → verifier → committer loop) never gates on the user, in either mode.
 
+### Degraded Mode (nested spawn unavailable)
+
+Some CLI builds do not inject the `Agent` tool into sub-agents, which makes the nested spawn above impossible. Before reading any file, orchestrator checks its own tool list and — if `Agent` is missing — returns immediately without creating a single artifact:
+
+```xml
+<capability-degraded reason="no-agent-tool">
+  <detail>Agent tool not injected into sub-agent; nested spawn unavailable</detail>
+</capability-degraded>
+```
+
+**Main Claude then takes over the orchestrator role**: it reads `orchestrator.md` plus the 5 reference files and runs the same procedure, spawning the five children directly at depth 1. ref-cache assembly, the activity log, TASK DAG scheduling, and the retry rules are all unchanged; gates are raised by asking the user directly instead of via `<gate>` XML.
+
+> This check exists because the failure is silent otherwise. Without it, orchestrator performs every role inline and reports success — the WORK looks complete while role separation and verification independence are gone.
+
 ### Stage Detail
 
 ```
@@ -463,7 +477,7 @@ Six agents work together in a clean, isolated pipeline — Main Claude spawns on
 
 ### Support Files (included in Plugin)
 
-In addition to the 6 pipeline agents, the plugin includes 7 support files that agents reference at startup.
+In addition to the 6 pipeline agents, the plugin includes 6 support files. **Only the orchestrator reads them** — child agents receive the sections they need via ref-cache (see below).
 These are located in `plugin/references/` (synced from `develop/references/`); when installed via npm they land in `.claude/references/`:
 
 | File | Purpose |
@@ -471,10 +485,11 @@ These are located in `plugin/references/` (synced from `develop/references/`); w
 | `agent-flow.md` | Pipeline orchestration rules — Main Claude's trigger/gate boundary + orchestrator's internal nested-spawn flow |
 | `context-policy.md` | Sliding window context transfer rules between agents |
 | `file-content-schema.md` | Single source of truth for all file formats (PLAN.md, TASK.md, progress.md, result.md) |
-| `ref-cache-protocol.md` | 4-step ref-cache protocol — checks `<ref-cache>` in the dispatch XML and skips disk reads when cached references are present |
-| `shared-prompt-sections.md` | Shared prompt sections with cache_control — reduces repeated token cost up to 90% |
+| `shared-prompt-sections.md` | Shared prompt sections reused across agents |
 | `work-activity-log.md` | Activity log format for builder stage tracking |
-| `xml-schema.md` | XML communication format for dispatch and task-result messages |
+| `xml-schema.md` | XML communication format for dispatch and task-result messages — also the normative ref-cache protocol (§ 4) |
+
+Each of the five files consumed via ref-cache (`context-policy`, `file-content-schema`, `shared-prompt-sections`, `work-activity-log`, `xml-schema`) carries a **section consumption matrix** at the top, declaring which agents need which `§` sections. That matrix is what the orchestrator slices against.
 
 ---
 
@@ -650,17 +665,17 @@ Each agent file follows a consistent four-section structure:
 
 ### ref-cache: Reference File Caching
 
-Each agent reads 4-5 shared reference files (shared-prompt-sections.md, file-content-schema.md, xml-schema.md, etc.) on startup — totaling ~26 file reads across a full pipeline. **ref-cache** eliminates this redundancy:
+Without caching, every agent re-reads 3-5 shared reference files at startup — roughly 40+ reads across a 3-TASK pipeline. **ref-cache** makes the orchestrator the single reader:
 
-1. **First agent** (orchestrator itself, per its STARTUP step) reads reference files normally and can return `<ref-cache>` when nesting the next agent's dispatch
-2. **Orchestrator** copies ref-cache into each nested child's dispatch instead of Main Claude relaying it
-3. **Subsequent nested agents** use cached content instead of reading files from disk
+1. **Orchestrator** reads the 5 reference files once at startup, and parses each file's section consumption matrix
+2. **Before every nested spawn**, it slices out only the `§` sections that specific child needs and assembles a `<ref-cache>` with a `sections="..."` attribute per file
+3. **Child agents never touch disk** for references — reading anything under `{REFERENCES_DIR}` is prohibited. Each child cross-checks the received `sections` against its own required-section list, and escalates a `<needs-decision>` if anything is missing rather than falling back to a disk read
 
-The protocol itself is defined in `references/ref-cache-protocol.md` (4 steps). Phase 2 (selective delivery) further reduces token usage by passing only the sections each agent needs — not the full file contents. The section mapping per agent is defined in `agent-flow.md`.
+The protocol is normatively defined in `references/xml-schema.md` § 4. The per-agent section mapping lives in the **section consumption matrix at the top of each reference file** — not in a separate mapping document, so a file and its distribution rules stay together.
 
-**Measured impact** (3 agents):
-- File reads: 14 → 5 (**-64%**)
-- Token usage: ~85K → ~72K (**-15%**)
+**Design target** (3-TASK WORK):
+- Reference file reads: ~42 → **5** (orchestrator startup only)
+- Token usage: reduced proportionally to section slicing — each child receives only its own sections instead of whole files
 
 ### WORK ID Assignment Strategy
 
@@ -878,14 +893,13 @@ uc-taskmanager/
 │   │   ├── builder.md       ← Code implementation
 │   │   ├── verifier.md      ← Build/lint/test verification
 │   │   └── committer.md     ← git commit + result.md
-│   ├── references/          ← 7 support files (shared across agents)
+│   ├── references/          ← 6 support files (read by the orchestrator only)
 │   │   ├── agent-flow.md          ← Pipeline orchestration rules
 │   │   ├── context-policy.md      ← Sliding window context rules
 │   │   ├── file-content-schema.md ← File format definitions
-│   │   ├── ref-cache-protocol.md  ← ref-cache protocol (4 steps)
-│   │   ├── shared-prompt-sections.md ← Cacheable shared sections
+│   │   ├── shared-prompt-sections.md ← Shared reusable sections
 │   │   ├── work-activity-log.md   ← Activity log format
-│   │   └── xml-schema.md          ← XML communication format
+│   │   └── xml-schema.md          ← XML communication format + ref-cache protocol (§ 4)
 │   ├── skills/              ← Skill definitions (sdd-pipeline, uctm-init, work-pipeline, work-status)
 │   └── .claude-plugin/
 │       └── plugin.json      ← Plugin manifest source (name, version, agents array)

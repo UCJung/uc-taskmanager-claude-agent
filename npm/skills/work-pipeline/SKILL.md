@@ -54,9 +54,24 @@ Main Claude는 `orchestrator` 에이전트 하나만 spawn합니다. specifier/p
 2. 게이트/의사결정 정지 없이 orchestrator가 전체 파이프라인을 완주하고 최종 요약(`## 자동 결정 사항` 포함)을 반환한다.
 3. 반환된 최종 요약을 사용자에게 제시한다. (파킹 상태가 아니므로 TaskStop 불필요.)
 
+## 축퇴 모드 (중첩 spawn 미지원 환경)
+
+orchestrator가 `<capability-degraded reason="no-agent-tool">`을 반환하면, 그 환경은 서브에이전트에 `Agent` 도구를 주지 않아 중첩 spawn이 불가능한 상태입니다(CLI 버전에 따라 발생). orchestrator는 아무 산출물도 만들지 않고 즉시 반환하므로 디스크에는 아무것도 없습니다.
+
+이때 Main Claude가 **orchestrator 역할을 넘겨받습니다**:
+
+1. 사용자에게 1줄 알린다 — "중첩 spawn 미지원 환경 — Main Claude가 직접 오케스트레이션합니다". 승인을 기다리지 않고 진행.
+2. `{REFERENCES_DIR}/orchestrator.md`와 레퍼런스 5종을 읽는다.
+3. `orchestrator.md` 절차를 그대로 수행한다 — specifier/planner/builder/verifier/committer를 **직접 spawn**(depth=1)하고, ref-cache 조립·활동 로그·TASK DAG·재시도 규칙을 동일하게 적용한다.
+4. 활동 로그에 `ORCHESTRATOR_DEGRADED — reason=no-agent-tool`을 기록한다.
+5. 게이트는 `<gate>` XML/`SendMessage` 없이 사용자에게 **직접** 질의한다.
+
+→ 상세: `agent-flow.md` § 7
+
 ## ⚠️ CRITICAL: 에이전트 Spawn 규칙
 
-- Main Claude가 spawn하는 에이전트는 **orchestrator 하나뿐**이다. Main Claude가 직접 코드 구현, 파일 생성, git 명령 실행 또는 orchestrator의 작업을 수행하면 안 된다.
+- **정상 경로**에서 Main Claude가 spawn하는 에이전트는 **orchestrator 하나뿐**이다. Main Claude가 직접 코드 구현, 파일 생성, git 명령 실행 또는 orchestrator의 작업을 수행하면 안 된다.
+- **축퇴 모드**에서는 Main Claude가 자식 5종을 직접 spawn한다. 단 이 경우에도 **자식 역할을 스스로 대행하지는 않는다** — 반드시 각 에이전트를 spawn해야 한다.
 - 게이트 재개는 항상 **agentId** 기준(SendMessage/TaskStop 모두)으로 한다 — name 재사용에 의한 오배달을 방지한다.
 
 ## Arguments

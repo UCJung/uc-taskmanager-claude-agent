@@ -2,7 +2,24 @@
 
 에이전트 간 슬라이딩 윈도우 컨텍스트 전달 규칙.
 
-## 슬라이딩 윈도우
+---
+
+## 섹션 소비 매트릭스
+
+orchestrator가 자식 spawn 시 `<ref-cache>`에 담을 섹션을 결정하는 기준표 → `xml-schema.md` § 4.
+
+| § | 내용 | orch | spec | plan | build | verif | commit |
+|---|------|:----:|:----:|:----:|:-----:|:-----:|:------:|
+| 1 | 슬라이딩 윈도우 | ✅ | | | ✅ | ✅ | ✅ |
+| 2 | Context-Handoff 4개 필드 | ✅ | | | ✅ | ✅ | ✅ |
+| 3 | 파이프라인 단계별 입출력 | | | | ✅ | ✅ | ✅ |
+| 4 | TASK 간 의존성 전달 | ✅ | | | ✅ | | |
+| 5 | Orchestrator 디스패치 | ✅ | | | | | |
+| 6 | Committer 재시도 | ✅ | | | | | |
+
+---
+
+## § 1. 슬라이딩 윈도우
 
 | 단계 거리 | 상세 레벨 | 규칙 |
 |-----------|----------|------|
@@ -10,7 +27,7 @@
 | 2단계 전 | `SUMMARY` | `what` 필드만, 1-3줄 |
 | 3단계+ | `DROP` | 생략 |
 
-## Context-Handoff 4개 필드
+## § 2. Context-Handoff 4개 필드
 
 | 필드 | FULL | SUMMARY | 내용 |
 |------|:----:|:-------:|------|
@@ -19,7 +36,7 @@
 | `caution` | ✅ | ❌ | 주의사항, 조건부 완료 (1-3줄) |
 | `incomplete` | ✅ | ❌ | 미완료 항목 (1-2줄, 없으면 "None") |
 
-## 파이프라인 단계별 입출력
+## § 3. 파이프라인 단계별 입출력
 
 ### Builder
 
@@ -55,15 +72,15 @@
 1. builder 성공 여부 확인 (context-handoff 상태 확인)
 2. result.md 작성 + git commit
 
-출력: → `{REFERENCES_DIR}/file-content-schema.md` § 3 참조
+출력: `works/{WORK_ID}/TASK-XX_result.md` + task-result XML
 
-## TASK 간 의존성 전달
+## § 4. TASK 간 의존성 전달
 
 - 직전 의존 TASK: context-handoff **FULL** (4개 필드 모두)
 - 2단계 전: **SUMMARY** (what만)
 - 3단계+: **DROP**
 
-## Orchestrator 디스패치
+## § 5. Orchestrator 디스패치
 
 TASK DAG 실행 중 다음 자식(중첩 spawn)의 프롬프트를 구성하는 주체는 **orchestrator**다 — dispatch XML을 만들어 자식 spawn 프롬프트에 포함한다.
 
@@ -88,7 +105,7 @@ TASK DAG 실행 중 다음 자식(중첩 spawn)의 프롬프트를 구성하는 
 </dispatch>
 ```
 
-## Committer 재시도
+## § 6. Committer 재시도
 
 1. 실패 원인: 검증 FAIL / 변경 파일 없음
 2. builder에 재디스패치

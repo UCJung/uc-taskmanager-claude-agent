@@ -3,12 +3,14 @@
 > Main Claude는 **트리거와 게이트 경계**만 담당합니다.
 > 파이프라인 내부 진행(WORK 생성 → 설계 → TASK 실행 → 완료)은 **orchestrator**가 전담합니다.
 > Main Claude는 orchestrator 외의 다른 에이전트를 **직접 spawn하지 않습니다**.
+>
+> **예외 — 축퇴 모드(§7)**: 실행 환경이 중첩 spawn을 지원하지 않으면 Main Claude가 orchestrator 역할을 넘겨받아 자식을 직접 spawn합니다.
 
 ---
 
 ## 1. Main Claude 역할 (트리거 + 게이트 경계)
 
-Main Claude가 직접 수행하는 일은 다음 4가지뿐입니다.
+Main Claude가 직접 수행하는 일은 다음 5가지뿐입니다.
 
 1. **트리거 감지** — `[tag]` 메시지 또는 WORK 재개 요청(예: "WORK-01 계속실행", "resume WORK-01")을 감지.
 2. **orchestrator 1회 spawn** — 다음을 전달:
@@ -16,14 +18,15 @@ Main Claude가 직접 수행하는 일은 다음 4가지뿐입니다.
    - `mode=gated|auto` — 사용자 메시지에 "auto"/"자동으로"가 포함되면 `auto`, 그 외는 기본값 `gated`
    - 사용자 요청 원문 (재개 요청이면 대상 `WORK_ID`)
    - spawn 결과로 받는 **agentId를 보관**한다(재개 시 name이 아니라 **agentId**로 지정 — 이름 재사용 오배달 방지).
-3. **게이트 처리** — orchestrator가 `<gate type="stage">` 또는 `<gate type="decision">`을 반환하고 **yield(파킹)** 하면:
+3. **축퇴 신호 처리** — orchestrator가 `<capability-degraded>`를 반환하면 §7 축퇴 모드로 전환한다.
+4. **게이트 처리** — orchestrator가 `<gate type="stage">` 또는 `<gate type="decision">`을 반환하고 **yield(파킹)** 하면:
    1. 게이트 내용을 사용자에게 그대로 제시한다 — `type="stage"`는 완료 요약, `type="decision"`은 배경(`<context>`) + 선택지(`<options>`) + 권고안(`<recommended>`)(`AskUserQuestion` 등으로 선택 요청).
    2. 사용자의 승인 또는 선택을 기다린다.
    3. 응답을 받으면 **`SendMessage(agentId, 결정내용)`으로 컨텍스트를 유지한 채 재개**한다.
    4. `SendMessage`가 실패하면(파킹 핸들 유실 등) **폴백**: `works/{WORK_ID}/work_{WORK_ID}.log` + `DECISIONS.md`를 근거로 orchestrator를 `WORK_ID`와 함께 새로 spawn해 재개시킨다.
-4. **완료 처리** — orchestrator가 최종 WORK 요약을 반환하면 사용자에게 그대로 릴레이하고 **`TaskStop(agentId)`로 파킹 핸들을 해제**한다.
+5. **완료 처리** — orchestrator가 최종 WORK 요약을 반환하면 사용자에게 그대로 릴레이하고 **`TaskStop(agentId)`로 파킹 핸들을 해제**한다.
 
-`mode=auto`인 경우 orchestrator가 게이트/의사결정 정지 없이 1회 spawn으로 완주하므로, 3단계(게이트 처리)는 발생하지 않는다 — Main Claude는 spawn 후 최종 결과만 수신·릴레이하고 `TaskStop`으로 마무리한다.
+`mode=auto`인 경우 orchestrator가 게이트/의사결정 정지 없이 1회 spawn으로 완주하므로, 4단계(게이트 처리)는 발생하지 않는다 — Main Claude는 spawn 후 최종 결과만 수신·릴레이하고 `TaskStop`으로 마무리한다.
 
 ---
 
@@ -155,7 +158,7 @@ Main Claude는 재개 요청을 감지하면 대상 `WORK_ID`를 orchestrator에
 ## References Directory 전달 (필수)
 
 Main Claude는 orchestrator spawn 시(신규/재개 모두) references 디렉토리 경로를 전달해야 합니다.
-설치 방법(npm 또는 plugin)에 관계없이 orchestrator와 그 자식이 레퍼런스 파일을 찾을 수 있도록 합니다.
+설치 방법(npm 또는 plugin)에 관계없이 orchestrator가 레퍼런스 파일을 찾을 수 있도록 합니다. 이 경로를 받는 것은 orchestrator뿐이며, 자식에게는 전달되지 않습니다.
 
 **전달 방법:**
 - orchestrator spawn 프롬프트 상단에 `REFERENCES_DIR={absolute_path}` 추가
@@ -170,10 +173,48 @@ mode=gated
 [WORK] 사용자 요청 원문...
 ```
 
-REFERENCES_DIR를 사용할 수 없는 경우(예: plugin 없는 npm 설치), orchestrator는 `.claude/references/`를 폴백으로 사용합니다. orchestrator는 자신이 읽은 레퍼런스 내용을 `<ref-cache>`(`xml-schema.md` § 4)로 자식에게 재전달할 수 있습니다.
+REFERENCES_DIR를 사용할 수 없는 경우(예: plugin 없는 npm 설치), orchestrator는 `.claude/references/`를 폴백으로 사용합니다. orchestrator는 자신이 읽은 레퍼런스 중 각 자식에게 필요한 섹션만 잘라 `<ref-cache>`(`xml-schema.md` § 4)로 **반드시** 재전달합니다.
 
 ---
 
 ## 레퍼런스 로딩
 
-Main Claude는 레퍼런스 파일을 읽지 않으며 — `agent-flow.md`만 읽습니다. orchestrator와 그 자식들이 `{REFERENCES_DIR}/`에서 각자(또는 ref-cache로 전달받아) 필요한 레퍼런스 파일을 읽습니다.
+**정상 경로**: Main Claude는 레퍼런스 파일을 읽지 않으며 — `agent-flow.md`만 읽습니다. `{REFERENCES_DIR}/`의 레퍼런스 파일을 읽는 주체는 **orchestrator 하나뿐**입니다(기동 시 1회, 5개 파일).
+
+**축퇴 모드(§7)**: orchestrator 역할이 Main Claude로 넘어오므로 Main Claude가 그 5개 파일을 읽습니다. 읽는 주체만 바뀌고 횟수·범위는 동일합니다.
+
+어느 경우든 자식 에이전트(specifier/planner/builder/verifier/committer)는 디스크를 읽지 않고, 각 파일 상단의 **섹션 소비 매트릭스**를 기준으로 잘라 전달된 `<ref-cache>`만 사용합니다 → `xml-schema.md` § 4.
+
+---
+
+## 7. 축퇴 모드 — Main Claude가 orchestrator 역할 수행
+
+### 진입 조건
+
+orchestrator가 `<capability-degraded reason="no-agent-tool">`(→ `xml-schema.md` § 8)을 반환한 경우. 일부 CLI 버전·환경에서 서브에이전트에 `Agent` 도구가 주입되지 않아 중첩 spawn이 불가능할 때 발생합니다. orchestrator는 이때 아무 산출물도 만들지 않고 즉시 반환하므로, 디스크에는 아무것도 남아 있지 않은 상태입니다.
+
+### 처리 절차
+
+1. **사용자에게 1줄 알린다** — 예: "중첩 spawn을 지원하지 않는 환경입니다. Main Claude가 직접 오케스트레이션합니다." 승인을 기다리지 않고 그대로 진행합니다(`mode=auto`의 무정지 완주 원칙 유지).
+2. **`{REFERENCES_DIR}/orchestrator.md`와 레퍼런스 5종을 읽는다** — `file-content-schema.md`, `shared-prompt-sections.md`, `xml-schema.md`, `work-activity-log.md`, `context-policy.md`.
+3. **`orchestrator.md`의 절차를 그대로 수행한다.** 정본은 `orchestrator.md` 하나이며 축퇴용 별도 절차는 없습니다. STEP A~D, TASK DAG 스케줄링, 재시도, 컨텍스트 핸드오프, ref-cache 조립(STEP 1-1), 활동 로그 규칙이 **전부 동일하게** 적용됩니다.
+4. **활동 로그**에 `ORCHESTRATOR_START` 직후 `ORCHESTRATOR_DEGRADED — reason=no-agent-tool`을 1회 기록합니다.
+
+### 정상 경로와 다른 점 — 3가지뿐
+
+| 항목 | 정상 | 축퇴 |
+|------|------|------|
+| 자식 spawn depth | 2 (orchestrator가 spawn) | **1** (Main Claude가 직접 spawn) |
+| 게이트 처리 | orchestrator가 `<gate>` 반환 후 yield → Main Claude가 사용자에게 질의 | **Main Claude가 사용자에게 직접 질의** — `<gate>` XML·`SendMessage`·`TaskStop` 불필요 |
+| 레퍼런스를 읽는 주체 | orchestrator | **Main Claude** |
+
+그 외 산출물 형식, 로그 이벤트 체계, ref-cache 조립 규칙, 재개 판정은 모두 같습니다.
+
+### 금지 사항
+
+- **자식 역할을 인라인으로 대행하지 않는다.** 축퇴 모드에서도 specifier/planner/builder/verifier/committer는 반드시 별도 spawn한다. Main Claude가 직접 코드를 작성하거나 커밋하면 파이프라인의 역할 분리가 사라진다.
+- `<ref-cache>` 없이 자식을 spawn하지 않는다 — 정상 경로와 동일하게 필수다.
+
+### 재개
+
+축퇴 모드로 진행 중이던 WORK를 재개할 때도 동일하다. Main Claude는 `works/{WORK_ID}/work_{WORK_ID}.log`의 마지막 이벤트로 재개 지점을 판정한다(§2 "재개 규칙"). 로그에 `ORCHESTRATOR_DEGRADED`가 있으면 그 WORK는 축퇴 모드로 시작됐다는 뜻이지만, 재개 시점의 환경이 바뀌었을 수 있으므로 **매번 orchestrator를 먼저 spawn해 다시 판정**한다.

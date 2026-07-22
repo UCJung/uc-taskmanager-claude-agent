@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -20,7 +20,6 @@ export const REFERENCE_FILES = [
   'agent-flow.md',
   'context-policy.md',
   'file-content-schema.md',
-  'ref-cache-protocol.md',
   'shared-prompt-sections.md',
   'work-activity-log.md',
   'xml-schema.md',
@@ -32,6 +31,35 @@ export function getAgentsSrcDir() {
 
 export function getReferencesSrcDir() {
   return join(__dirname, '..', 'references');
+}
+
+/**
+ * Files and directories shipped by earlier versions that no longer exist.
+ * init and update copy files but never delete, so an upgraded install keeps
+ * stale copies unless they are pruned explicitly.
+ *
+ * Paths are relative to the install root (.claude/ or ~/.claude/).
+ */
+export const OBSOLETE_PATHS = [
+  'agents/scheduler.md',             // removed in 2.0.0 — orchestrator took over scheduling
+  'references/callback-protocol.md', // removed in 2.0.0 — external callback integration dropped
+  'references/ref-cache-protocol.md',// removed in 2.1.0 — protocol folded into xml-schema.md § 4
+  'skills/sdd-pipeline/references',  // removed in 1.5.0 — references moved to references/
+];
+
+/**
+ * Delete every OBSOLETE_PATHS entry that still exists under baseDir.
+ * Returns the paths actually removed.
+ */
+export function pruneObsolete(baseDir) {
+  const removed = [];
+  for (const relPath of OBSOLETE_PATHS) {
+    const target = join(baseDir, relPath);
+    if (!existsSync(target)) continue;
+    rmSync(target, { recursive: true, force: true });
+    removed.push(relPath);
+  }
+  return removed;
 }
 
 
