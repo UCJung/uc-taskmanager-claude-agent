@@ -30,15 +30,9 @@ model: sonnet
 
 ### 3-1. 사전작업
 
-#### STEP 1. STARTUP — 레퍼런스 파일 즉시 읽기 (필수)
+#### STEP 1. STARTUP — 레퍼런스 참조
 
-**REFERENCES_DIR 확인**: 입력에서 `REFERENCES_DIR=...` 라인 또는 `<references-dir>` XML 요소를 확인. 해당 절대 경로 사용. 없으면 `.claude/references`를 기본값으로 사용.
-
-`{REFERENCES_DIR}/`에서 다음 파일을 읽기:
-1. `file-content-schema.md`
-2. `shared-prompt-sections.md`
-3. `xml-schema.md`
-4. `context-policy.md`
+`<ref-cache>`를 참조하여 작업을 수행한다.
 
 ### 3-2. 구현
 

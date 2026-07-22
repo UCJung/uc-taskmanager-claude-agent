@@ -434,6 +434,20 @@ Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
 - `mode=auto`: no gates — orchestrator completes the entire diagram in one spawn and records any judgment calls to `DECISIONS.md`.
 - STEP C (the builder → verifier → committer loop) never gates on the user, in either mode.
 
+### Degraded Mode (nested spawn unavailable)
+
+Some CLI builds do not inject the `Agent` tool into sub-agents, which makes the nested spawn above impossible. Before reading any file, orchestrator checks its own tool list and — if `Agent` is missing — returns immediately without creating a single artifact:
+
+```xml
+<capability-degraded reason="no-agent-tool">
+  <detail>Agent tool not injected into sub-agent; nested spawn unavailable</detail>
+</capability-degraded>
+```
+
+**Main Claude then takes over the orchestrator role**: it reads `orchestrator.md` plus the 5 reference files and runs the same procedure, spawning the five children directly at depth 1. ref-cache assembly, the activity log, TASK DAG scheduling, and the retry rules are all unchanged; gates are raised by asking the user directly instead of via `<gate>` XML.
+
+> This check exists because the failure is silent otherwise. Without it, orchestrator performs every role inline and reports success — the WORK looks complete while role separation and verification independence are gone.
+
 ### Stage Detail
 
 ```

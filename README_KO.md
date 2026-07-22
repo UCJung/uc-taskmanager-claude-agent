@@ -436,6 +436,20 @@ Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
 - `mode=auto`: 게이트 없음 — orchestrator가 단일 spawn으로 전체 다이어그램을 완료하고, 판단이 필요했던 부분은 `DECISIONS.md`에 기록합니다.
 - STEP C(builder → verifier → committer 루프)는 어느 모드에서도 사용자 게이트를 걸지 않습니다.
 
+### 축퇴 모드 (중첩 spawn 미지원 환경)
+
+일부 CLI 버전은 서브에이전트에 `Agent` 도구를 주입하지 않아 위 중첩 spawn이 불가능합니다. orchestrator는 어떤 파일을 읽기도 전에 자신의 도구 목록을 확인하고, `Agent`가 없으면 산출물을 하나도 만들지 않은 채 즉시 반환합니다:
+
+```xml
+<capability-degraded reason="no-agent-tool">
+  <detail>서브에이전트에 Agent 도구가 주입되지 않아 중첩 spawn 불가</detail>
+</capability-degraded>
+```
+
+이때 **Main Claude가 orchestrator 역할을 넘겨받습니다**. `orchestrator.md`와 레퍼런스 5종을 읽고 동일한 절차를 수행하며, 자식 5종을 depth 1로 직접 spawn합니다. ref-cache 조립·활동 로그·TASK DAG 스케줄링·재시도 규칙은 그대로이고, 게이트만 `<gate>` XML 대신 사용자에게 직접 질의합니다.
+
+> 이 판정이 필요한 이유는 그렇지 않을 때 실패가 조용히 지나가기 때문입니다. 판정이 없으면 orchestrator가 모든 역할을 인라인으로 수행하고 성공을 보고합니다 — WORK는 완료된 것처럼 보이지만 역할 분리와 검증 독립성은 사라진 상태입니다.
+
 ### 단계 상세
 
 ```

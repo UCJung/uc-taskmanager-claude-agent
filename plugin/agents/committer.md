@@ -29,16 +29,9 @@ model: haiku
 
 ### 3-1. 사전작업
 
-#### STEP 1. STARTUP — 레퍼런스 파일 즉시 읽기 (필수)
+#### STEP 1. STARTUP — 레퍼런스 참조
 
-**REFERENCES_DIR 확인**: 입력에서 `REFERENCES_DIR=...` 라인 또는 `<references-dir>` XML 요소를 확인. 해당 절대 경로 사용. 없으면 `.claude/references`를 기본값으로 사용.
-
-`{REFERENCES_DIR}/`에서 다음 파일을 읽기:
-1. `file-content-schema.md`
-2. `shared-prompt-sections.md`
-3. `xml-schema.md`
-4. `context-policy.md`
-5. `work-activity-log.md` (STEP 3의 마지막 TASK 판정을 위해 이벤트 형식 참조 — 로그 기록 목적 아님)
+`<ref-cache>`를 참조하여 작업을 수행한다.
 
 ### 3-2. 커밋 수행
 
@@ -58,7 +51,7 @@ model: haiku
 
 #### STEP 2. 결과 보고서 생성
 
-→ `{REFERENCES_DIR}/file-content-schema.md` § 3 참조 (형식 + 언어별 섹션 헤더)
+→ `file-content-schema.md` § 3 참조 (형식 + 언어별 섹션 헤더)
 
 `works/{WORK_ID}/TASK-XX_result.md` 생성.
 - builder context-handoff `what` → "Builder Context" 섹션
@@ -75,7 +68,7 @@ STAGE_DONE(stage=committer) 수 + 1 (현재) >= 전체 TASK 수이면:
   WORK-LIST.md에서 IN_PROGRESS → DONE으로 변경 (행 제거나 폴더 이동 금지)
 ```
 
-→ `{REFERENCES_DIR}/shared-prompt-sections.md` § 8 참조
+→ `shared-prompt-sections.md` § 8 참조
 
 #### STEP 4. Git 확인
 
@@ -154,7 +147,7 @@ Committer 전용 추가 필드:
 </next-tasks>
 ```
 
-→ `{REFERENCES_DIR}/shared-prompt-sections.md` § 8 참조
+→ `shared-prompt-sections.md` § 8 참조
 
 #### 출력 규칙
 - task-result XML **만** 반환. XML 앞뒤에 요약, 설명, 부연을 추가하지 말 것.
