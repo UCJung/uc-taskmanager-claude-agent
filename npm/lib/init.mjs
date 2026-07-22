@@ -1,10 +1,7 @@
-import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
-import { AGENT_FILES, REFERENCE_FILES, getAgentsSrcDir, getReferencesSrcDir, REQUIRED_PERMISSIONS, pruneObsolete } from './constants.mjs';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { AGENT_FILES, REFERENCE_FILES, getAgentsSrcDir, getReferencesSrcDir, REQUIRED_PERMISSIONS, pruneObsolete, copyPluginResources } from './constants.mjs';
 
 import { createInterface } from 'node:readline';
 
@@ -35,41 +32,6 @@ function copyReferences(destDir) {
     copyFileSync(src, join(destDir, file));
     count++;
   }
-  return count;
-}
-
-function copyDirRecursive(src, dest) {
-  mkdirSync(dest, { recursive: true });
-  let count = 0;
-  for (const entry of readdirSync(src)) {
-    const srcPath = join(src, entry);
-    const destPath = join(dest, entry);
-    if (statSync(srcPath).isDirectory()) {
-      count += copyDirRecursive(srcPath, destPath);
-    } else {
-      copyFileSync(srcPath, destPath);
-      count++;
-    }
-  }
-  return count;
-}
-
-function copyPluginResources(destBaseDir) {
-  const pkgRoot = join(__dirname, '..');
-  let count = 0;
-
-  // .claude-plugin/
-  const pluginSrc = join(pkgRoot, '.claude-plugin');
-  if (existsSync(pluginSrc)) {
-    count += copyDirRecursive(pluginSrc, join(destBaseDir, '.claude-plugin'));
-  }
-
-  // skills/
-  const skillsSrc = join(pkgRoot, 'skills');
-  if (existsSync(skillsSrc)) {
-    count += copyDirRecursive(skillsSrc, join(destBaseDir, 'skills'));
-  }
-
   return count;
 }
 

@@ -35,8 +35,10 @@ README 업데이트 범위:
 사용자가 npm 버전업을 요청하면 다음을 추가로 수행한다:
 
 1. develop/ 동기화 (Push 절차 1단계와 동일)
-3. `npm version patch|minor|major` 실행
-4. `npm publish`
+2. `npm version patch|minor|major` 실행
+3. `npm publish`
+4. 배포 검증 — 격리 환경에서 `uctm init` / `uctm update` 확인
+   → [docs/guide_release-verification.md](docs/guide_release-verification.md)
 
 ## 레퍼런스 수정 절차 (ref-cache 연동 — 필수)
 

@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Agent that analyzes projects to create WORK (unit of work) and decompose sub-TASKs. Reads CLAUDE.md, README, and source code to create WORK and derive sub-TASKs.
-tools: Read, Glob, Grep, Bash, mcp__serena__*, mcp__sequential-thinking__sequentialthinking
+tools: Read, Write, Edit, Glob, Grep, Bash, mcp__serena__*, mcp__sequential-thinking__sequentialthinking
 model: opus
 ---
 
