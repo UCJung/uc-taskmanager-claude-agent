@@ -183,7 +183,7 @@ uc-taskmanager/                     ← 별도 레포
 | 에이전트 | 모델 | 도구 권한 | 역할 | 쓰기 권한 |
 |---------|------|----------|------|-----------|
 | **router** | **Opus** | Read, Write, Edit, Bash, Glob, Grep, **Task**, **mcp__serena__***, **mcp__sequential-thinking__*** | 요청 분석, [] 태그 감지, execution-mode 판정, WORK 라우팅 | WORK-LIST.md |
-| **planner** | **Opus** | Read, Glob, Grep, Bash, **mcp__serena__***, **mcp__sequential-thinking__*** | WORK 분해, TASK 파일 + progress 템플릿 생성 | works/WORK-NN/ 전체 |
+| **planner** | **Opus** | Read, Write, Edit, Glob, Grep, Bash, **mcp__serena__***, **mcp__sequential-thinking__*** | WORK 분해, TASK 파일 + progress 템플릿 생성 | works/WORK-NN/ 전체 |
 | **scheduler** | Haiku | Read, Write, Edit, Bash, Glob, Grep, **Task** | DAG 관리, 콜백 보고, 오케스트레이션 | PROGRESS.md |
 | **builder** | Sonnet | Read, Write, Edit, Bash, Glob, Grep, **mcp__serena__*** | 코드 구현, 빌드/린트 자가검증 | 소스코드 전체 + progress.md |
 | **verifier** | Haiku | Read, Bash, Glob, Grep | 7단계 검증 (빌드/린트/테스트/인수조건) | **없음** (읽기 전용) |
