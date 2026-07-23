@@ -70,6 +70,29 @@ auto
 
 ---
 
+## D-05
+> 시각: 2026-07-23T13:04:53Z
+> 단계: commit
+> 상태: RESOLVED
+
+### 배경
+TASK-06 빌더가 `develop/references/file-content-schema.md` § 4(DECISIONS.md 템플릿)의 `단계:` enum `{specifier|planner|builder|verifier|committer}`을 TASK-06 Scope(매트릭스+§3+§5) 밖으로 보고 미변경했다. D-04에서 stage 값 집합이 `.../commit`로 바뀌어 `committer`는 stale하며, TASK-06 자체 Verify(`grep committer file-content-schema.md`)와 TASK-09 전역 감사가 이를 잔존으로 검출한다.
+
+### 선택지
+1. TASK-06을 확장해 § 4 enum `committer`→`commit`으로 정합화(WORK 의도 FR-04/NFR-02와 일치)
+2. 현 상태 유지, TASK-09 감사에서 별도 처리
+
+### 권고안
+option 1 — 정본(develop/) 편집 단계에서 원천 수정하는 것이 미러(TASK-09) 전에 정합을 보장.
+
+### 확정값
+option 1. TASK-06 빌더에 § 4 enum `committer`→`commit` 수정을 추가 지시(경미한 vocabulary 정합, 게이트 불요).
+
+### 결정주체
+auto
+
+---
+
 ## D-04
 > 시각: 2026-07-23T01:47:00Z
 > 단계: planner

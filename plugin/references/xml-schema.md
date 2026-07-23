@@ -8,16 +8,16 @@ uc-taskmanager 에이전트용 XML 통신 형식 정의.
 
 orchestrator가 자식 spawn 시 `<ref-cache>`에 담을 섹션을 결정하는 기준표 → § 4.
 
-| § | 내용 | orch | spec | plan | build | verif | commit |
-|---|------|:----:|:----:|:----:|:-----:|:-----:|:------:|
-| 1 | Dispatch 형식 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 2 | Task Result 형식 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 3 | Context-Handoff 요소 | ✅ | | | ✅ | ✅ | ✅ |
-| 4 | ref-cache 프로토콜 | ✅ | | | | | |
-| 5 | Gate 요소 | ✅ | | | | | |
-| 6 | needs-decision 요소 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 7 | decision 요소 | ✅ | | | | | |
-| 8 | capability-degraded 요소 | ✅ | | | | | |
+| § | 내용 | orch | spec | plan | build | verif |
+|---|------|:----:|:----:|:----:|:-----:|:-----:|
+| 1 | Dispatch 형식 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 2 | Task Result 형식 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 3 | Context-Handoff 요소 | ✅ | | | ✅ | ✅ |
+| 4 | ref-cache 프로토콜 | ✅ | | | | |
+| 5 | Gate 요소 | ✅ | | | | |
+| 6 | needs-decision 요소 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 7 | decision 요소 | ✅ | | | | |
+| 8 | capability-degraded 요소 | ✅ | | | | |
 
 > § 4·§ 5·§ 7·§ 8은 **orchestrator 전용**이다. ref-cache 생성(§ 4), 게이트 발행(§ 5), 결정 확정(§ 7)은 모두 orchestrator의 책임이며 자식 에이전트는 수행하지 않는다. 자식에게 필요한 ref-cache 소비 규칙은 각 에이전트 정의의 STARTUP 절에 인라인으로 기술되어 있다.
 
@@ -53,7 +53,7 @@ orchestrator가 자식 spawn 시 `<ref-cache>`에 담을 섹션을 결정하는 
 
 | 속성 | 값 |
 |------|-----|
-| `to` | builder, verifier, committer, planner, specifier |
+| `to` | builder, verifier, planner, specifier |
 | `task` | `TASK-NN` — WORK 접두사 포함 금지 |
 
 > `<ref-cache>`는 **필수**다. orchestrator는 이것 없이 자식을 spawn하지 않는다 — 자식이 레퍼런스를 디스크에서 다시 읽게 되어 ref-cache가 무력화된다.
@@ -140,7 +140,7 @@ orchestrator가 자식 spawn 시 `<ref-cache>`에 담을 섹션을 결정하는 
 ### 조립 절차 (orchestrator)
 
 ```
-1. 대상 자식(specifier/planner/builder/verifier/committer)을 확정한다.
+1. 대상 자식(specifier/planner/builder/verifier)을 확정한다.
 2. 읽어둔 레퍼런스 5종 각각의 "섹션 소비 매트릭스" 표에서 해당 자식 열이 ✅인 행을 모은다.
    표를 끝까지 훑어 ✅ 행을 하나도 빠뜨리지 않는다.
 3. ✅ 행이 하나도 없는 파일은 <ref> 자체를 생성하지 않는다.
@@ -197,7 +197,7 @@ orchestrator가 자식 spawn 시 `<ref-cache>`에 담을 섹션을 결정하는 
 |------|-----|
 | `type` | `stage`(단계 완료 승인 요청) / `decision`(선택 필요) |
 | `work` | `WORK_ID` |
-| `stage` | 현재 정지된 단계: `specifier`/`planner`/`builder`/`verifier`/`committer` |
+| `stage` | 현재 정지된 단계: `specifier`/`planner`/`builder`/`verifier` |
 
 - `type="decision"`은 `<context>`(배경 — 왜 결정이 필요한가), `<options>`(선택지 목록), `<recommended>`(권고안)을 하위 요소로 반드시 포함한다.
 - Main Claude는 `<gate>` 수신 시 사용자에게 승인/선택을 구하고, 결과를 `<decision>`(§ 7)으로 orchestrator에 재전달하여 재개시킨다.

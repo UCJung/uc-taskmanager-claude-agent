@@ -49,13 +49,13 @@ Main Claude가 관여하지 않는 orchestrator 내부 진행이다. 상세 절�
 ### STEP C. TASK DAG 실행 — 게이트 없음
 
 - `work_{WORK}.log` + `PLAN.md`로 DAG를 해석해 READY TASK를 오름차순으로 판정한다. 복수 READY면 builder를 병렬로 중첩 spawn한다.
-- TASK별로 builder → verifier → committer를 순차 spawn한다. 이 단계는 사용자 승인 대상이 아니므로 고정 게이트가 없다.
-- verifier/committer가 FAIL을 반환하면 builder에 최대 2회 재디스패치(총 3회 시도)한다. 3회 모두 실패하면 자식이 `<needs-decision>`으로 orchestrator에 상향하고, `mode=gated`면 게이트로 승격, `mode=auto`면 권고안 자동결정 후 계속한다.
+- TASK별로 builder → verifier를 순차 spawn 후 orchestrator가 인라인 커밋(result.md 작성 + WORK-LIST 갱신 + git commit)을 수행한다. 이 단계는 사용자 승인 대상이 아니므로 고정 게이트가 없다.
+- verifier가 FAIL을 반환하면 builder에 최대 2회 재디스패치(총 3회 시도)한다. 3회 모두 실패하면 자식이 `<needs-decision>`으로 orchestrator에 상향하고, `mode=gated`면 게이트로 승격, `mode=auto`면 권고안 자동결정 후 계속한다.
 
 ### STEP D. 로그 일괄 기록
 
 - 활동 로그를 기록하는 주체는 **orchestrator뿐**이다.
-- 이벤트 순서: `ORCHESTRATOR_START` → (`STAGE_START` → [`GATE_WAIT`/`DECISION_WAIT` → `DECISION`] → `STAGE_DONE`)를 단계마다 반복 → `ORCHESTRATOR_DONE`.
+- 이벤트 순서: `ORCHESTRATOR_START` → (`STAGE_START` → [`GATE_WAIT`/`DECISION_WAIT` → `DECISION`] → `STAGE_DONE`)를 단계마다 반복 → `ORCHESTRATOR_DONE`. 인라인 커밋 완료는 `STAGE_START` 없이 `STAGE_DONE — stage=commit task=TASK-NN`만 기록되는 비-spawn 이벤트다.
 
 ### 재개 규칙 (마지막 로그 이벤트 기준)
 
@@ -66,6 +66,7 @@ Main Claude가 관여하지 않는 orchestrator 내부 진행이다. 상세 절�
 | `GATE_WAIT — stage=X` | 게이트 미승인 | 자식 재실행 없이 디스크 산출물 재사용, **동일 게이트를 재제시** |
 | `DECISION_WAIT — stage=X` | 결정 미확정 | `DECISIONS.md`의 `상태: PENDING` 항목을 동일 배경/선택지/권고안으로 재제시 |
 | `DECISION — ... by=...` | 결정 확정, 후속 `STAGE_DONE` 없음 | 결정을 반영해 해당 단계 이어서 진행 |
+| `STAGE_DONE — stage=verifier task=TASK-NN`이 있고 해당 TASK의 `STAGE_DONE — stage=commit task=TASK-NN`이 없음 | 인라인 커밋 미완료(비-spawn 단계) | 자식 재실행 없이 인라인 커밋 단계부터 재개(멱등 처리) |
 | `STAGE_DONE — stage=X` | 해당 단계 완료(게이트 통과됨) | 다음 단계로 진행 |
 | `ORCHESTRATOR_DONE` | WORK 이미 완료 | 재개 불필요 — 완료 상태 보고 |
 
@@ -123,12 +124,12 @@ orchestrator가 자식 프롬프트를 구성할 때 이전 단계 결과를 다
 
 ## 4. 모드/스폰 수
 
-| Main → Orchestrator | Orchestrator → Specifier | → Planner | → Builder | → Verifier | → Committer | 합계 |
-|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| 1 | 1 | 1 | N | N | N | **3 + 3N** |
+| Main → Orchestrator | Orchestrator → Specifier | → Planner | → Builder | → Verifier | 합계 |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| 1 | 1 | 1 | N | N | **3 + 2N** |
 
 - `gated`/`auto` 여부는 spawn 수에 영향을 주지 않는다 — 게이트 정지 발생 여부만 다르다(§3).
-- 위 표는 orchestrator 내부 자식 spawn만 집계한다. Main Claude가 spawn하는 대상은 오직 orchestrator 1개다.
+- 위 표는 orchestrator 내부 자식 spawn만 집계한다. Main Claude가 spawn하는 대상은 오직 orchestrator 1개다. 인라인 커밋(result.md 작성 + WORK-LIST 갱신 + git commit)은 orchestrator가 자식 spawn 없이 직접 수행하므로 집계에 포함되지 않는다.
 
 ---
 
@@ -146,12 +147,11 @@ Main Claude는 재개 요청을 감지하면 대상 `WORK_ID`를 orchestrator에
 
 | 에이전트 | 역할 | 모델 |
 |---|---|---|
-| orchestrator | 파이프라인 전체 조정 + TASK DAG 스케줄링 + 게이트/의사결정 중재 + 로그 일괄 기록 | opus |
+| orchestrator | 파이프라인 전체 조정 + TASK DAG 스케줄링 + 게이트/의사결정 중재 + 로그 일괄 기록 + 인라인 커밋(result.md 작성 + WORK-LIST 갱신 + git commit) | opus |
 | specifier | 요구사항 분석 | opus |
 | planner | 실행계획 수립 + TASK 분해 | opus |
 | builder | 코드 구현 | sonnet |
 | verifier | 빌드/린트/테스트 검증 | haiku |
-| committer | 결과 보고서 + git commit | haiku |
 
 ---
 
@@ -183,7 +183,7 @@ REFERENCES_DIR를 사용할 수 없는 경우(예: plugin 없는 npm 설치), or
 
 **축퇴 모드(§7)**: orchestrator 역할이 Main Claude로 넘어오므로 Main Claude가 그 5개 파일을 읽습니다. 읽는 주체만 바뀌고 횟수·범위는 동일합니다.
 
-어느 경우든 자식 에이전트(specifier/planner/builder/verifier/committer)는 디스크를 읽지 않고, 각 파일 상단의 **섹션 소비 매트릭스**를 기준으로 잘라 전달된 `<ref-cache>`만 사용합니다 → `xml-schema.md` § 4.
+어느 경우든 자식 에이전트(specifier/planner/builder/verifier)는 디스크를 읽지 않고, 각 파일 상단의 **섹션 소비 매트릭스**를 기준으로 잘라 전달된 `<ref-cache>`만 사용합니다 → `xml-schema.md` § 4.
 
 ---
 
@@ -212,7 +212,7 @@ orchestrator가 `<capability-degraded reason="no-agent-tool">`(→ `xml-schema.m
 
 ### 금지 사항
 
-- **자식 역할을 인라인으로 대행하지 않는다.** 축퇴 모드에서도 specifier/planner/builder/verifier/committer는 반드시 별도 spawn한다. Main Claude가 직접 코드를 작성하거나 커밋하면 파이프라인의 역할 분리가 사라진다.
+- **자식 역할을 인라인으로 대행하지 않는다.** 축퇴 모드에서도 specifier/planner/builder/verifier는 반드시 별도 spawn한다. Main Claude가 직접 코드를 작성하면 파이프라인의 역할 분리가 사라진다. 단, 인라인 커밋(result.md 작성 + WORK-LIST 갱신 + git commit)은 정상 경로와 동일하게 orchestrator 역할을 넘겨받은 Main Claude가 자식 spawn 없이 직접 수행한다.
 - `<ref-cache>` 없이 자식을 spawn하지 않는다 — 정상 경로와 동일하게 필수다.
 
 ### 재개

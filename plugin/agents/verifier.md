@@ -51,7 +51,7 @@ Exit ≠ 0 → CRITICAL FAIL.
 
 → 린트 명령: `shared-prompt-sections.md` § 2 참조
 
-실패 시: WARN (CRITICAL 아님). 명령이 없으면: N/A.
+실패 시: **FAIL (게이트)**. 명령이 없으면: N/A.
 
 #### STEP 4. 테스트
 
