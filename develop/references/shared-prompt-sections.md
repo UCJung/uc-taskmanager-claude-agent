@@ -57,10 +57,10 @@ fi
 # 린트 자동 감지 (스크립트가 있을 때만 실행)
 if [ -f "package.json" ]; then
   if node -e "const p=JSON.parse(require('fs').readFileSync('package.json','utf8')); process.exit(p.scripts&&p.scripts.lint?0:1)" 2>/dev/null; then
-    npm run lint 2>&1 || bun run lint 2>&1 || true
+    npm run lint 2>&1 || bun run lint 2>&1
   fi
 elif [ -f "pyproject.toml" ]; then
-  ruff check . 2>&1 || python -m flake8 . 2>&1 || true
+  ruff check . 2>&1 || python -m flake8 . 2>&1
 fi
 ```
 
