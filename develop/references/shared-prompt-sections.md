@@ -8,18 +8,18 @@
 
 orchestrator가 자식 spawn 시 `<ref-cache>`에 담을 섹션을 결정하는 기준표 → `xml-schema.md` § 4.
 
-| § | 내용 | orch | spec | plan | build | verif | commit |
-|---|------|:----:|:----:|:----:|:-----:|:-----:|:------:|
-| 1 | 출력 언어 규칙 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 2 | 빌드 및 린트 명령 | | | | ✅ | ✅ | |
-| 3 | WORK 및 TASK 파일 경로 패턴 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 4 | 파일 시스템 Discovery 스크립트 | ✅ | | | | | |
-| 5 | Task Result XML 형식 | | | | ✅ | ✅ | ✅ |
-| 6 | 자동결정 기록 관례 | ✅ | | | | | |
-| 7 | PLAN.md 필수 메타 정보 | | | ✅ | | | |
-| 8 | WORK-LIST.md 업데이트 규칙 | | ✅ | | | | ✅ |
-| 9 | 로케일 감지 | ✅ | ✅ | | | | |
-| 12 | Bash 명령 규칙 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| § | 내용 | orch | spec | plan | build | verif |
+|---|------|:----:|:----:|:----:|:-----:|:-----:|
+| 1 | 출력 언어 규칙 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 2 | 빌드 및 린트 명령 | | | | ✅ | ✅ |
+| 3 | WORK 및 TASK 파일 경로 패턴 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 4 | 파일 시스템 Discovery 스크립트 | ✅ | | | | |
+| 5 | Task Result XML 형식 | | | | ✅ | ✅ |
+| 6 | 자동결정 기록 관례 | ✅ | | | | |
+| 7 | PLAN.md 필수 메타 정보 | | | ✅ | | |
+| 8 | WORK-LIST.md 업데이트 규칙 | ✅ | ✅ | | | |
+| 9 | 로케일 감지 | ✅ | ✅ | | | |
+| 12 | Bash 명령 규칙 | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 > § 10·§ 11은 존재하지 않는다(과거 삭제분). 기존 상호참조 호환을 위해 번호를 재사용하지 않는다.
 
@@ -177,13 +177,13 @@ LAST_WORK_ID: WORK-XX
 | 상태 | 의미 | 트리거 |
 |------|------|--------|
 | `IN_PROGRESS` | WORK 실행 중 | specifier가 WORK 생성 |
-| `DONE` | 모든 TASK 완료, 리뷰/push 대기 | committer가 마지막 TASK 완료 |
+| `DONE` | 모든 TASK 완료, 리뷰/push 대기 | orchestrator가 마지막 TASK 인라인 커밋 시 |
 | `COMPLETED` | _COMPLETED/로 아카이빙됨 | push 머지 (Main Claude가 모든 DONE 일괄 처리) |
 
 규칙:
 - `LAST_WORK_ID` 헤더는 지금까지 생성된 가장 높은 WORK ID를 추적
 - **specifier**: WORK 생성 시 IN_PROGRESS 행 추가 + `LAST_WORK_ID` 업데이트
-- **committer**: 마지막 TASK 완료 시 `IN_PROGRESS` → `DONE`으로 변경하고 완료일 기입 (폴더 이동이나 행 제거 금지)
+- **orchestrator**(인라인 커밋): 마지막 TASK 완료 시 `IN_PROGRESS` → `DONE`으로 변경하고 완료일 기입 (폴더 이동이나 행 제거 금지)
 - **Main Claude** (push 절차): 모든 DONE WORK를 `works/_COMPLETED/`로 이동, WORK-LIST.md에서 해당 행 제거
 
 ---
