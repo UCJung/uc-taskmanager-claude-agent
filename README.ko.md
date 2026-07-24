@@ -162,6 +162,66 @@ verifier는 read-only로 **독립 재실행**해 빌드·린트·테스트·인�
 
 ---
 
+## 🧩 Agent 구성 파일
+
+`uctm init`은 `.claude/` 아래에 다음을 설치합니다:
+
+```
+.claude/
+├── agents/       # 파이프라인 에이전트 정의
+│   ├── orchestrator.md
+│   ├── specifier.md
+│   ├── planner.md
+│   ├── builder.md
+│   ├── verifier.md
+│   └── committer.md          # deprecated 스텁 (커밋은 orchestrator 인라인 수행)
+├── references/   # 공용 규칙·스키마 문서 — orchestrator가 1회만 읽음
+│   ├── agent-flow.md
+│   ├── context-policy.md
+│   ├── file-content-schema.md
+│   ├── shared-prompt-sections.md
+│   ├── work-activity-log.md
+│   └── xml-schema.md
+└── skills/       # 사용자 트리거용 스킬
+    ├── uctm-init/
+    ├── work-pipeline/
+    ├── work-status/
+    └── sdd-pipeline/
+```
+
+**`agents/` — 파이프라인 에이전트 정의**
+
+| 파일 | 설명 |
+|------|------|
+| `orchestrator.md` | 중첩 spawn으로 전체 파이프라인 자율 조정 — 스케줄링·게이트·인라인 커밋 담당 |
+| `specifier.md` | 요구사항 명세 생성 (What) |
+| `planner.md` | 요구사항을 설계 + TASK DAG로 변환 (How) |
+| `builder.md` | TASK 코드 구현 + 빌드 셀프체크 |
+| `verifier.md` | 독립 read-only 검증 (빌드·린트·테스트·인수기준) |
+| `committer.md` | deprecated 스텁 — 커밋은 orchestrator 인라인 수행, 패키징 안정성 위해 유지 |
+
+**`references/` — 공용 규칙·스키마 문서** (orchestrator가 1회 읽어 ref-cache로 자식에게 섹션 배분)
+
+| 파일 | 설명 |
+|------|------|
+| `agent-flow.md` | Main Claude 역할 가이드 — 트리거·게이트 경계, 축퇴 모드 |
+| `context-policy.md` | 슬라이딩 윈도우 컨텍스트 핸드오프 규칙 + 재시도 정책 |
+| `file-content-schema.md` | 산출물 파일 형식·이름 규칙의 단일 정의 소스 |
+| `shared-prompt-sections.md` | 공통 재사용 프롬프트 섹션 (출력 언어, 상태 판정, WORK-LIST, Bash 규칙) |
+| `work-activity-log.md` | 멱등 재개를 구동하는 활동 로그 이벤트 규칙 |
+| `xml-schema.md` | 에이전트 간 XML 프로토콜 (ref-cache, gate, needs-decision, task-result) |
+
+**`skills/` — 사용자 트리거용 스킬**
+
+| 파일 | 설명 |
+|------|------|
+| `uctm-init/` | 프로젝트에 uctm 초기화 (`works/` 생성, Bash 권한 구성) |
+| `work-pipeline/` | WORK-PIPELINE 트리거 (오케스트레이션 시작) |
+| `work-status/` | WORK 상태 조회 (read-only) |
+| `sdd-pipeline/` | 파이프라인 에이전트 내부 참조 문서 묶음 (사용자 대면 아님) |
+
+---
+
 ## 📄 라이선스
 
 GPL-3.0 · [UCJung](https://github.com/UCJung/uc-taskmanager-claude-agent)
