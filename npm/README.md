@@ -43,6 +43,40 @@ Every artifact is preserved under `works/WORK-NN/` — the requirement spec (`Re
 
 ---
 
+## 📂 Artifacts
+
+The pipeline automatically generates a documented paper trail for every WORK — no manual note-taking required.
+
+**Folder structure**
+
+```
+works/
+├── WORK-LIST.md              # index & status of all WORKs
+├── WORK-NN/                  # one folder per WORK
+│   ├── Requirement.md        # requirement spec
+│   ├── PLAN.md               # implementation plan
+│   ├── TASK-01.md            # per-TASK spec (DAG node)
+│   ├── TASK-01_result.md     # per-TASK result
+│   ├── ...
+│   ├── DECISIONS.md          # decision log
+│   └── work_WORK-NN.log      # activity log (resume source)
+└── _COMPLETED/               # archive of finished WORKs
+```
+
+**Artifacts produced per stage**
+
+| Stage | Naming | Description |
+|-------|--------|-------------|
+| specifier | `Requirement.md` | Structured requirement spec (the What) |
+| planner | `PLAN.md` | WORK-level implementation plan |
+| planner | `TASK-NN.md` | Per-TASK spec — a node in the TASK DAG |
+| builder → verifier → commit | `TASK-NN_result.md` | Per-TASK result, written inline by the orchestrator after verifier PASS |
+| orchestrator | `DECISIONS.md` | Auto/user decision log with rationale |
+| orchestrator | `work_WORK-NN.log` | Activity log driving idempotent resume |
+| orchestrator | `WORK-LIST.md` | Global WORK list & status (IN_PROGRESS → DONE) |
+
+---
+
 ## 🚀 Installation & Usage
 
 ### Install
@@ -122,6 +156,9 @@ All progress is written to the activity log (`work_WORK-NN.log`), so an interrup
 
 **7. Cost optimization via model tiering**
 Heavy reasoning (requirements, design) runs on opus, implementation on sonnet, and verification on haiku — balancing **quality against cost**.
+
+**8. Automatic artifact generation**
+Every stage writes its output to disk — requirement spec, plan, per-TASK results, decision log, and activity log — giving you a complete, reviewable paper trail without any manual note-taking. See [Artifacts](#-artifacts).
 
 ---
 

@@ -43,6 +43,40 @@ WORK 완료 보고
 
 ---
 
+## 📂 산출물
+
+파이프라인은 모든 WORK에 대해 문서화된 기록을 **자동 생성**합니다 — 수기 메모가 필요 없습니다.
+
+**폴더 구조**
+
+```
+works/
+├── WORK-LIST.md              # 전체 WORK 목록·상태 인덱스
+├── WORK-NN/                  # WORK 1건당 폴더 1개
+│   ├── Requirement.md        # 요구사항 명세
+│   ├── PLAN.md               # 구현 계획
+│   ├── TASK-01.md            # TASK별 명세 (DAG 노드)
+│   ├── TASK-01_result.md     # TASK별 수행 결과
+│   ├── ...
+│   ├── DECISIONS.md          # 의사결정 기록
+│   └── work_WORK-NN.log      # 활동 로그 (재개 기준)
+└── _COMPLETED/               # 완료된 WORK 아카이브
+```
+
+**작업 단계별 생성 산출물**
+
+| 단계 | Naming | 설명 |
+|------|--------|------|
+| specifier | `Requirement.md` | 구조화된 요구사항 명세 (What) |
+| planner | `PLAN.md` | WORK 단위 구현 계획 |
+| planner | `TASK-NN.md` | TASK별 명세 — TASK DAG의 노드 |
+| builder → verifier → 커밋 | `TASK-NN_result.md` | TASK별 결과 — verifier PASS 후 orchestrator가 인라인 작성 |
+| orchestrator | `DECISIONS.md` | 자동/사용자 의사결정 기록(근거 포함) |
+| orchestrator | `work_WORK-NN.log` | 멱등 재개를 구동하는 활동 로그 |
+| orchestrator | `WORK-LIST.md` | 전역 WORK 목록·상태 (IN_PROGRESS → DONE) |
+
+---
+
 ## 🚀 설치 및 사용방법
 
 ### 설치
@@ -122,6 +156,9 @@ verifier는 read-only로 **독립 재실행**해 빌드·린트·테스트·인�
 
 **7. 모델 티어링으로 비용 최적화**
 무거운 추론(요구분석·설계)은 opus, 구현은 sonnet, 검증은 haiku로 배분해 **품질과 비용의 균형**을 맞춥니다.
+
+**8. 작업 산출물 자동 생성**
+모든 단계가 산출물을 디스크에 기록합니다 — 요구명세·계획·TASK별 결과·의사결정 기록·활동 로그까지, 수기 메모 없이 완결된 검토 가능한 기록이 남습니다. [산출물](#-산출물) 참조.
 
 ---
 
