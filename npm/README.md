@@ -103,7 +103,7 @@ WORK-31 Development Approval Request
 ```
 * Per-TASK: build → verify → commit repeats automatically for each TASK, all inside the same nested orchestrator run.
 ```
-● TASK-05 committed. Updating PROGRESS.md and finalizing WORK-31.
+● TASK-05 committed. Writing result.md and finalizing WORK-31.
 ```
 * When TASKs complete, verify via `works/WORK-NN/TASK-NN_result.md` and actual testing.
 ```
@@ -275,7 +275,7 @@ If WORK-02 is `IN_PROGRESS`, the specifier asks:
 > What's the status of WORK-03: TASK-02?
 ```
 
-Orchestrator reads `PROGRESS.md` and `result.md` files to report current state.
+Orchestrator reads `work_{WORK}.log` and `result.md` files to report current state.
 
 ---
 
@@ -297,10 +297,10 @@ To register this rule in your project, add the following to your `CLAUDE.md`:
 ```markdown
 ## Agent 호출 규칙
 
-`[]` 태그로 시작하는 요청 → specifier 에이전트 호출 (WORK 파이프라인 시작)
+`[]` 태그로 시작하는 요청 → work-pipeline 스킬 트리거 → orchestrator 에이전트 spawn (WORK 파이프라인 시작)
 ```
 
-This ensures Claude automatically delegates `[]`-tagged requests to the specifier agent without manual invocation.
+This ensures Claude automatically triggers the work-pipeline skill for `[]`-tagged requests, which spawns the orchestrator agent (never specifier directly) to start the WORK pipeline.
 
 ---
 
@@ -447,7 +447,7 @@ Some CLI builds do not inject the `Agent` tool into sub-agents, which makes the 
 </capability-degraded>
 ```
 
-**Main Claude then takes over the orchestrator role**: it reads `orchestrator.md` plus the 5 reference files and runs the same procedure, spawning the five children directly at depth 1. ref-cache assembly, the activity log, TASK DAG scheduling, and the retry rules are all unchanged; gates are raised by asking the user directly instead of via `<gate>` XML.
+**Main Claude then takes over the orchestrator role**: it reads `orchestrator.md` plus the 5 reference files and runs the same procedure, spawning the four children directly at depth 1 and performing the commit step inline. ref-cache assembly, the activity log, TASK DAG scheduling, and the retry rules are all unchanged; gates are raised by asking the user directly instead of via `<gate>` XML.
 
 > This check exists because the failure is silent otherwise. Without it, orchestrator performs every role inline and reports success — the WORK looks complete while role separation and verification independence are gone.
 
@@ -465,15 +465,15 @@ Some CLI builds do not inject the `Agent` tool into sub-agents, which makes the 
 
 ### Agents
 
-Five agents are nested by orchestrator in a clean, isolated pipeline — Main Claude spawns only `orchestrator`, and orchestrator nests the rest itself:
+The pipeline consists of orchestrator plus four nested children in a clean, isolated pipeline — Main Claude spawns only `orchestrator`, and orchestrator nests the four children (specifier/planner/builder/verifier) itself:
 
 | Agent | Role | Model | Permission | MCP | Spawn |
 |-------|------|-------|------------|-----|-------|
 | **orchestrator** | Nests specifier→(planner)→builder→verifier; schedules the TASK DAG (STEP C); performs the inline commit (result.md + git commit) after each TASK's verifier PASS; mediates fixed/dynamic gates; batch-records the activity log | **opus** | read + nested spawn + git | Serena (optional) | spawned **once** by Main Claude per WORK |
-| **specifier** | `[]` tag detection, requirement analysis, complexity assessment, WORK-LIST management, returns dispatch XML | **opus** | read + dispatch | Serena (codebase exploration), sequential-thinking (complexity check) | nested by orchestrator |
-| **planner** | Create WORK + decompose TASKs + generate PLAN.md + pre-create progress templates | **opus** | read-only | Serena (codebase exploration), sequential-thinking (task decomposition) | nested by orchestrator |
-| **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena (symbol-level explore/edit) | nested by orchestrator, per TASK |
-| **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification (read-only) | **haiku** | read + execute | — | nested by orchestrator, per TASK |
+| **specifier** | requirement analysis, complexity assessment, WORK-LIST management, returns dispatch XML | **opus** | read + dispatch | sequential-thinking (complexity check) | nested by orchestrator |
+| **planner** | Create WORK + decompose TASKs + generate PLAN.md | **opus** | read-only | Serena (codebase exploration), sequential-thinking (task decomposition) | nested by orchestrator |
+| **builder** | Code implementation + returns context-handoff | **sonnet** | full access | Serena (symbol-level explore/edit) | nested by orchestrator, per TASK |
+| **verifier** | build/lint/test verification (read-only) | **haiku** | read + execute | — | nested by orchestrator, per TASK |
 
 > `committer.md` remains in the repo only as a stub for backward compatibility (agent count/definitions still list 6 files) — it is never spawned. Orchestrator performs the commit step inline itself (result.md write + WORK-LIST update + git commit) right after verifier returns PASS.
 >
@@ -488,7 +488,7 @@ These are located in `plugin/references/` (synced from `develop/references/`); w
 |------|---------|
 | `agent-flow.md` | Pipeline orchestration rules — Main Claude's trigger/gate boundary + orchestrator's internal nested-spawn flow |
 | `context-policy.md` | Sliding window context transfer rules between agents |
-| `file-content-schema.md` | Single source of truth for all file formats (PLAN.md, TASK.md, progress.md, result.md) |
+| `file-content-schema.md` | Single source of truth for all file formats (PLAN.md, TASK.md, result.md) |
 | `shared-prompt-sections.md` | Shared prompt sections reused across agents |
 | `work-activity-log.md` | Activity log format for builder stage tracking |
 | `xml-schema.md` | XML communication format for dispatch and task-result messages — also the normative ref-cache protocol (§ 4) |
@@ -504,11 +504,9 @@ works/
 ├── WORK-LIST.md                      ← Master list of all WORKs (managed by specifier)
 ├── WORK-01/                          ← "User Authentication"
 │   ├── PLAN.md                       ← Plan + dependency graph
-│   ├── PROGRESS.md                   ← Progress tracking (auto-updated)
 │   ├── work_WORK-01.log               ← Orchestrator activity log (STAGE_*/GATE_WAIT/DECISION_WAIT/DECISION)
 │   ├── DECISIONS.md                  ← Auto-decisions + resolved gate decisions (PENDING to RESOLVED)
 │   ├── TASK-00.md                    ← Task specification
-│   ├── TASK-00_progress.md           ← Real-time checkpoint (builder writes)
 │   ├── TASK-00_result.md             ← Completion report (orchestrator writes inline after verifier PASS)
 │   ├── TASK-01.md
 │   └── ...
@@ -521,10 +519,8 @@ works/
 | File | Naming Rule |
 |------|-------------|
 | Task spec | `TASK-NN.md` (no prefix) |
-| Progress checkpoint | `TASK-NN_progress.md` (underscore separator) |
 | Completion report | `TASK-NN_result.md` |
 | Plan | `PLAN.md` |
-| Work progress | `PROGRESS.md` |
 | Activity log | `work_{WORK_ID}.log` (orchestrator writes; drives gate resume) |
 | Decision log | `DECISIONS.md` (auto-decisions + user-approved decisions, `PENDING`/`RESOLVED`) |
 
@@ -588,7 +584,7 @@ If Claude loses context mid-pipeline, you can always resume:
 > Resume WORK-02 from where it stopped
 ```
 
-Orchestrator reads `work_{WORK}.log` (and `PROGRESS.md`) to determine the last completed stage/TASK and continues — reattaching via `SendMessage` if its parked handle is still alive, or a fresh nested re-spawn reconstructed from the log otherwise. An unresolved `GATE_WAIT`/`DECISION_WAIT` is always re-presented rather than skipped.
+Orchestrator reads `work_{WORK}.log` to determine the last completed stage/TASK and continues — reattaching via `SendMessage` if its parked handle is still alive, or a fresh nested re-spawn reconstructed from the log otherwise. An unresolved `GATE_WAIT`/`DECISION_WAIT` is always re-presented rather than skipped.
 
 ---
 
@@ -665,7 +661,7 @@ Each agent file follows a consistent four-section structure:
    Written as a flat prohibition/constraint list.
 ```
 
-`file-content-schema.md` is the single authoritative definition for all file formats (PLAN.md, TASK.md, progress.md, result.md). Agents reference it instead of embedding format specs inline — eliminating duplication across 6 agent files.
+`file-content-schema.md` is the single authoritative definition for all file formats (PLAN.md, TASK.md, result.md). Agents reference it instead of embedding format specs inline — eliminating duplication across 6 agent files.
 
 ### ref-cache: Reference File Caching
 
@@ -800,7 +796,7 @@ Each agent outputs a **context-handoff** — a structured reasoning document, no
 </context-handoff>
 ```
 
-**Result responsibility shift**: builder focuses on implementation only, writing a `progress.md` checkpoint. **Orchestrator** synthesizes builder + verifier context-handoffs into the final `result.md`, inline, right after verifier returns PASS. This prevents result files from being skipped when builder is context-pressured.
+**Result responsibility shift**: builder focuses on implementation only, returning a context-handoff. **Orchestrator** synthesizes builder + verifier context-handoffs into the final `result.md`, inline, right after verifier returns PASS. This prevents result files from being skipped when builder is context-pressured.
 
 **Estimated token savings**: ~48% on a 3-TASK dependency chain vs. the naive approach of passing full results forward.
 
@@ -892,7 +888,7 @@ uc-taskmanager/
 ├── develop/                 ← Source of truth (edit here)
 │   ├── agents/              ← 6 agent prompts (language-agnostic)
 │   │   ├── orchestrator.md  ← Nested spawn coordinator: specifier→(planner)→builder→verifier, TASK DAG scheduling, gates/decisions, inline commit, batch log
-│   │   ├── specifier.md     ← [] tag detection + requirement analysis
+│   │   ├── specifier.md     ← requirement analysis + complexity assessment
 │   │   ├── planner.md       ← WORK creation + TASK decomposition
 │   │   ├── builder.md       ← Code implementation
 │   │   ├── verifier.md      ← Build/lint/test verification

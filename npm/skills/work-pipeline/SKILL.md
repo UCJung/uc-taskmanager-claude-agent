@@ -36,7 +36,7 @@ REFERENCES_DIR = {Base directory}/../../references
 
 ## 오케스트레이션 흐름
 
-Main Claude는 `orchestrator` 에이전트 하나만 spawn합니다. specifier/planner/builder/verifier/committer는 orchestrator가 내부에서 중첩 spawn(TASK DAG 스케줄링 포함)하므로 Main Claude가 직접 호출하지 않습니다.
+Main Claude는 `orchestrator` 에이전트 하나만 spawn합니다. specifier/planner/builder/verifier 4종은 orchestrator가 내부에서 중첩 spawn(TASK DAG 스케줄링 포함)하므로 Main Claude가 직접 호출하지 않습니다. 커밋과 result.md 작성은 orchestrator가 인라인으로 수행합니다(committer는 deprecated 스텁, 비-spawn).
 
 ### Gated 모드 (기본값 — "auto"/"자동으로" 없음)
 
@@ -62,7 +62,7 @@ orchestrator가 `<capability-degraded reason="no-agent-tool">`을 반환하면, 
 
 1. 사용자에게 1줄 알린다 — "중첩 spawn 미지원 환경 — Main Claude가 직접 오케스트레이션합니다". 승인을 기다리지 않고 진행.
 2. `{REFERENCES_DIR}/orchestrator.md`와 레퍼런스 5종을 읽는다.
-3. `orchestrator.md` 절차를 그대로 수행한다 — specifier/planner/builder/verifier/committer를 **직접 spawn**(depth=1)하고, ref-cache 조립·활동 로그·TASK DAG·재시도 규칙을 동일하게 적용한다.
+3. `orchestrator.md` 절차를 그대로 수행한다 — 자식 4종(specifier/planner/builder/verifier)을 **직접 spawn**(depth=1)하고, 커밋과 result.md 작성은 Main Claude가 인라인으로 수행하며, ref-cache 조립·활동 로그·TASK DAG·재시도 규칙을 동일하게 적용한다.
 4. 활동 로그에 `ORCHESTRATOR_DEGRADED — reason=no-agent-tool`을 기록한다.
 5. 게이트는 `<gate>` XML/`SendMessage` 없이 사용자에게 **직접** 질의한다.
 
@@ -71,7 +71,7 @@ orchestrator가 `<capability-degraded reason="no-agent-tool">`을 반환하면, 
 ## ⚠️ CRITICAL: 에이전트 Spawn 규칙
 
 - **정상 경로**에서 Main Claude가 spawn하는 에이전트는 **orchestrator 하나뿐**이다. Main Claude가 직접 코드 구현, 파일 생성, git 명령 실행 또는 orchestrator의 작업을 수행하면 안 된다.
-- **축퇴 모드**에서는 Main Claude가 자식 5종을 직접 spawn한다. 단 이 경우에도 **자식 역할을 스스로 대행하지는 않는다** — 반드시 각 에이전트를 spawn해야 한다.
+- **축퇴 모드**에서는 Main Claude가 자식 4종을 직접 spawn한다. 단 이 경우에도 **자식 역할을 스스로 대행하지는 않는다** — 반드시 각 에이전트를 spawn해야 한다. 커밋은 자식 spawn 대상이 아니라 Main Claude가 인라인으로 수행한다.
 - 게이트 재개는 항상 **agentId** 기준(SendMessage/TaskStop 모두)으로 한다 — name 재사용에 의한 오배달을 방지한다.
 
 ## Arguments
