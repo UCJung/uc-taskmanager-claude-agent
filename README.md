@@ -447,7 +447,7 @@ Some CLI builds do not inject the `Agent` tool into sub-agents, which makes the 
 </capability-degraded>
 ```
 
-**Main Claude then takes over the orchestrator role**: it reads `orchestrator.md` plus the 5 reference files and runs the same procedure, spawning the five children directly at depth 1. ref-cache assembly, the activity log, TASK DAG scheduling, and the retry rules are all unchanged; gates are raised by asking the user directly instead of via `<gate>` XML.
+**Main Claude then takes over the orchestrator role**: it reads `orchestrator.md` plus the 5 reference files and runs the same procedure, spawning the four children directly at depth 1 and performing the commit step inline. ref-cache assembly, the activity log, TASK DAG scheduling, and the retry rules are all unchanged; gates are raised by asking the user directly instead of via `<gate>` XML.
 
 > This check exists because the failure is silent otherwise. Without it, orchestrator performs every role inline and reports success — the WORK looks complete while role separation and verification independence are gone.
 
@@ -465,7 +465,7 @@ Some CLI builds do not inject the `Agent` tool into sub-agents, which makes the 
 
 ### Agents
 
-Five agents are nested by orchestrator in a clean, isolated pipeline — Main Claude spawns only `orchestrator`, and orchestrator nests the rest itself:
+The pipeline consists of orchestrator plus four nested children in a clean, isolated pipeline — Main Claude spawns only `orchestrator`, and orchestrator nests the four children (specifier/planner/builder/verifier) itself:
 
 | Agent | Role | Model | Permission | MCP | Spawn |
 |-------|------|-------|------------|-----|-------|
