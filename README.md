@@ -297,10 +297,10 @@ To register this rule in your project, add the following to your `CLAUDE.md`:
 ```markdown
 ## Agent 호출 규칙
 
-`[]` 태그로 시작하는 요청 → specifier 에이전트 호출 (WORK 파이프라인 시작)
+`[]` 태그로 시작하는 요청 → work-pipeline 스킬 트리거 → orchestrator 에이전트 spawn (WORK 파이프라인 시작)
 ```
 
-This ensures Claude automatically delegates `[]`-tagged requests to the specifier agent without manual invocation.
+This ensures Claude automatically triggers the work-pipeline skill for `[]`-tagged requests, which spawns the orchestrator agent (never specifier directly) to start the WORK pipeline.
 
 ---
 
@@ -470,7 +470,7 @@ The pipeline consists of orchestrator plus four nested children in a clean, isol
 | Agent | Role | Model | Permission | MCP | Spawn |
 |-------|------|-------|------------|-----|-------|
 | **orchestrator** | Nests specifier→(planner)→builder→verifier; schedules the TASK DAG (STEP C); performs the inline commit (result.md + git commit) after each TASK's verifier PASS; mediates fixed/dynamic gates; batch-records the activity log | **opus** | read + nested spawn + git | Serena (optional) | spawned **once** by Main Claude per WORK |
-| **specifier** | `[]` tag detection, requirement analysis, complexity assessment, WORK-LIST management, returns dispatch XML | **opus** | read + dispatch | Serena (codebase exploration), sequential-thinking (complexity check) | nested by orchestrator |
+| **specifier** | requirement analysis, complexity assessment, WORK-LIST management, returns dispatch XML | **opus** | read + dispatch | sequential-thinking (complexity check) | nested by orchestrator |
 | **planner** | Create WORK + decompose TASKs + generate PLAN.md | **opus** | read-only | Serena (codebase exploration), sequential-thinking (task decomposition) | nested by orchestrator |
 | **builder** | Code implementation + returns context-handoff | **sonnet** | full access | Serena (symbol-level explore/edit) | nested by orchestrator, per TASK |
 | **verifier** | build/lint/test verification (read-only) | **haiku** | read + execute | — | nested by orchestrator, per TASK |
@@ -888,7 +888,7 @@ uc-taskmanager/
 ├── develop/                 ← Source of truth (edit here)
 │   ├── agents/              ← 6 agent prompts (language-agnostic)
 │   │   ├── orchestrator.md  ← Nested spawn coordinator: specifier→(planner)→builder→verifier, TASK DAG scheduling, gates/decisions, inline commit, batch log
-│   │   ├── specifier.md     ← [] tag detection + requirement analysis
+│   │   ├── specifier.md     ← requirement analysis + complexity assessment
 │   │   ├── planner.md       ← WORK creation + TASK decomposition
 │   │   ├── builder.md       ← Code implementation
 │   │   ├── verifier.md      ← Build/lint/test verification
