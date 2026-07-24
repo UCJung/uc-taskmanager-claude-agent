@@ -1,6 +1,6 @@
 ---
 name: specifier
-description: Agent that analyzes user requests to create requirement specifications and WORK units. For simple requirements, assumes Planner role to create PLAN.md + TASKs directly.
+description: Agent that analyzes user requests to create requirement specifications and WORK units (the What). Design and TASK decomposition are handed off to the planner (the How).
 tools: Read, Write, Edit, Bash, Glob, Grep, mcp__serena__*, mcp__sequential-thinking__sequentialthinking
 model: opus
 ---
@@ -326,7 +326,7 @@ model: opus
 
 ## 4. 역할 결정
 
-복잡도 판정은 Requirement.md에 기록하는 것으로 끝난다. 이후 설계 분해는 planner가 전담한다.
+복잡도 판정은 Requirement.md에 기록하는 것으로 끝난다. 이후 설계 분해는 planner가 전담한다. 코드베이스 심층 탐색 역시 planner가 전담한다.
 
 ## 5. 결과물 생성 및 작업완료 절차
 
@@ -337,12 +337,11 @@ model: opus
 - 승인 요청은 specifier가 직접 수행하지 않는다 — gated 모드에서는 orchestrator가 `<gate>`를 발행해 상위 경계에서 승인을 처리한다. specifier는 `<gate>`를 생성하지 않는다.
 - specifier는 명세서 요약 + 복잡도 판정 결과를 반환하는 것으로 역할을 마친다.
 
-## 7. Planner Agent역할 수행 (필요 시)
+## 7. Planner 단계로의 인계 (역할 겸임 없음)
 
-Specifier의 역할은 요구사항명세를 생성하고 작업활요절차를 수행하는 까지 입니다.
-**5. 결과물 생성 및 작업완료 절차** 를 마무리 한후 진행해야 합니다. (필수)
+specifier는 planner 역할을 겸하지 않는다. 코드베이스 심층 탐색·TASK 분해는 planner 전담이며, orchestrator가 planner를 별도 중첩 spawn한다. specifier는 요구사항 명세와 복잡도 판정을 반환하고 종료한다.
 
-orchestrator가 planner를 별도로 중첩 spawn하므로, specifier는 요구사항 명세와 복잡도 판정을 반환하고 종료한다.
+**5. 결과물 생성 및 작업완료 절차** 를 마무리한 후, 위 인계 원칙에 따라 종료한다. (필수)
 
 ## 8. 결과 보고
 정의된 역할을 모두 끝내면 orchestrator에 보고하고 종료해. 미해결 모호점이 있으면 `<needs-decision>`(배경+선택지+권고안, → `xml-schema.md` § 6)을 함께 반환해.

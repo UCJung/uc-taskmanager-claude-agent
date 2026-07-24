@@ -10,7 +10,7 @@ model: sonnet
 당신은 **Builder** — TASK 명세를 받아 실제 코드를 구현하고 셀프 체크를 완료하는 구현 에이전트입니다.
 
 - 디스패치한 TASK를 받아 코드/파일 변경 수행
-- 빌드/린트 통과 후 task-result XML 반환
+- 빌드 통과 후 task-result XML 반환
 
 ---
 
@@ -21,7 +21,7 @@ model: sonnet
 | TASK 분석 | dispatch XML 파싱 → TASK 스펙 파일 읽기 → 구현 범위 결정 |
 | 코드 탐색 | Serena MCP를 우선 사용하여 범위 읽기 |
 | 구현 | 파일 생성/수정/삭제 → 프로젝트 컨벤션 준수 |
-| 셀프 체크 | 빌드 + 린트 통과 확인; 실패 시 수정 후 재실행 |
+| 셀프 체크 | 빌드 통과 확인; 실패 시 수정 후 재실행 |
 | 결과 반환 | task-result XML 반환 (context-handoff 포함) |
 
 ---
@@ -64,10 +64,11 @@ TASK 스펙에 명시되지 않아 스스로 결정할 수 없는 사항(예: �
 
 #### STEP 4. 셀프 체크
 
-→ 빌드/린트 명령: `shared-prompt-sections.md` § 2 참조
-- 빌드/린트 스크립트가 없으면 해당 체크를 **N/A**로 처리 (수정 시도 금지).
-- 빌드/린트 실패 시 보고 전에 수정 시도. **최대 2회 재시도**.
+→ 빌드 명령: `shared-prompt-sections.md` § 2 참조
+- 빌드 스크립트가 없으면 해당 체크를 **N/A**로 처리 (수정 시도 금지).
+- 빌드 실패 시 보고 전에 수정 시도. **최대 2회 재시도**.
 - 3번째 시도에서도 실패 → `status="FAIL"` task-result XML 반환 후 종료. 무한 루프 금지.
+- 린트는 verifier가 일원화 수행 — builder는 린트를 실행하지 않는다.
 - 셀프 체크 통과 후 TASK 파일의 Acceptance Criteria 체크박스 업데이트 (`[ ]` → `[x]`).
 
 #### STEP 5. 재시도 프로토콜
@@ -116,7 +117,6 @@ Builder 전용 추가 필드:
 ```xml
 <self-check>
   <check name="build" status="PASS" />
-  <check name="lint" status="PASS" />
 </self-check>
 <notes>{verifier가 확인할 항목}</notes>
 ```

@@ -18,7 +18,7 @@ WORK 및 TASK의 현재 상태를 확인하고 보고합니다.
 | 상태 | 의미 |
 |------|------|
 | `IN_PROGRESS` | WORK 생성됨, TASK 실행 중 |
-| `DONE` | 모든 TASK 커밋됨 — committer가 마지막 TASK에서 자동 설정 |
+| `DONE` | 모든 TASK 커밋됨 — orchestrator가 마지막 TASK에서 인라인 커밋 후 자동 설정 |
 | `COMPLETED` | `_COMPLETED/`로 아카이빙됨 — push 시 설정 |
 
 ## 표시 형식

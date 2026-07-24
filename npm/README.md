@@ -6,7 +6,7 @@
 
 # uc-taskmanager
 
-Requirements Analysis & Development 6-Agent Full Pipeline + DAG-Based Orchestration + Sliding Window Context Management
+Requirements Analysis & Development 5-Agent Nested Pipeline + Orchestrator Inline Commit + DAG-Based Orchestration + Sliding Window Context Management
 
 **Universal Claude Task Manager** — A WORK-PIPELINE Agent that executes SDD (Specification-Driven Development) for Claude Code.
 It formalizes user requirements into specifications,
@@ -97,13 +97,13 @@ WORK-31 Development Approval Request
      └─────────────────────────────────→ TASK-05 ($$$$$$$$$)
 
   - TASK-01/02 parallel, TASK-03/04 parallel, TASK-05 final integration
-  - If approved, orchestrator schedules the TASK DAG itself and nest-spawns builder → verifier → committer for each TASK — no further approval gates in this phase.
+  - If approved, orchestrator schedules the TASK DAG itself and nest-spawns builder → verifier for each TASK, then commits inline itself — no further approval gates in this phase.
 
   Proceed?
 ```
 * Per-TASK: build → verify → commit repeats automatically for each TASK, all inside the same nested orchestrator run.
 ```
-● TASK-05 committed. Updating PROGRESS.md and finalizing WORK-31.
+● TASK-05 committed. Writing result.md and finalizing WORK-31.
 ```
 * When TASKs complete, verify via `works/WORK-NN/TASK-NN_result.md` and actual testing.
 ```
@@ -125,7 +125,7 @@ I'm cost-conscious (honestly). So this agent applies four token-saving strategie
 **(1) Serena MCP for codebase analysis.**
 The agent prioritizes [Serena MCP](https://github.com/oraios/serena) for code exploration — reading symbols instead of entire files. (Huge thanks to the Serena team.)
 
-**(2) A single nested orchestrator instead of per-stage round-trips.** The WORK-PIPELINE has up to 6 agent stages. Instead of Main Claude calling each stage one at a time, Main Claude spawns a single `orchestrator` agent **once**, which nests specifier → planner → builder → verifier → committer as sub-spawns of its own (Claude Code sub-agent nesting, depth 2). The orchestrator schedules the TASK DAG itself instead of round-tripping through Main Claude for every stage. See [Concept: Orchestrator Modes](#concept-orchestrator-modes-gated-vs-auto).
+**(2) A single nested orchestrator instead of per-stage round-trips.** The WORK-PIPELINE covers 6 agent roles, but only 5 are ever spawned — orchestrator performs the commit stage inline itself. Instead of Main Claude calling each stage one at a time, Main Claude spawns a single `orchestrator` agent **once**, which nests specifier → planner → builder → verifier as sub-spawns of its own (Claude Code sub-agent nesting, depth 2), then commits inline. The orchestrator schedules the TASK DAG itself instead of round-tripping through Main Claude for every stage. See [Concept: Orchestrator Modes](#concept-orchestrator-modes-gated-vs-auto).
 
 **(3) Structured XML communication.** Even with nesting, every hop between agents is still a text boundary — gate summaries and hand-offs are still just blobs of text.
 * Whichever side receives it has to parse it again. So we standardized the communication format as XML.
@@ -150,7 +150,7 @@ Currently designing a **RAG-based system** to store accumulated artifacts and qu
 
 ---
 
-Six subagents work across any project and any language, automatically handling **request routing → task decomposition → dependency management → code implementation → verification → commit**.
+Five nested subagents work across any project and any language, automatically handling **request routing → task decomposition → dependency management → code implementation → verification** — commits are performed inline by the orchestrator itself.
 
 ```
 "[new-feature] Build a user authentication feature"
@@ -167,7 +167,7 @@ Six subagents work across any project and any language, automatically handling *
 > [bugfix] Fix typo in login error message
 ```
 
-Main Claude spawns `orchestrator` once (`mode=gated` by default). Orchestrator nests specifier → **[GATE-1]** → planner → **[GATE-2]** → builder → verifier → committer. Creates WORK-NN directory + PLAN + result.md + commit — all inside the same orchestrator run. Every WORK takes this path, so even a one-line change is planned and recorded.
+Main Claude spawns `orchestrator` once (`mode=gated` by default). Orchestrator nests specifier → **[GATE-1]** → planner → **[GATE-2]** → builder → verifier, then commits inline. Creates WORK-NN directory + PLAN + result.md + commit — all inside the same orchestrator run. Every WORK takes this path, so even a one-line change is planned and recorded.
 
 ### Feature (WORK)
 
@@ -197,7 +197,7 @@ WORK-01: User Authentication
 > Run WORK-01 pipeline
 ```
 
-Orchestrator's internal DAG scheduling (STEP C) executes WORK-01's TASKs in dependency order, nesting builder → verifier → committer for each TASK — this phase has no approval gates.
+Orchestrator's internal DAG scheduling (STEP C) executes WORK-01's TASKs in dependency order, nesting builder → verifier for each TASK and committing inline — this phase has no approval gates.
 
 #### 3. Add to Existing WORK
 
@@ -234,7 +234,7 @@ Skip to a specific TASK within a WORK (e.g., retry after a failure):
 > Run WORK-02: TASK-02
 ```
 
-Orchestrator's DAG scheduling (STEP C) identifies the next READY TASK, then nests builder → verifier → committer in sequence.
+Orchestrator's DAG scheduling (STEP C) identifies the next READY TASK, then nests builder → verifier in sequence, followed by an orchestrator inline commit.
 
 #### 7. Force WORK Creation (Skip Complexity Check)
 
@@ -275,7 +275,7 @@ If WORK-02 is `IN_PROGRESS`, the specifier asks:
 > What's the status of WORK-03: TASK-02?
 ```
 
-Orchestrator reads `PROGRESS.md` and `result.md` files to report current state.
+Orchestrator reads `work_{WORK}.log` and `result.md` files to report current state.
 
 ---
 
@@ -297,10 +297,10 @@ To register this rule in your project, add the following to your `CLAUDE.md`:
 ```markdown
 ## Agent 호출 규칙
 
-`[]` 태그로 시작하는 요청 → specifier 에이전트 호출 (WORK 파이프라인 시작)
+`[]` 태그로 시작하는 요청 → work-pipeline 스킬 트리거 → orchestrator 에이전트 spawn (WORK 파이프라인 시작)
 ```
 
-This ensures Claude automatically delegates `[]`-tagged requests to the specifier agent without manual invocation.
+This ensures Claude automatically triggers the work-pipeline skill for `[]`-tagged requests, which spawns the orchestrator agent (never specifier directly) to start the WORK pipeline.
 
 ---
 
@@ -329,7 +329,7 @@ uctm update --lang en
 ```bash
 git clone https://github.com/UCJung/uc-taskmanager-claude-agent.git /tmp/uc-tm
 mkdir -p .claude/agents .claude/references
-cp /tmp/uc-tm/npm/agents/*.md .claude/agents/          # 6 agents (orchestrator, specifier, planner, builder, verifier, committer)
+cp /tmp/uc-tm/npm/agents/*.md .claude/agents/          # 6 agent files (orchestrator, specifier, planner, builder, verifier, committer — committer is a stub, absorbed into orchestrator's inline commit)
 cp /tmp/uc-tm/npm/references/*.md .claude/references/   # 7 reference files
 rm -rf /tmp/uc-tm
 git add .claude/agents/ .claude/references/ && git commit -m "chore: add uc-taskmanager agents"
@@ -347,14 +347,15 @@ claude --plugin-dir ./
 ```bash
 claude
 > /agents
-# orchestrator, specifier, planner, builder, verifier, committer → confirm all 6
+# orchestrator, specifier, planner, builder, verifier, committer → confirm all 6 files exist
+# (committer is a stub — its role is absorbed into orchestrator's inline commit; only 5 agents are ever spawned)
 ```
 
 ---
 
 ## Concept: Orchestrator Modes (Gated vs Auto)
 
-Main Claude detects the `[]` tag and spawns a single **orchestrator** subagent, passing `mode=gated` (default) or `mode=auto` (when the request contains "auto"/"자동으로"). Orchestrator nests every other agent itself — Main Claude never calls specifier/planner/builder/verifier/committer directly:
+Main Claude detects the `[]` tag and spawns a single **orchestrator** subagent, passing `mode=gated` (default) or `mode=auto` (when the request contains "auto"/"자동으로"). Orchestrator nests every other agent itself — Main Claude never calls specifier/planner/builder/verifier directly, and committer is never nested at all (orchestrator commits inline):
 
 ```
 User Request → Main Claude
@@ -369,18 +370,20 @@ User Request → Main Claude
                      │
               planner   → PLAN.md + TASK DAG      ← [GATE-2]
                      │
-              STEP C: DAG-ordered [builder → verifier → committer] × N (parallel where READY)
+              STEP C: DAG-ordered [builder → verifier] × N, then orchestrator inline commit (parallel where READY)
 ```
 
 - `mode=gated`: pauses with `<gate type="stage">` after specifier (**[GATE-1]**) and after planner (**[GATE-2]**); also pauses anytime with `<gate type="decision">` (background + options + recommendation) when orchestrator or a nested child needs a user call. Main Claude relays the gate, waits for approval/choice, then resumes the parked orchestrator with `SendMessage` (falls back to a log-based re-spawn if the handle is gone).
 - `mode=auto`: **one spawn, zero gates** — every judgment point is resolved with the recommended option and logged to `works/{WORK}/DECISIONS.md` plus the final report's `## 자동 결정 사항` section.
-- Execution (STEP C: builder → verifier → committer) never gates on the user — only WORK creation (specifier) and planning (planner) do.
+- Execution (STEP C: builder → verifier, then orchestrator inline commit) never gates on the user — only WORK creation (specifier) and planning (planner) do.
 
 **Sub-agent Spawn Count:**
 
-| Main → Orchestrator | → Specifier | → Planner | → Builder | → Verifier | → Committer | Total |
-|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| 1 | 1 | 1 | N | N | N | **3 + 3N** |
+| Main → Orchestrator | → Specifier | → Planner | → Builder | → Verifier | Total |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| 1 | 1 | 1 | N | N | **3 + 2N** |
+
+Committer is not a spawned agent — orchestrator performs its result.md/commit step inline itself, which is why the total is `3 + 2N` rather than counting a separate committer spawn per TASK.
 
 `gated` vs `auto` doesn't change the spawn count — only whether execution pauses for approval (see [Approval Gates, Nested Autonomy, and DECISIONS.md](#approval-gates-nested-autonomy-and-decisionsmd) below, `agent-flow.md` § 4).
 
@@ -396,12 +399,12 @@ WORK (unit of work)       A single goal. The unit requested by the user.
     └── result            Completion proof. Auto-generated after verification.
 ```
 
-Orchestrator nests planner once, then loops builder → verifier → committer per TASK in DAG order.
+Orchestrator nests planner once, then loops builder → verifier per TASK in DAG order, committing inline after each verifier PASS.
 
 ```
 orchestrator → planner(opus, nested)                 → PLAN.md + TASK DAG
-             → [builder(sonnet) → verifier(haiku) → committer(haiku)] × N   ← STEP C, no gates
-              (each nested spawn made by orchestrator, not Main Claude)
+             → [builder(sonnet) → verifier(haiku)] × N, orchestrator inline commit   ← STEP C, no gates
+              (builder/verifier nested spawns made by orchestrator; commit performed inline, not spawned)
 ```
 
 ---
@@ -415,13 +418,13 @@ orchestrator → planner(opus, nested)                 → PLAN.md + TASK DAG
 ```
 Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
                                                       │  nested spawn (depth 2)
-                    ┌─────────────┬──────────────────┴──────────────────┐
-                    │             │                                     │
-  specifier        planner                    builder          verifier         committer
- ┌──────────┐    ┌─────────┐               ┌──────────┐     ┌──────────┐     ┌──────────┐
- │Request   │────▶│Create   │──────────────▶│Code      │────▶│Build/Test│────▶│Result    │
- │Analysis  │     │WORK/TASK│               │Implement │     │Verify    │     │→ git     │
- └────┬─────┘     └────┬────┘               └────┬─────┘     └────┬─────┘     └────┬─────┘
+                    ┌─────────────┬──────────────────┴──────────────┐
+                    │             │                                 │
+  specifier        planner                    builder          verifier
+ ┌──────────┐    ┌─────────┐               ┌──────────┐     ┌──────────┐
+ │Request   │────▶│Create   │──────────────▶│Code      │────▶│Build/Test│──▶ orchestrator inline commit
+ │Analysis  │     │WORK/TASK│               │Implement │     │Verify    │    (result.md + git commit,
+ └────┬─────┘     └────┬────┘               └────┬─────┘     └────┬─────┘     no nested spawn)
       │                │                         │                │                │
  [GATE-1]          [GATE-2]                      └── Retry on fail┘                │
  (gated mode        (gated mode                     (max 3 times, then             │
@@ -432,7 +435,7 @@ Main Claude ── spawn once (mode=gated|auto) ──▶ orchestrator
 
 - `mode=gated` (default): pause + yield at **[GATE-1]** (after specifier) and **[GATE-2]** (after planner); resume via `SendMessage(agentId, decision)`, fallback to log-based re-spawn.
 - `mode=auto`: no gates — orchestrator completes the entire diagram in one spawn and records any judgment calls to `DECISIONS.md`.
-- STEP C (the builder → verifier → committer loop) never gates on the user, in either mode.
+- STEP C (the builder → verifier loop, plus orchestrator's inline commit) never gates on the user, in either mode.
 
 ### Degraded Mode (nested spawn unavailable)
 
@@ -444,35 +447,36 @@ Some CLI builds do not inject the `Agent` tool into sub-agents, which makes the 
 </capability-degraded>
 ```
 
-**Main Claude then takes over the orchestrator role**: it reads `orchestrator.md` plus the 5 reference files and runs the same procedure, spawning the five children directly at depth 1. ref-cache assembly, the activity log, TASK DAG scheduling, and the retry rules are all unchanged; gates are raised by asking the user directly instead of via `<gate>` XML.
+**Main Claude then takes over the orchestrator role**: it reads `orchestrator.md` plus the 5 reference files and runs the same procedure, spawning the four children directly at depth 1 and performing the commit step inline. ref-cache assembly, the activity log, TASK DAG scheduling, and the retry rules are all unchanged; gates are raised by asking the user directly instead of via `<gate>` XML.
 
 > This check exists because the failure is silent otherwise. Without it, orchestrator performs every role inline and reports success — the WORK looks complete while role separation and verification independence are gone.
 
 ### Stage Detail
 
 ```
-  specifier   →  planner  →  [builder → verifier → committer] × N
- ┌──────────┐   ┌─────────┐   ┌──────────┐  ┌──────────┐  ┌────────────┐
- │Request   │──▶│PLAN     │──▶│Code      │─▶│Build/Test│─▶│Result→ git │
- │Analysis  │   │+TASK DAG│   │Implement │  │Verify    │  │            │
- └──────────┘   └─────────┘   └──────────┘  └──────────┘  └────────────┘
-   (opus)          (opus)       (sonnet)       (haiku)        (haiku)
-              ← all nested spawns made by orchestrator →
+  specifier   →  planner  →  [builder → verifier] × N  →  orchestrator inline commit
+ ┌──────────┐   ┌─────────┐   ┌──────────┐  ┌──────────┐  ┌─────────────────────────┐
+ │Request   │──▶│PLAN     │──▶│Code      │─▶│Build/Test│─▶│Result.md + git commit   │
+ │Analysis  │   │+TASK DAG│   │Implement │  │Verify    │  │(no nested spawn)        │
+ └──────────┘   └─────────┘   └──────────┘  └──────────┘  └─────────────────────────┘
+   (opus)          (opus)       (sonnet)       (haiku)          (orchestrator)
+              ← builder/verifier are nested spawns; the commit step is performed inline by orchestrator →
 ```
 
 ### Agents
 
-Six agents work together in a clean, isolated pipeline — Main Claude spawns only `orchestrator`; orchestrator nests the rest:
+The pipeline consists of orchestrator plus four nested children in a clean, isolated pipeline — Main Claude spawns only `orchestrator`, and orchestrator nests the four children (specifier/planner/builder/verifier) itself:
 
 | Agent | Role | Model | Permission | MCP | Spawn |
 |-------|------|-------|------------|-----|-------|
-| **orchestrator** | Nests specifier→(planner)→builder→verifier→committer; schedules the TASK DAG (STEP C); mediates fixed/dynamic gates; batch-records the activity log | **opus** | read + nested spawn | Serena (optional) | spawned **once** by Main Claude per WORK |
-| **specifier** | `[]` tag detection, requirement analysis, complexity assessment, WORK-LIST management, returns dispatch XML | **opus** | read + dispatch | Serena (codebase exploration), sequential-thinking (complexity check) | nested by orchestrator |
-| **planner** | Create WORK + decompose TASKs + generate PLAN.md + pre-create progress templates | **opus** | read-only | Serena (codebase exploration), sequential-thinking (task decomposition) | nested by orchestrator |
-| **builder** | Code implementation + progress.md checkpoint recording | **sonnet** | full access | Serena (symbol-level explore/edit) | nested by orchestrator, per TASK |
-| **verifier** | Progress gate (Status=COMPLETED) → build/lint/test verification (read-only) | **haiku** | read + execute | — | nested by orchestrator, per TASK |
-| **committer** | Gate check (progress.md) → write result.md → git commit | **haiku** | read + write + git | — | nested by orchestrator, per TASK |
+| **orchestrator** | Nests specifier→(planner)→builder→verifier; schedules the TASK DAG (STEP C); performs the inline commit (result.md + git commit) after each TASK's verifier PASS; mediates fixed/dynamic gates; batch-records the activity log | **opus** | read + nested spawn + git | Serena (optional) | spawned **once** by Main Claude per WORK |
+| **specifier** | requirement analysis, complexity assessment, WORK-LIST management, returns dispatch XML | **opus** | read + dispatch | sequential-thinking (complexity check) | nested by orchestrator |
+| **planner** | Create WORK + decompose TASKs + generate PLAN.md | **opus** | read-only | Serena (codebase exploration), sequential-thinking (task decomposition) | nested by orchestrator |
+| **builder** | Code implementation + returns context-handoff | **sonnet** | full access | Serena (symbol-level explore/edit) | nested by orchestrator, per TASK |
+| **verifier** | build/lint/test verification (read-only) | **haiku** | read + execute | — | nested by orchestrator, per TASK |
 
+> `committer.md` remains in the repo only as a stub for backward compatibility (agent count/definitions still list 6 files) — it is never spawned. Orchestrator performs the commit step inline itself (result.md write + WORK-LIST update + git commit) right after verifier returns PASS.
+>
 > Activity-log recording is done **once, by orchestrator**, on behalf of the agent it just nested — child agents do not write logs themselves.
 
 ### Support Files (included in Plugin)
@@ -484,7 +488,7 @@ These are located in `plugin/references/` (synced from `develop/references/`); w
 |------|---------|
 | `agent-flow.md` | Pipeline orchestration rules — Main Claude's trigger/gate boundary + orchestrator's internal nested-spawn flow |
 | `context-policy.md` | Sliding window context transfer rules between agents |
-| `file-content-schema.md` | Single source of truth for all file formats (PLAN.md, TASK.md, progress.md, result.md) |
+| `file-content-schema.md` | Single source of truth for all file formats (PLAN.md, TASK.md, result.md) |
 | `shared-prompt-sections.md` | Shared prompt sections reused across agents |
 | `work-activity-log.md` | Activity log format for builder stage tracking |
 | `xml-schema.md` | XML communication format for dispatch and task-result messages — also the normative ref-cache protocol (§ 4) |
@@ -500,12 +504,10 @@ works/
 ├── WORK-LIST.md                      ← Master list of all WORKs (managed by specifier)
 ├── WORK-01/                          ← "User Authentication"
 │   ├── PLAN.md                       ← Plan + dependency graph
-│   ├── PROGRESS.md                   ← Progress tracking (auto-updated)
 │   ├── work_WORK-01.log               ← Orchestrator activity log (STAGE_*/GATE_WAIT/DECISION_WAIT/DECISION)
 │   ├── DECISIONS.md                  ← Auto-decisions + resolved gate decisions (PENDING to RESOLVED)
 │   ├── TASK-00.md                    ← Task specification
-│   ├── TASK-00_progress.md           ← Real-time checkpoint (builder writes)
-│   ├── TASK-00_result.md             ← Completion report (committer writes)
+│   ├── TASK-00_result.md             ← Completion report (orchestrator writes inline after verifier PASS)
 │   ├── TASK-01.md
 │   └── ...
 └── WORK-02/
@@ -517,10 +519,8 @@ works/
 | File | Naming Rule |
 |------|-------------|
 | Task spec | `TASK-NN.md` (no prefix) |
-| Progress checkpoint | `TASK-NN_progress.md` (underscore separator) |
 | Completion report | `TASK-NN_result.md` |
 | Plan | `PLAN.md` |
-| Work progress | `PROGRESS.md` |
 | Activity log | `work_{WORK_ID}.log` (orchestrator writes; drives gate resume) |
 | Decision log | `DECISIONS.md` (auto-decisions + user-approved decisions, `PENDING`/`RESOLVED`) |
 
@@ -536,11 +536,11 @@ The specifier maintains `works/WORK-LIST.md` as the master index:
 | Status | Meaning |
 |--------|---------|
 | `IN_PROGRESS` | WORK created, TASKs in progress |
-| `DONE` | All TASKs committed — set automatically by committer on last TASK |
+| `DONE` | All TASKs committed — set by orchestrator (inline commit) on last TASK |
 | `COMPLETED` | Archived to `_COMPLETED/` — set during push procedure |
 
 - **IN_PROGRESS**: specifier checks this before creating new WORKs
-- **DONE**: committer automatically changes IN_PROGRESS → DONE when the last TASK completes
+- **DONE**: orchestrator automatically changes IN_PROGRESS → DONE, inline, when the last TASK's commit step completes
 - **COMPLETED**: during push, DONE WORKs are batch-processed — rows removed from WORK-LIST and folders moved to `works/_COMPLETED/`
 
 #### git push Procedure
@@ -554,7 +554,7 @@ When you ask Claude to push (`"push this"`, `"git push"`), Claude handles the fu
 4. git push
 ```
 
-> **DONE is set by committer** when the last TASK completes. **COMPLETED** happens at push time when DONE WORKs are archived to `_COMPLETED/`.
+> **DONE is set by orchestrator (inline commit)** when the last TASK completes. **COMPLETED** happens at push time when DONE WORKs are archived to `_COMPLETED/`.
 
 ---
 
@@ -584,7 +584,7 @@ If Claude loses context mid-pipeline, you can always resume:
 > Resume WORK-02 from where it stopped
 ```
 
-Orchestrator reads `work_{WORK}.log` (and `PROGRESS.md`) to determine the last completed stage/TASK and continues — reattaching via `SendMessage` if its parked handle is still alive, or a fresh nested re-spawn reconstructed from the log otherwise. An unresolved `GATE_WAIT`/`DECISION_WAIT` is always re-presented rather than skipped.
+Orchestrator reads `work_{WORK}.log` to determine the last completed stage/TASK and continues — reattaching via `SendMessage` if its parked handle is still alive, or a fresh nested re-spawn reconstructed from the log otherwise. An unresolved `GATE_WAIT`/`DECISION_WAIT` is always re-presented rather than skipped.
 
 ---
 
@@ -619,11 +619,11 @@ Claude: [orchestrator nests planner]
 User: Approve.
 
 Claude: [orchestrator resumed via SendMessage → STEP C: DAG execution, no further gates]
-  WORK-03: TASK-00 → builder → verifier ✅ → committer [a1b2c3d]
-  WORK-03: TASK-01 → builder → verifier ✅ → committer [d4e5f6g]
-  WORK-03: TASK-02 → builder → verifier ✅ → committer [h7i8j9k]
-  WORK-03: TASK-03 → builder → verifier ✅ → committer [l0m1n2o]
-  WORK-03: TASK-04 → builder → verifier ✅ → committer [p3q4r5s]
+  WORK-03: TASK-00 → builder → verifier ✅ → orchestrator inline commit [a1b2c3d]
+  WORK-03: TASK-01 → builder → verifier ✅ → orchestrator inline commit [d4e5f6g]
+  WORK-03: TASK-02 → builder → verifier ✅ → orchestrator inline commit [h7i8j9k]
+  WORK-03: TASK-03 → builder → verifier ✅ → orchestrator inline commit [l0m1n2o]
+  WORK-03: TASK-04 → builder → verifier ✅ → orchestrator inline commit [p3q4r5s]
 
   🎉 WORK-03 completed! 5 tasks, 5 commits
   ## 자동 결정 사항: 없음 (both gates required explicit approval)
@@ -661,7 +661,7 @@ Each agent file follows a consistent four-section structure:
    Written as a flat prohibition/constraint list.
 ```
 
-`file-content-schema.md` is the single authoritative definition for all file formats (PLAN.md, TASK.md, progress.md, result.md). Agents reference it instead of embedding format specs inline — eliminating duplication across 6 agent files.
+`file-content-schema.md` is the single authoritative definition for all file formats (PLAN.md, TASK.md, result.md). Agents reference it instead of embedding format specs inline — eliminating duplication across 6 agent files.
 
 ### ref-cache: Reference File Caching
 
@@ -719,7 +719,7 @@ orchestrator's context after 5 TASKs:
 
 ### Approval Gates, Nested Autonomy, and DECISIONS.md
 
-Main Claude spawns `orchestrator` exactly once per WORK; orchestrator alone decides when to nest specifier/planner/builder/verifier/committer, and when to pause and ask a human. Since nested sub-agents cannot prompt the user directly, **every approval or decision is surfaced at the Main Claude boundary**:
+Main Claude spawns `orchestrator` exactly once per WORK; orchestrator alone decides when to nest specifier/planner/builder/verifier (and when to perform its own inline commit), and when to pause and ask a human. Since nested sub-agents cannot prompt the user directly, **every approval or decision is surfaced at the Main Claude boundary**:
 
 - **Fixed gates** (`<gate type="stage">`) — exactly two, and only in `mode=gated` (the default): **[GATE-1]** right after specifier (Requirement.md ready), and **[GATE-2]** right after planner (PLAN.md + TASK DAG ready).
 - **Dynamic gates** (`<gate type="decision">`) — raised by orchestrator or any nested child, at *any* point (design trade-off, scope creep, destructive change, 3 failed retries, ambiguous requirement…), carrying `<context>` + `<options>` + `<recommended>`.
@@ -727,7 +727,7 @@ Main Claude spawns `orchestrator` exactly once per WORK; orchestrator alone deci
 - Once the final report lands, Main Claude calls `TaskStop(agentId)` to release the parked handle.
 - `mode=auto` ("auto"/"자동으로" in the request) skips every gate: orchestrator resolves each judgment point with its own recommended option and completes in a single spawn.
 
-Every decision — whether a human approved it or orchestrator auto-resolved it — is written to `works/{WORK_ID}/DECISIONS.md` (status `PENDING` while parked, `RESOLVED` once settled) and summarized in the final report's `## 자동 결정 사항` section. STEP C itself (the builder → verifier → committer TASK loop) never gates, in either mode — it's the part of the pipeline nobody needs to approve.
+Every decision — whether a human approved it or orchestrator auto-resolved it — is written to `works/{WORK_ID}/DECISIONS.md` (status `PENDING` while parked, `RESOLVED` once settled) and summarized in the final report's `## 자동 결정 사항` section. STEP C itself (the builder → verifier TASK loop, plus orchestrator's inline commit) never gates, in either mode — it's the part of the pipeline nobody needs to approve.
 
 Both modes (gated/auto) output to `works/WORK-NN/` with identical artifact structure (PLAN.md + result.md + `DECISIONS.md`), ensuring downstream integration works regardless of mode.
 
@@ -796,7 +796,7 @@ Each agent outputs a **context-handoff** — a structured reasoning document, no
 </context-handoff>
 ```
 
-**Result responsibility shift**: builder focuses on implementation only, writing a `progress.md` checkpoint. The **committer** synthesizes builder + verifier context-handoffs into the final `result.md`. This prevents result files from being skipped when builder is context-pressured.
+**Result responsibility shift**: builder focuses on implementation only, returning a context-handoff. **Orchestrator** synthesizes builder + verifier context-handoffs into the final `result.md`, inline, right after verifier returns PASS. This prevents result files from being skipped when builder is context-pressured.
 
 **Estimated token savings**: ~48% on a 3-TASK dependency chain vs. the naive approach of passing full results forward.
 
@@ -857,7 +857,7 @@ Place a file with the same name in `.claude/agents/` to override.
 | Complexity criteria | `specifier.md` | 4. 역할 결정 |
 | Approval gates / mode handling | `orchestrator.md` | 3-3. 게이트 및 동적 의사결정 |
 | TASK DAG scheduling / retries | `orchestrator.md` | STEP C: TASK DAG 실행 |
-| Commit message format | `committer.md` | Step 3: Stage + Commit |
+| Commit message format | `orchestrator.md` | STEP C: TASK DAG 실행 (inline commit step) |
 | Verification steps | `verifier.md` | Verification Pipeline |
 | Task granularity | `planner.md` | Task Decomposition Rules |
 | Build/lint commands | `builder.md` + `verifier.md` | Self-Check / Step 1-2 |
@@ -887,12 +887,12 @@ Auto-detected from project files. No configuration needed.
 uc-taskmanager/
 ├── develop/                 ← Source of truth (edit here)
 │   ├── agents/              ← 6 agent prompts (language-agnostic)
-│   │   ├── orchestrator.md  ← Nested spawn coordinator: specifier→(planner)→builder→verifier→committer, TASK DAG scheduling, gates/decisions, batch log
-│   │   ├── specifier.md     ← [] tag detection + requirement analysis
+│   │   ├── orchestrator.md  ← Nested spawn coordinator: specifier→(planner)→builder→verifier, TASK DAG scheduling, gates/decisions, inline commit, batch log
+│   │   ├── specifier.md     ← requirement analysis + complexity assessment
 │   │   ├── planner.md       ← WORK creation + TASK decomposition
 │   │   ├── builder.md       ← Code implementation
 │   │   ├── verifier.md      ← Build/lint/test verification
-│   │   └── committer.md     ← git commit + result.md
+│   │   └── committer.md     ← stub only — role absorbed into orchestrator's inline commit (WORK-55); kept for backward compatibility
 │   ├── references/          ← 6 support files (read by the orchestrator only)
 │   │   ├── agent-flow.md          ← Pipeline orchestration rules
 │   │   ├── context-policy.md      ← Sliding window context rules

@@ -8,15 +8,15 @@
 
 orchestrator가 자식 spawn 시 `<ref-cache>`에 담을 섹션을 결정하는 기준표 → `xml-schema.md` § 4.
 
-| § | 내용 | orch | spec | plan | build | verif | commit |
-|---|------|:----:|:----:|:----:|:-----:|:-----:|:------:|
-| — | 준수사항 (아래 표) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 0 | Requirement.md | | ✅ | ✅ | | | |
-| 1 | PLAN.md | ✅ | | ✅ | | | |
-| 2 | TASK-XX.md | | | ✅ | ✅ | ✅ | |
-| 3 | TASK-XX_result.md | | | | ✅ | | ✅ |
-| 4 | DECISIONS.md | ✅ | | | | | |
-| 5 | 파일 이름 규칙 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| § | 내용 | orch | spec | plan | build | verif |
+|---|------|:----:|:----:|:----:|:-----:|:-----:|
+| — | 준수사항 (아래 표) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 0 | Requirement.md | | ✅ | ✅ | | |
+| 1 | PLAN.md | ✅ | | ✅ | | |
+| 2 | TASK-XX.md | | | ✅ | ✅ | ✅ |
+| 3 | TASK-XX_result.md | ✅ | | | ✅ | |
+| 4 | DECISIONS.md | ✅ | | | | |
+| 5 | 파일 이름 규칙 | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 > "준수사항" 표는 § 번호가 없다. 모든 에이전트가 공통으로 필요로 하므로 이 파일을 전달할 때는 **항상 함께 싣고**, `sections` 속성에는 표기하지 않는다.
 
@@ -261,7 +261,7 @@ orchestrator가 `<gate type="decision">` 또는 자식 에이전트의 `<needs-d
 
 ## D-01
 > 시각: {YYYY-MM-DDTHH:MM:SSZ}
-> 단계: {specifier|planner|builder|verifier|committer}
+> 단계: {specifier|planner|builder|verifier|commit}
 > 상태: {PENDING|RESOLVED}
 
 ### 배경
@@ -300,7 +300,7 @@ orchestrator가 `<gate type="decision">` 또는 자식 에이전트의 `<needs-d
 | 요구사항 | `Requirement.md` | specifier |
 | WORK 계획 | `PLAN.md` | planner / specifier |
 | TASK 계획 | `TASK-NN.md` | planner / specifier |
-| TASK 결과 | `TASK-NN_result.md` | committer |
+| TASK 결과 | `TASK-NN_result.md` | orchestrator |
 | 결정 로그 | `DECISIONS.md` | orchestrator |
 | 활동 로그 | `work_WORK-NN.log` | orchestrator (추가) |
 

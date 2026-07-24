@@ -8,13 +8,13 @@
 
 orchestrator가 자식 spawn 시 `<ref-cache>`에 담을 섹션을 결정하는 기준표 → `xml-schema.md` § 4.
 
-| § | 내용 | orch | spec | plan | build | verif | commit |
-|---|------|:----:|:----:|:----:|:-----:|:-----:|:------:|
-| 1 | 규칙 | ✅ | | | | | |
-| 2 | 형식 | ✅ | | | | | ✅ |
-| 3 | 이벤트 체계 | ✅ | | | | | ✅ |
+| § | 내용 | orch | spec | plan | build | verif |
+|---|------|:----:|:----:|:----:|:-----:|:-----:|
+| 1 | 규칙 | ✅ | | | | |
+| 2 | 형식 | ✅ | | | | |
+| 3 | 이벤트 체계 | ✅ | | | | |
 
-> committer는 마지막 TASK 판정을 위해 로그를 **읽기만** 한다 — 기록 주체는 orchestrator뿐(§ 1).
+> 마지막 TASK 판정(WORK-LIST `DONE` 전환 여부)은 orchestrator가 인라인 커밋 단계에서 로그를 읽어 직접 수행한다 — 기록 주체는 orchestrator뿐(§ 1).
 
 ---
 
@@ -38,13 +38,13 @@ orchestrator가 자식 spawn 시 `<ref-cache>`에 담을 섹션을 결정하는 
 |--------|----------|------|
 | `ORCHESTRATOR_START` | orchestrator 실행 시작 | `ORCHESTRATOR_START — WORK-NN orchestrator started` |
 | `ORCHESTRATOR_DEGRADED` | 축퇴 모드 진입 — Main Claude가 orchestrator 역할을 넘겨받음. `ORCHESTRATOR_START` 직후 1회 기록 | `ORCHESTRATOR_DEGRADED — reason=no-agent-tool` |
-| `STAGE_START` | 자식 에이전트(specifier/planner/builder/verifier/committer) spawn 직전 | `STAGE_START — stage=specifier` |
+| `STAGE_START` | 자식 에이전트(specifier/planner/builder/verifier) spawn 직전 | `STAGE_START — stage=specifier` |
 | `GATE_WAIT` | `<gate type="stage">`에서 정지, Main Claude 승인 대기 | `GATE_WAIT — stage=specifier` |
 | `DECISION_WAIT` | `<gate type="decision">` 또는 자식의 `<needs-decision>` 수신 후 결정 대기 | `DECISION_WAIT — stage=planner` |
 | `DECISION` | 결정 확정 — 주체는 `user`(사용자 승인) 또는 `auto`(orchestrator 자동결정) | `DECISION — stage=planner by=user` / `DECISION — task=TASK-03 by=auto` |
-| `STAGE_DONE` | 게이트 해소(RESOLVED) 후, 또는 게이트가 없는 단계는 완료 즉시 | `STAGE_DONE — stage=specifier` |
+| `STAGE_DONE` | 게이트 해소(RESOLVED) 후, 또는 게이트가 없는 단계는 완료 즉시. `stage=commit`은 spawn 없는 orchestrator 인라인 커밋 완료를 뜻하며 대응하는 `STAGE_START`가 없다 | `STAGE_DONE — stage=specifier` / `STAGE_DONE — stage=commit task=TASK-NN` |
 | `ORCHESTRATOR_DONE` | orchestrator 실행 종료 (WORK 완료) | `ORCHESTRATOR_DONE — WORK-NN orchestrator completed` |
 
-- `stage` 값: `specifier`/`planner`/`builder`/`verifier`/`committer`.
+- `stage` 값: `specifier`/`planner`/`builder`/`verifier`/`commit`(commit은 spawn이 아닌 orchestrator 내부 인라인 액션).
 - `by` 값: `user`/`auto`. `<decision>`(§ 7, `xml-schema.md`)의 `by` 속성과 동일한 값 체계를 사용.
 - 확정된 결정의 상세 내용(배경/선택지/권고안/확정값)은 로그가 아니라 `works/{WORK_ID}/DECISIONS.md`에 orchestrator가 기록한다. 로그의 `DECISION` 이벤트는 "언제·누가 결정했는지"만 남긴다.
