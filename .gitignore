@@ -4,3 +4,6 @@ node_modules/
 socialMT/
 .agent/
 .claude/
+
+# Local MCP config — contains plaintext API keys (UCPM_API_KEY). Never commit.
+.mcp.json
