@@ -19,6 +19,7 @@ export const REFERENCE_FILES = [
   'agent-flow.md',
   'context-policy.md',
   'file-content-schema.md',
+  'operation-guide.md',
   'shared-prompt-sections.md',
   'work-activity-log.md',
   'xml-schema.md',
@@ -160,4 +161,9 @@ export const REQUIRED_PERMISSIONS = [
 
   // Git operations (inline commit in orchestrator)
   'Bash(git:*)',
+
+  // Operation Guide overlay backend (ucpm-mcp) — pipeline run/step/artifact
+  // recording + REQ/IA/TC/test registration. Harmless if the server is not
+  // connected; pre-authorized to avoid prompts when a guide is active.
+  'mcp__ucpm-mcp__*',
 ];

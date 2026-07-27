@@ -178,6 +178,7 @@ Every stage writes its output to disk — requirement spec, plan, per-TASK resul
 │   ├── agent-flow.md
 │   ├── context-policy.md
 │   ├── file-content-schema.md
+│   ├── operation-guide.md
 │   ├── shared-prompt-sections.md
 │   ├── work-activity-log.md
 │   └── xml-schema.md
@@ -205,6 +206,7 @@ Every stage writes its output to disk — requirement spec, plan, per-TASK resul
 | `agent-flow.md` | Main Claude's role guide — trigger & gate boundaries, degraded mode |
 | `context-policy.md` | Sliding-window context handoff rules + retry policy |
 | `file-content-schema.md` | Single source of truth for artifact file formats & naming |
+| `operation-guide.md` | Operation Guide overlay contract — how a per-project guide drives external-system integration |
 | `shared-prompt-sections.md` | Common reusable prompt sections (output language, status detection, WORK-LIST, Bash rules) |
 | `work-activity-log.md` | Activity-log event rules driving idempotent resume |
 | `xml-schema.md` | Inter-agent XML protocol (ref-cache, gate, needs-decision, task-result) |
@@ -217,6 +219,31 @@ Every stage writes its output to disk — requirement spec, plan, per-TASK resul
 | `work-pipeline/` | Trigger the WORK-PIPELINE (starts orchestration) |
 | `work-status/` | Show WORK status (read-only) |
 | `sdd-pipeline/` | Internal reference bundle for the pipeline agents (not user-facing) |
+
+---
+
+## 🔗 Operation Guide overlay (optional)
+
+uctm's file-based pipeline is a **mechanical substrate**. A project may layer its own operating
+procedure on top by declaring an **operation guide** in its `CLAUDE.md`:
+
+```
+## OperationGuide
+docs/[GUIDE]_RND_OPERATION.md
+```
+
+When declared, the `work-pipeline` skill passes the guide's absolute path to the orchestrator
+(`OPERATION_GUIDE=…`, same pattern as `REFERENCES_DIR=`). The guide is treated as a **policy overlay**:
+
+- **orchestrator** records pipeline execution history at stage boundaries (run / step / artifact / finish),
+  using the tools the guide specifies (supported backend: `ucpm-mcp`).
+- **Main Claude** performs lifecycle work at the boundaries — requirement/state transitions, IA/TC
+  registration, test & release.
+- If the guide's tools are unavailable, calls **gracefully skip** and fall back to the activity log,
+  to be backfilled later. Projects with no `## OperationGuide` run exactly as before.
+
+uctm ships **no project-specific procedure** — only the discovery + overlay contract
+(`references/operation-guide.md`). Each project authors its own guide.
 
 ---
 

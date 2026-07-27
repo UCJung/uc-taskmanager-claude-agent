@@ -178,6 +178,7 @@ verifier는 read-only로 **독립 재실행**해 빌드·린트·테스트·인�
 │   ├── agent-flow.md
 │   ├── context-policy.md
 │   ├── file-content-schema.md
+│   ├── operation-guide.md
 │   ├── shared-prompt-sections.md
 │   ├── work-activity-log.md
 │   └── xml-schema.md
@@ -205,6 +206,7 @@ verifier는 read-only로 **독립 재실행**해 빌드·린트·테스트·인�
 | `agent-flow.md` | Main Claude 역할 가이드 — 트리거·게이트 경계, 축퇴 모드 |
 | `context-policy.md` | 슬라이딩 윈도우 컨텍스트 핸드오프 규칙 + 재시도 정책 |
 | `file-content-schema.md` | 산출물 파일 형식·이름 규칙의 단일 정의 소스 |
+| `operation-guide.md` | 운영 가이드 오버레이 계약 — 프로젝트별 가이드가 외부 시스템 연동을 구동하는 방식 |
 | `shared-prompt-sections.md` | 공통 재사용 프롬프트 섹션 (출력 언어, 상태 판정, WORK-LIST, Bash 규칙) |
 | `work-activity-log.md` | 멱등 재개를 구동하는 활동 로그 이벤트 규칙 |
 | `xml-schema.md` | 에이전트 간 XML 프로토콜 (ref-cache, gate, needs-decision, task-result) |
@@ -217,6 +219,30 @@ verifier는 read-only로 **독립 재실행**해 빌드·린트·테스트·인�
 | `work-pipeline/` | WORK-PIPELINE 트리거 (오케스트레이션 시작) |
 | `work-status/` | WORK 상태 조회 (read-only) |
 | `sdd-pipeline/` | 파이프라인 에이전트 내부 참조 문서 묶음 (사용자 대면 아님) |
+
+---
+
+## 🔗 운영 가이드 오버레이 (선택)
+
+uctm의 파일 기반 파이프라인은 **기계적 substrate**입니다. 프로젝트는 `CLAUDE.md`에 **운영 가이드**를
+선언해 자기 운영 절차를 그 위에 얹을 수 있습니다:
+
+```
+## OperationGuide
+docs/[GUIDE]_RND_OPERATION.md
+```
+
+선언되면 `work-pipeline` 스킬이 가이드의 절대경로를 orchestrator에 전달하고(`OPERATION_GUIDE=…`,
+`REFERENCES_DIR=`와 동일 패턴), 가이드는 **정책 오버레이**로 취급됩니다:
+
+- **orchestrator**: 단계 경계에서 실행 이력(run/step/artifact/finish)을 기록 — 가이드가 지정한 도구 사용
+  (지원 백엔드: `ucpm-mcp`).
+- **Main Claude**: 경계에서 생명주기 작업 수행 — REQ/상태 전이, IA/TC 등록, 테스트·릴리스.
+- 가이드가 지목한 도구가 없으면 호출을 **graceful-skip**하고 활동 로그로 폴백 후 나중에 백필합니다.
+  `## OperationGuide`가 없는 프로젝트는 현행과 완전히 동일하게 동작합니다.
+
+uctm에는 **프로젝트별 절차를 넣지 않습니다** — 발견 + 오버레이 계약(`references/operation-guide.md`)만
+제공하며, 각 프로젝트가 자기 가이드를 저작합니다.
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: WORK 파이프라인 전체를 중첩 sub-agent spawn으로 자율 오케스트레이션하는 에이전트. Main Claude가 1회 spawn하며, 내부에서 specifier→planner→builder→verifier를 중첩 spawn(커밋은 orchestrator 인라인 수행)하고 TASK DAG 스케줄링, 승인 게이트/동적 의사결정 처리, 활동 로그 기록을 전담한다.
-tools: Agent, Read, Write, Edit, Bash, Glob, Grep, mcp__serena__*
+tools: Agent, Read, Write, Edit, Bash, Glob, Grep, mcp__serena__*, mcp__ucpm-mcp__*
 model: opus
 ---
 
@@ -126,6 +126,10 @@ model: opus
 - `mode=gated|auto` 추출. 값이 없으면 `gated`를 기본값으로 사용.
 - 사용자 요청 원문 확인.
 - `WORK_ID`가 함께 전달되면(재개 요청) 신규 생성 단계(STEP A)를 건너뛰고 STEP 3(재개 판정)부터 시작.
+- `OPERATION_GUIDE={절대경로}`(선택) 추출 — 있으면 **운영 가이드 오버레이 활성**. 해당 가이드 파일을
+  여기서 **1회 읽어둔다**(이 읽기는 STEP 1의 레퍼런스 5종 읽기와 별개다 — 매트릭스·ref-cache 대상 아님).
+  이후 § 3-7 오버레이 절차의 도구·상태값·절차는 이 가이드를 정본으로 삼는다. 값이 없으면 오버레이 비활성
+  — 순수 파일 기반으로 현행과 동일하게 동작한다(§ 3-7을 수행하지 않음).
 
 #### STEP 3. 재개 판정 (기존 WORK 이어가기)
 
@@ -302,6 +306,28 @@ TASK 간 의존성 전달(builder→verifier, 그리고 다음 TASK로)도 동�
 
 #### 출력 언어 규칙
 → `shared-prompt-sections.md` § 1 참조.
+
+---
+
+### 3-7. 운영 가이드 오버레이 (선택 — `OPERATION_GUIDE` 있을 때만)
+
+`OPERATION_GUIDE`가 전달되지 않았으면 이 절 전체를 **수행하지 않는다**(순수 파일 기반, 현행 동작). 전달됐으면
+STEP 2에서 읽어둔 가이드를 정본으로 아래 바인딩 지점에서 가이드가 지정한 외부 연동 도구를 호출한다.
+지원 백엔드는 `ucpm-mcp`(`mcp__ucpm-mcp__*`)이며, **구체 도구명·인자·상태값은 가이드에서 읽어 사용**한다
+(uctm은 도구명을 하드코딩하지 않는다). 상세 계약 → `operation-guide.md`.
+
+| 바인딩 지점(파이프라인 이벤트) | 오버레이 동작(가이드가 지정한 도구로) |
+|---|---|
+| `ORCHESTRATOR_START` 기록 직후 | 실행 run 생성 — 예: `ucpm_pipeline_run_start(workId, reqCode, mode, branch)` |
+| 각 `STAGE_DONE`(specifier/planner/builder/verifier/commit) 기록 직후 | 단계 기록 + 해당 단계 산출물 원문 저장 — 예: `ucpm_pipeline_step_record`, `ucpm_pipeline_artifact_put` |
+| `ORCHESTRATOR_DONE` 기록 직후 | run 종료 — 예: `ucpm_pipeline_run_finish(status)` |
+
+- 기록은 활동 로그 이벤트에 **얹는 것**이며, 자식 산출물의 내용·형식·파일 기반 파이프라인 진행을 바꾸지 않는다.
+- **graceful-skip**: 가이드가 지목한 도구가 미연결/미권한/scope 부족이면 해당 외부 호출을 **건너뛰고**
+  파이프라인을 계속한다. 활동 로그가 임시 fallback이 되며, 최종 보고 `## 자동 결정 사항`에 skip 사유·백필
+  대상 지점을 1줄 남긴다(전제 복구 후 Main Claude가 소급 백필 — → `operation-guide.md` § 3).
+- REQ 생성·상태전이·IA/TC 등록·테스트/릴리스는 orchestrator가 아니라 **Main Claude가 경계에서** 수행한다
+  (→ `operation-guide.md` § 2). orchestrator는 위 실행 이력 기록만 담당한다.
 
 ---
 
