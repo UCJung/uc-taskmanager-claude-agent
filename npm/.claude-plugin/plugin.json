@@ -6,8 +6,7 @@
     "./agents/specifier.md",
     "./agents/planner.md",
     "./agents/builder.md",
-    "./agents/verifier.md",
-    "./agents/committer.md"
+    "./agents/verifier.md"
   ],
   "skills": [
     "./skills/uctm-init",

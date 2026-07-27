@@ -24,7 +24,7 @@ mkdir -p "$TEST_DIR/.claude/agents" \
 ### 1.2 파일 복사
 
 ```bash
-# agents (6개) + references (6개) → .claude/agents/ (flat)
+# agents (5개) + references (6개) → .claude/agents/ (flat)
 cp $DEVELOP/agents/*.md "$TEST_DIR/.claude/agents/"
 cp $DEVELOP/references/*.md "$TEST_DIR/.claude/agents/"
 
@@ -133,8 +133,9 @@ auto" \
   >> /tmp/logs/agent_test_NN.jsonl 2>&1 &
 ```
 
-> **주의**: full 모드는 scheduler가 DAG를 해석하여 builder→verifier→committer를 TASK별로
-> 반복해야 하지만, Main Claude가 파이프라인을 우회하여 직접 구현하는 경우가 있다.
+> **주의**: full 모드는 scheduler가 DAG를 해석하여 builder→verifier를 TASK별로
+> 반복해야 하지만(verifier PASS 후 Main Claude가 인라인으로 result.md 작성 → git commit),
+> Main Claude가 파이프라인을 우회하여 직접 구현하는 경우가 있다.
 > 이 경우 커밋이 1개로 합쳐지고 result.md가 생성되지 않는다. (test-04에서 확인)
 > `--output-format json` 로그로 Agent spawn 여부를 확인하여 원인을 특정할 수 있다.
 
@@ -213,7 +214,7 @@ grep '"modelUsage"' "$LOG" | grep -oE '"claude-[^"]*":\{[^}]*\}'
 |------|-----------|----------|
 | `claude-opus-4-6` | specifier, planner | 요구사항 분석/설계 실행됨 |
 | `claude-sonnet-4-6` | builder | 코드 구현 실행됨 |
-| `claude-haiku-4-5` | scheduler, verifier, committer | 파이프라인 오케스트레이션 실행됨 |
+| `claude-haiku-4-5` | scheduler, verifier | 파이프라인 오케스트레이션 실행됨 |
 
 3개 모델이 모두 사용되었으면 파이프라인이 정상 동작한 것. opus만 사용되었으면 Main Claude가 직접 구현한 것.
 
@@ -226,7 +227,7 @@ Main Claude가 builder를 호출하므로, Agent tool call 순서로 병렬 여�
 grep -E '"Agent"|"subagent_type"' "$LOG"
 
 # builder가 연이어 호출되었으면 → 병렬 spawn (DAG 독립 TASK)
-# builder → verifier → committer → builder 순이면 → 순차 실행
+# builder → verifier → builder 순이면 → 순차 실행
 ```
 
 ## 3. 완료 후 결과 확인
@@ -301,8 +302,8 @@ echo "exit: $?"
 
 3. 파일 기반 간접 확인:
    - `PROGRESS.md` 미생성 → Scheduler 미실행
-   - `TASK-*_result.md` 0개 → Committer 미실행
-   - 커밋 메시지 `feat:` (TASK 번호 없음) → Committer 미실행
+   - `TASK-*_result.md` 0개 → orchestrator(Main Claude) 인라인 커밋 미수행
+   - 커밋 메시지 `feat:` (TASK 번호 없음) → orchestrator(Main Claude) 인라인 커밋 미수행
 
 **대응**:
 - agent-flow.md의 full 모드 오케스트레이션 지시를 더 명확하게 강화

@@ -36,7 +36,7 @@ REFERENCES_DIR = {Base directory}/../../references
 
 ## 오케스트레이션 흐름
 
-Main Claude는 `orchestrator` 에이전트 하나만 spawn합니다. specifier/planner/builder/verifier 4종은 orchestrator가 내부에서 중첩 spawn(TASK DAG 스케줄링 포함)하므로 Main Claude가 직접 호출하지 않습니다. 커밋과 result.md 작성은 orchestrator가 인라인으로 수행합니다(committer는 deprecated 스텁, 비-spawn).
+Main Claude는 `orchestrator` 에이전트 하나만 spawn합니다. specifier/planner/builder/verifier 4종은 orchestrator가 내부에서 중첩 spawn(TASK DAG 스케줄링 포함)하므로 Main Claude가 직접 호출하지 않습니다. 커밋과 result.md 작성은 orchestrator가 인라인으로 수행합니다.
 
 ### Gated 모드 (기본값 — "auto"/"자동으로" 없음)
 

@@ -701,10 +701,10 @@ body {
       <div class="principle-card" style="border-top-color:var(--accent5);">
         <div class="num">03</div>
         <h3>Separation of Concerns</h3>
-        <p>result.md writing responsibility moved from Builder to Committer.</p>
+        <p>Builder focuses on implementation; Main Claude writes result.md inline after verifier PASS.</p>
         <div style="margin-top:1rem;font-size:0.82rem;color:var(--text-muted);line-height:1.8;">
           <div><strong>Builder</strong>: Focus on implementation only. Record checkpoints in progress.md.</div>
-          <div><strong>Committer</strong>: Synthesize builder + verifier context-handoff into result.md.</div>
+          <div><strong>Main Claude</strong>: After verifier PASS, synthesizes builder + verifier context-handoff into result.md inline (no separate spawn).</div>
         </div>
       </div>
     </div>
@@ -827,9 +827,9 @@ body {
     <!-- Pipeline Mode -->
     <div id="mode-pipeline" class="mode-panel">
       <div class="card">
-        <div class="card-title" style="color:var(--accent2);">Pipeline Mode - Builder &rarr; Verifier+Committer (단일 spawn — v1.6)</div>
+        <div class="card-title" style="color:var(--accent2);">Pipeline Mode - Builder &rarr; Verifier (v1.6)</div>
         <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
-          Builder는 별도 spawn. Verifier와 Committer는 <strong>단일 spawn</strong>으로 결합 실행되어 verifier→committer 컨텍스트 전달이 동일 세션 내에서 처리된다.
+          Builder와 Verifier는 각각 별도 spawn으로 실행된다. Verifier가 PASS를 반환하면 <strong>Main Claude</strong>가 자식 spawn 없이 인라인으로 result.md 작성과 git commit을 수행한다.
         </p>
         <div class="pipeline-v">
           <div class="pipeline-step">
@@ -838,22 +838,22 @@ body {
           </div>
           <div class="pipeline-arrow-down">&darr; <span style="font-size:0.7rem;color:var(--full-color);">FULL handoff via Main Claude</span></div>
           <div class="pipeline-step">
-            <div class="pipeline-step-node" style="border-color:var(--accent4);color:var(--accent5);background:rgba(248,113,113,0.05);border-style:dashed;">Verifier+Committer (spawn 2 — 단일)</div>
+            <div class="pipeline-step-node" style="border-color:var(--accent4);color:var(--accent5);background:rgba(248,113,113,0.05);border-style:dashed;">Verifier (spawn 2)</div>
             <div class="pipeline-step-desc">
               Receives builder's full context.<br>
               <strong>[Verifier]</strong> Knows <em>why</em> code was written &rarr; targeted verification.<br>
-              <strong>[Committer]</strong> Uses same session context (no separate handoff needed) &rarr; writes result.md + git commit.
+              <strong>[Main Claude]</strong> On verifier PASS, uses same session context (no separate handoff needed) &rarr; writes result.md + git commit inline.
             </div>
           </div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title">Verifier+Committer spawn Context Window</div>
+        <div class="card-title">Verifier spawn Context Window</div>
         <table class="handoff-table">
           <tr><th>Source</th><th>Detail Level</th><th>Content</th></tr>
           <tr><td>Builder (직전 — via Main Claude)</td><td><span class="detail-badge full">FULL</span></td><td>what + why + caution + incomplete</td></tr>
-          <tr><td>Verifier (동일 spawn 내)</td><td colspan="2" style="font-size:0.8rem;color:var(--accent3);">단일 세션 컨텍스트 공유 — 별도 handoff 불필요</td></tr>
+          <tr><td>Main Claude (verifier PASS 후 인라인)</td><td colspan="2" style="font-size:0.8rem;color:var(--accent3);">단일 세션 컨텍스트 공유 — 별도 handoff 불필요</td></tr>
           <tr><td>Planner/Scheduler</td><td><span class="detail-badge drop">DROP</span></td><td>N/A in pipeline mode</td></tr>
         </table>
       </div>
@@ -866,12 +866,12 @@ body {
         <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
           When TASK-N completes and TASK-N+1 starts, the new builder gets a fresh session.
           Scheduler automatically includes context-handoff from preceding TASKs based on sliding window rules.
-          Verifier+Committer는 각 TASK마다 단일 spawn으로 결합 실행된다.
+          Verifier는 각 TASK마다 별도 spawn으로 실행되며, PASS 후 Main Claude가 인라인으로 result.md를 작성한다.
         </p>
         <div class="pipeline-v">
           <div class="pipeline-step">
             <div class="pipeline-step-node" style="border-color:var(--accent6);color:var(--accent6);width:220px;">TASK-N Pipeline</div>
-            <div class="pipeline-step-desc">Builder &rarr; Verifier+Committer (단일 spawn) &rarr; result.md created</div>
+            <div class="pipeline-step-desc">Builder &rarr; Verifier &rarr; (Main Claude inline) result.md created</div>
           </div>
           <div class="pipeline-arrow-down">&darr; <span style="font-size:0.7rem;color:var(--accent6);">result context-handoff</span></div>
           <div class="pipeline-step">
@@ -997,9 +997,9 @@ body {
 
   <!-- TAB 6: Checkpoint & Gate -->
   <div id="tab-checkpoint" class="tab-panel">
-    <h2 class="section-title">Checkpoint System & Committer Gate</h2>
+    <h2 class="section-title">Checkpoint System & Commit Gate</h2>
     <p class="section-desc">
-      progress.md serves as a checkpoint for crash recovery. The committer gate ensures only completed TASKs get committed.
+      progress.md serves as a checkpoint for crash recovery. Before committing, Main Claude performs a gate check inline to ensure only completed TASKs get committed.
     </p>
 
     <div class="card">
@@ -1055,9 +1055,9 @@ body {
     </div>
 
     <div class="card">
-      <div class="card-title" style="color:var(--accent5);">Committer Gate Check</div>
+      <div class="card-title" style="color:var(--accent5);">Commit Gate Check</div>
       <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
-        Before creating result.md and committing, committer performs 3 mandatory checks:
+        Before creating result.md and committing, Main Claude performs 3 mandatory checks inline:
       </p>
       <div class="gate-container">
         <div class="gate-check" id="gate-1" onclick="toggleGate(1)">

@@ -54,13 +54,13 @@ builder가 auth.ts를 수정했다 → verifier가 auth.ts를 처음부터 읽�
 
 ### 원칙 3: 역할 분리
 
-> result.md 작성 책임을 builder에서 committer로 이전
+> result.md 작성 책임은 builder가 아닌 Main Claude가 인라인으로 수행
 
 - **builder**: 구현에만 집중. progress.md에 체크포인트 기록
-- **committer**: builder + verifier의 context-handoff를 종합해 result.md 작성
+- **Main Claude**: verifier PASS 직후, builder + verifier의 context-handoff를 종합해 인라인으로 result.md 작성
 
 builder가 result.md를 직접 쓰면 작업에 집중하다 빠뜨리는 문제가 발생한다.
-저렴한 committer가 구조화된 문서 작성을 전담하는 것이 효율적이다.
+Main Claude가 verifier 검증 완료 후 구조화된 문서 작성을 전담하는 것이 효율적이다.
 
 ---
 
@@ -125,34 +125,33 @@ Main Claude → specifier 세션:
   ↑ 모두 동일 세션, 컨텍스트 누적됨
 ```
 
-### pipeline 모드 — Main Claude → Builder → Verifier+Committer (단일 spawn)
+### pipeline 모드 — Main Claude → Builder → Verifier
 
-v1.6.0부터 verifier와 committer가 **단일 spawn**으로 결합 실행된다.
-builder의 context-handoff는 Main Claude를 통해 verifier+committer spawn에 전달된다.
+builder의 context-handoff는 Main Claude를 통해 verifier spawn에 전달된다.
+verifier PASS 후에는 별도 spawn 없이 Main Claude가 인라인으로 result.md 작성 및 git commit을 수행한다.
 
 ```
 Main Claude가 서브에이전트를 순차 호출하며 context-handoff를 중개한다.
 
 builder 완료 → Main Claude에 반환
-  └─ Main Claude → verifier+committer 단일 spawn 호출 시 전달:
+  └─ Main Claude → verifier spawn 호출 시 전달:
                     builder context-handoff (FULL)
                     → builder가 왜 그렇게 짰는지 알고 타겟 검증 가능
 
-[verifier+committer 단일 spawn 내부]
-  - Verifier가 먼저 검증 수행 (builder FULL context 보유)
-  - 검증 완료 후 Committer가 result.md 작성 + git commit
-  - verifier → committer context 전달이 동일 spawn 내에서 처리됨
-    (별도 XML handoff 없이 단일 세션 컨텍스트 공유)
+verifier 완료(PASS) → Main Claude에 반환
+  └─ Main Claude가 자식 spawn 없이 인라인으로 수행:
+     - builder + verifier의 context-handoff를 종합해 result.md 작성
+     - git commit
 ```
 
 ```
-verifier+committer spawn이 받는 컨텍스트:
+verifier spawn이 받는 컨텍스트:
   builder.what + why + caution + incomplete  ← FULL
   planner/scheduler 내용                     ← DROP (pipeline 모드엔 없음)
 
-committer가 활용하는 컨텍스트 (동일 spawn 내):
-  verifier 검증 결과    ← 동일 세션 컨텍스트 (별도 handoff 불필요)
-  builder.what (요약)  ← 같은 spawn이 보유한 FULL에서 추출
+Main Claude가 인라인 result.md 작성 시 활용하는 컨텍스트:
+  verifier 검증 결과    ← verifier 반환값 (동일 세션, 별도 handoff 불필요)
+  builder.what (요약)  ← Main Claude가 보유한 FULL에서 추출
 ```
 
 ### full 모드 — TASK 간 의존성 전달
@@ -235,9 +234,9 @@ builder가 재dispatch되면 progress.md를 읽고 **마지막 완료된 체크�
 
 ---
 
-## 6. committer Gate 역할
+## 6. Gate 역할 (Main Claude 인라인 수행)
 
-committer(pipeline / full 모드)는 verifier+committer 단일 spawn 내에서 verifier 검증 완료 후 작업을 시작하며, 다음을 확인한다:
+Main Claude(pipeline / full 모드)는 verifier 검증 완료(PASS) 후 인라인으로 다음을 확인한다:
 
 ```
 [Gate 검사]
@@ -248,10 +247,9 @@ committer(pipeline / full 모드)는 verifier+committer 단일 spawn 내에서 v
 [Gate 통과 시]
   → result.md 작성 (what/why/caution/incomplete)
   → git commit
-  → COMMITTER DONE 콜백 전송
+  → 커밋 완료 콜백(TaskCallback) 전송
 
 [Gate 실패 시]
-  → Main Claude에 FAIL 반환
   → Main Claude가 builder 재dispatch (최대 2회 재시도)
 ```
 
@@ -259,9 +257,9 @@ direct 모드에서는 specifier가 self-check로 동등한 검증을 수행한�
 
 ---
 
-## 7. result.md 구조 (committer 작성)
+## 7. result.md 구조 (Main Claude 인라인 작성)
 
-committer가 builder + verifier의 context-handoff를 종합해 작성한다.
+Main Claude가 builder + verifier의 context-handoff를 종합해 인라인으로 작성한다.
 
 상세 포맷은 `agents/file-content-schema.md` § 4 (full/pipeline) 및 § 5 (direct) 참조.
 
@@ -329,7 +327,6 @@ direct 모드의 경우 서브에이전트 세션 초기화 비용(~12,500 토�
 | `agents/scheduler.md` | 슬라이딩 윈도우 dispatch 로직 (full 모드) |
 | `agents/builder.md` | progress.md 체크포인트 기록 규칙 |
 | `agents/verifier.md` | context-handoff 기반 타겟 검증 |
-| `agents/committer.md` | Gate 역할 + result.md 작성 + COMMITTER DONE 콜백 |
 
 ---
 

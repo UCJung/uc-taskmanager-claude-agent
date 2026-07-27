@@ -173,8 +173,7 @@ verifier는 read-only로 **독립 재실행**해 빌드·린트·테스트·인�
 │   ├── specifier.md
 │   ├── planner.md
 │   ├── builder.md
-│   ├── verifier.md
-│   └── committer.md          # deprecated 스텁 (커밋은 orchestrator 인라인 수행)
+│   └── verifier.md
 ├── references/   # 공용 규칙·스키마 문서 — orchestrator가 1회만 읽음
 │   ├── agent-flow.md
 │   ├── context-policy.md
@@ -198,7 +197,6 @@ verifier는 read-only로 **독립 재실행**해 빌드·린트·테스트·인�
 | `planner.md` | 요구사항을 설계 + TASK DAG로 변환 (How) |
 | `builder.md` | TASK 코드 구현 + 빌드 셀프체크 |
 | `verifier.md` | 독립 read-only 검증 (빌드·린트·테스트·인수기준) |
-| `committer.md` | deprecated 스텁 — 커밋은 orchestrator 인라인 수행, 패키징 안정성 위해 유지 |
 
 **`references/` — 공용 규칙·스키마 문서** (orchestrator가 1회 읽어 ref-cache로 자식에게 섹션 배분)
 

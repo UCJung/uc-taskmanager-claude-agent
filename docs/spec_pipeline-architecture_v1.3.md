@@ -15,7 +15,7 @@ uc-taskmanager는 Claude Code CLI 위에서 동작하는 **멀티 에이전트 �
 - **3종 execution-mode**: 복잡도에 따라 direct / pipeline / full 중 최적 경로 선택
 - **Main Claude 오케스트레이션**: 모든 서브에이전트 호출은 Main Claude가 수행
 - **슬라이딩 윈도우 컨텍스트**: 에이전트 간 reasoning 전달로 토큰 절감
-- **불변 보장**: 모든 모드에서 result.md 생성과 COMMITTER DONE 콜백 전송 보장
+- **불변 보장**: 모든 모드에서 result.md 생성과 커밋 완료 콜백(TaskCallback) 전송 보장
 
 ---
 
@@ -25,10 +25,11 @@ uc-taskmanager는 Claude Code CLI 위에서 동작하는 **멀티 에이전트 �
 |---------|------|------|---------|
 | **specifier** | 사용자 요청 분석 → Requirement.md 생성 → execution-mode 결정 및 실행 오케스트레이션 | opus | 항상 |
 | **planner** | WORK 생성 + TASK 분해 + DAG 설계 | opus | pipeline / full |
-| **scheduler** | DAG 관리 + Builder/Verifier/Committer 파이프라인 실행 | haiku | full 전용 |
+| **scheduler** | DAG 관리 + Builder/Verifier 파이프라인 실행 | haiku | full 전용 |
 | **builder** | TASK 실제 구현 (파일 생성/수정) + progress.md 기록 | sonnet | direct / pipeline / full |
 | **verifier** | 구현 결과 검증 (빌드·린트·테스트·AC) — 읽기 전용 | haiku | pipeline / full |
-| **committer** | result.md 작성 + git commit + TaskCallback 전송 | haiku | pipeline / full |
+
+> verifier PASS 후 result.md 작성 + git commit + TaskCallback 전송은 **Main Claude가 인라인으로 수행**한다 (별도 서브에이전트 spawn 없음).
 
 ### 에이전트 간 호출 구조
 
@@ -51,13 +52,12 @@ uc-taskmanager는 Claude Code CLI 위에서 동작하는 **멀티 에이전트 �
  specifier+   specifier+     specifier+
  planner      planner        planner
  겸임          →builder      →scheduler
-  │           →verifier+    →[builder→
-  ▼            committer      verifier+
- builder       (1 spawn)      committer]
-  │                           (1 spawn)
-  ▼                            ×N
- verifier+
- committer
+  │           →verifier     →[builder→
+  ▼            (1 spawn)      verifier]
+ builder                      (1 spawn)
+  │                            ×N
+  ▼
+ verifier
  (1 spawn)
 ```
 
@@ -65,9 +65,9 @@ uc-taskmanager는 Claude Code CLI 위에서 동작하는 **멀티 에이전트 �
 
 | 모드 | Spawn 구성 | 총 Spawn 수 |
 |------|-----------|:----------:|
-| direct | specifier(1) + builder(1) + verifier+committer(1) | **3** |
-| pipeline | specifier+planner(1) + builder(1) + verifier+committer(1) | **3** |
-| full (N TASK) | specifier+planner(1) + scheduler(1) + [builder(1) + verifier+committer(1)] × N | **2 + 2N** |
+| direct | specifier(1) + builder(1) + verifier(1) | **3** |
+| pipeline | specifier+planner(1) + builder(1) + verifier(1) | **3** |
+| full (N TASK) | specifier+planner(1) + scheduler(1) + [builder(1) + verifier(1)] × N | **2 + 2N** |
 | full (6 TASK 예시) | 2 + 2×6 | **14** |
 
 ---
@@ -95,7 +95,7 @@ Main Claude가 builder를 호출하여 구현을 수행한다.
 
 ```
 Specifier: Requirement.md 생성 → PLAN.md + TASK-00.md 생성 → builder dispatch XML 반환
-Main Claude: builder 호출 → verifier 호출 → committer 호출
+Main Claude: builder 호출 → verifier 호출 → (PASS 시) 인라인으로 result.md 작성 → git commit
 ```
 
 **실행 순서 (12단계):**
@@ -116,21 +116,21 @@ Main Claude: builder 호출 → verifier 호출 → committer 호출
 ```
 
 - Specifier가 Planner 겸임 (PLAN.md + TASK 파일 직접 생성)
-- builder → verifier+committer 순차 실행 (Main Claude 수행, verifier+committer는 단일 spawn)
+- builder → verifier 순차 실행 (Main Claude 수행, verifier는 자체 spawn)
 - ProgressCallback: builder가 직접 전송
-- TaskCallback: committer가 전송
-- **Spawn 수: 3** (specifier(Planner 겸임) 1 + builder 1 + verifier+committer 1)
+- TaskCallback: verifier PASS 후 Main Claude가 커밋 완료 시 전송
+- **Spawn 수: 3** (specifier(Planner 겸임) 1 + builder 1 + verifier 1)
 
 ### 3.2 pipeline 모드
 
 Specifier와 Planner가 **단일 spawn**으로 결합되어 실행된다.
 specifier+planner spawn이 Requirement.md + PLAN + TASK 파일을 생성하면,
-Main Claude가 builder → verifier+committer를 순차 실행한다.
-verifier와 committer 역시 **단일 spawn**으로 결합된다.
+Main Claude가 builder → verifier를 순차 실행한다.
+verifier PASS 후에는 Main Claude가 인라인으로 result.md 작성 + git commit을 수행한다(별도 spawn 없음).
 
 ```
 specifier+planner (1 spawn): Requirement.md + PLAN.md + TASK 생성
-Main Claude: builder 호출 → verifier+committer 호출 (1 spawn)
+Main Claude: builder 호출 → verifier 호출 (1 spawn) → (PASS 시) 인라인 커밋
 ```
 
 **실행 순서:**
@@ -140,23 +140,24 @@ Main Claude: builder 호출 → verifier+committer 호출 (1 spawn)
 2. specifier+planner: WORK-LIST.md IN_PROGRESS 추가 + LAST_WORK_ID 갱신
 3. specifier+planner: PLAN.md, TASK-00.md, TASK-00_progress.md 생성 (사용자 승인 후)
 4. Main Claude: builder 서브에이전트 호출
-5. Main Claude: verifier+committer 서브에이전트 호출 (builder context-handoff 전달)
+5. Main Claude: verifier 서브에이전트 호출 (builder context-handoff 전달)
+6. Main Claude: verifier PASS 시 인라인으로 result.md 작성 → git commit
 ```
 
 - TASK 1개 단순 구조
 - `execution-mode="pipeline"` 속성을 dispatch XML에 포함
-- **Spawn 수: 3** (specifier+planner 1 + builder 1 + verifier+committer 1)
+- **Spawn 수: 3** (specifier+planner 1 + builder 1 + verifier 1)
 
 ### 3.3 full 모드
 
 specifier와 planner가 **단일 spawn**으로 결합되어 실행된다.
 specifier+planner spawn이 PLAN + TASK 파일을 생성하고, Scheduler를 dispatch한다.
-Scheduler가 DAG 기반으로 [builder → verifier+committer] × N을 반복 실행한다.
-verifier와 committer는 각 TASK마다 **단일 spawn**으로 결합된다.
+Scheduler가 DAG 기반으로 [builder → verifier] × N을 반복 실행한다.
+각 TASK의 verifier PASS 후에는 Main Claude가 인라인으로 result.md 작성 + git commit을 수행한다(별도 spawn 없음).
 
 ```
 specifier+planner (1 spawn) → (Main Claude) → scheduler
-→ (Main Claude) → [builder → verifier+committer (1 spawn)] × N
+→ (Main Claude) → [builder → verifier (1 spawn) → 인라인 커밋] × N
 ```
 
 **실행 순서:**
@@ -174,14 +175,15 @@ specifier+planner (1 spawn) → (Main Claude) → scheduler
 scheduler 루프:
 5. scheduler: DAG 분석 → READY TASK 선별 → builder dispatch XML 반환
 6. Main Claude: builder 호출
-7. Main Claude: verifier+committer 호출 (단일 spawn)
-8. 미완료 TASK 있으면 5번으로 돌아감
+7. Main Claude: verifier 호출 (자체 spawn)
+8. Main Claude: verifier PASS 시 인라인으로 result.md 작성 → git commit
+9. 미완료 TASK 있으면 5번으로 돌아감
 ```
 
 - 병렬 실행: scheduler가 복수의 READY TASK를 반환하면 builder를 동시에 호출 가능
 - PLAN.md에 `Execution-Mode: full` 기록
-- **Spawn 수 (N TASK):** 2 + 2N (specifier+planner 1 + scheduler 1 + (builder + verifier+committer) × N)
-- **6 TASK 예시:** 2 + 12 = **14 spawns** (기존 20 대비 30% 감소)
+- **Spawn 수 (N TASK):** 2 + 2N (specifier+planner 1 + scheduler 1 + (builder + verifier) × N)
+- **6 TASK 예시:** 2 + 12 = **14 spawns** (기존 20 대비 30% 감소 — specifier+planner 결합에 따른 감소)
 
 ### 3.4 Routing 기준표
 
@@ -210,7 +212,7 @@ works/
     PROGRESS.md                 # scheduler 진행 상태 (full 모드만)
     TASK-XX.md                  # TASK 명세 (WORK prefix 없음)
     TASK-XX_progress.md         # 실시간 체크포인트 (builder 작성)
-    TASK-XX_result.md           # 완료 보고서 (committer 작성)
+    TASK-XX_result.md           # 완료 보고서 (Main Claude 인라인 작성)
     work_WORK-NN.log            # Activity Log (모든 에이전트 기록)
 ```
 
@@ -222,7 +224,7 @@ works/
 | WORK 계획 | `PLAN.md` | planner / specifier(direct) |
 | TASK 계획 | `TASK-NN.md` | planner / specifier(direct) |
 | TASK 진행 | `TASK-NN_progress.md` | planner(템플릿) / builder(갱신) |
-| TASK 결과 | `TASK-NN_result.md` | committer |
+| TASK 결과 | `TASK-NN_result.md` | Main Claude(인라인) |
 | WORK 진행 | `PROGRESS.md` | scheduler |
 | Activity Log | `work_WORK-NN.log` | 모든 에이전트 |
 
@@ -254,7 +256,7 @@ LAST_WORK_ID: WORK-XX
 | 상태 | 의미 | 전환 트리거 |
 |------|------|------------|
 | `IN_PROGRESS` | WORK 진행 중 | specifier가 WORK 생성 시 |
-| `DONE` | 모든 TASK 완료, 검토/push 대기 | committer가 마지막 TASK 완료 시 |
+| `DONE` | 모든 TASK 완료, 검토/push 대기 | Main Claude가 마지막 TASK 커밋 완료 시 인라인 전환 |
 | `COMPLETED` | `_COMPLETED/` 아카이브 완료 | push 시 Main Claude 일괄 처리 |
 
 ### 불변 보장 항목
@@ -267,10 +269,10 @@ LAST_WORK_ID: WORK-XX
 | `Requirement.md` | Specifier | Specifier |
 | `PLAN.md` | Specifier(Planner 겸임) | Planner |
 | `TASK-XX.md` 파일 | Specifier(Planner 겸임) | Planner |
-| `TASK-XX_result.md` 생성 | **Committer** | **Committer** |
-| COMMITTER DONE 콜백 전송 | **Committer** | **Committer** |
+| `TASK-XX_result.md` 생성 | **Main Claude(인라인)** | **Main Claude(인라인)** |
+| 커밋 완료 콜백(TaskCallback) 전송 | **Main Claude(인라인)** | **Main Claude(인라인)** |
 | `WORK-LIST.md` IN_PROGRESS 추가 | Specifier | Specifier |
-| `WORK-LIST.md` DONE 전환 | **Committer** | **Committer** |
+| `WORK-LIST.md` DONE 전환 | **Main Claude(인라인)** | **Main Claude(인라인)** |
 
 ---
 
@@ -291,7 +293,7 @@ LAST_WORK_ID: WORK-XX
 
 **WORK-LIST.md 관리:**
 - WORK 생성 시 `IN_PROGRESS` 추가 + `LAST_WORK_ID` 갱신
-- DONE/COMPLETED 변경 금지 (committer 및 push 절차에서 수행)
+- DONE/COMPLETED 변경 금지 (Main Claude 인라인 처리 및 push 절차에서 수행)
 
 ### 5.2 Planner
 
@@ -313,10 +315,10 @@ LAST_WORK_ID: WORK-XX
 주요 역할:
 - DAG Resolution: `result file 존재 → DONE`, `ALL deps DONE → READY`, 그 외 `BLOCKED`
 - READY TASK를 번호 낮은 순 실행
-- builder → verifier+committer 순차 호출을 위한 dispatch XML 반환 (Main Claude가 각각 호출, verifier+committer는 단일 spawn)
+- builder → verifier 순차 호출을 위한 dispatch XML 반환 (Main Claude가 각각 호출)
 - FAIL 시 최대 3회 builder 재dispatch
 - PROGRESS.md 업데이트 및 진행 보고
-- Pipeline Stage Callbacks (BUILDER/VERIFIER/COMMITTER START/DONE)
+- Pipeline Stage Callbacks (BUILDER/VERIFIER START/DONE)
 
 **WORK-LIST.md:** DONE/COMPLETED 변경 금지
 
@@ -351,43 +353,6 @@ LAST_WORK_ID: WORK-XX
 
 **금지:** 소스 코드 수정, 이슈 수정(오직 보고만)
 
-### 5.6 Committer
-
-**모델:** haiku | **트리거:** verifier 완료 후 dispatch
-
-**실행 순서 (8단계):**
-
-```
-1. Gate Check: progress.md 존재 + Status=COMPLETED + Files changed 비어있지 않음
-   실패 시: FAIL 반환 (result.md 생성 및 commit 금지)
-2. result.md 생성: works/WORK-NN/TASK-XX_result.md
-3. PROGRESS.md 갱신
-4. git add -A && git commit
-5. 커밋 해시 백필: result.md에 commit hash 기록 후 amend
-6. TaskCallback 전송 (CLAUDE.md TaskCallback URL)
-7. WORK 완료 확인: 마지막 TASK이면 WORK-LIST.md IN_PROGRESS → DONE 전환 + 완료일 기록 후 amend
-8. 결과 보고: task-result XML 반환
-```
-
-**WORK 완료 시 DONE 전환 로직:**
-
-```bash
-# 마지막 TASK 여부 확인
-TOTAL=$(ls works/${WORK_ID}/TASK-*.md 2>/dev/null | grep -cv '_result\|_progress')
-DONE=$(ls works/${WORK_ID}/TASK-*_result.md 2>/dev/null | wc -l)
-
-if [ "$DONE" -ge "$TOTAL" ]; then
-  # IN_PROGRESS → DONE 전환 (행 삭제 또는 폴더 이동 금지)
-  sed -i "s/| ${WORK_ID} |\(.*\)| IN_PROGRESS |/| ${WORK_ID} |\1| DONE |/" works/WORK-LIST.md
-  git add works/WORK-LIST.md
-  git commit --amend --no-edit
-fi
-```
-
-**Git commit type:** feat / fix / chore / test / docs / refactor (항상 영어)
-
-**금지:** result 없이 commit, Gate 없이 진행, WORK-LIST.md COMPLETED 변경
-
 ---
 
 ## 6. TASK 파이프라인 흐름 (pipeline / full 공통)
@@ -403,14 +368,16 @@ dispatcher (specifier+planner 또는 Scheduler)
   │       └─ ProgressCallback 전송 (체크포인트마다)
   │       └─ task-result XML + context-handoff 반환
   │
-  └─ [2] verifier+committer dispatch (단일 spawn)
-          └─ [verifier] builder context-handoff(FULL) 수신
-          └─ [verifier] progress.md Gate 확인 (CRITICAL)
-          └─ [verifier] build / lint / test / AC 검증
-          └─ [committer] Gate Check (progress.md + COMPLETED + Files changed)
-          └─ [committer] Gate 실패 → dispatcher에 FAIL 반환 → builder 재dispatch (최대 3회)
-          └─ [committer] Gate 통과 → result.md 작성 → git commit → TaskCallback 전송
-          └─ [committer] 마지막 TASK이면 WORK-LIST.md IN_PROGRESS → DONE 전환
+  ├─ [2] verifier dispatch (자체 spawn)
+  │       └─ builder context-handoff(FULL) 수신
+  │       └─ progress.md Gate 확인 (CRITICAL)
+  │       └─ build / lint / test / AC 검증
+  │       └─ FAIL → dispatcher에 반환 → builder 재dispatch (최대 3회)
+  │       └─ PASS → task-result XML + context-handoff 반환
+  │
+  └─ [3] Main Claude 인라인 처리 (verifier PASS 후, spawn 없음)
+          └─ result.md 작성 → git commit → 커밋 완료 콜백(TaskCallback) 전송
+          └─ 마지막 TASK이면 WORK-LIST.md IN_PROGRESS → DONE 전환
 ```
 
 ---
@@ -450,7 +417,7 @@ dispatcher (specifier+planner 또는 Scheduler)
 
 | 속성 | 값 | 설명 |
 |------|----|------|
-| `to` | builder, verifier, committer, planner, scheduler | 수신 에이전트 |
+| `to` | builder, verifier, planner, scheduler | 수신 에이전트 |
 | `work` | WORK-NN | WORK 식별자 |
 | `task` | TASK-XX | TASK 식별자 (WORK prefix 금지) |
 | `execution-mode` | direct, pipeline, full | 생략 시 `full`로 간주 |
@@ -486,12 +453,12 @@ dispatcher (specifier+planner 또는 Scheduler)
 | Dispatcher | Receiver | execution-mode | 설명 |
 |------------|----------|:--------------:|------|
 | Specifier (겸임) | Builder | `direct` | Planner 겸임 — PLAN.md + TASK 직접 생성 후 builder dispatch |
-| Main Claude | Verifier+Committer | `direct` | builder 완료 후 단일 spawn dispatch |
+| Main Claude | Verifier | `direct` | builder 완료 후 dispatch (verifier PASS 후 Main Claude 인라인 커밋) |
 | Specifier+Planner | Builder | `pipeline` | 단일 spawn — PLAN + TASK 생성 후 builder dispatch |
-| Main Claude | Verifier+Committer | `pipeline` | builder 완료 후 단일 spawn dispatch |
+| Main Claude | Verifier | `pipeline` | builder 완료 후 dispatch (verifier PASS 후 Main Claude 인라인 커밋) |
 | Specifier+Planner | Scheduler | `full` | 단일 spawn — PLAN + TASK 생성 후 scheduler dispatch |
 | Scheduler | Builder | `full` | TASK N개 구현 |
-| Main Claude | Verifier+Committer | `full` | builder 완료 후 단일 spawn dispatch (TASK당) |
+| Main Claude | Verifier | `full` | builder 완료 후 dispatch (TASK당, verifier PASS 후 Main Claude 인라인 커밋) |
 
 ---
 
@@ -525,8 +492,8 @@ builder 완료
   └─ verifier: builder context-handoff (FULL) 수신
                 → 왜 그렇게 짰는지 알고 타겟 검증 가능
 
-verifier 완료
-  └─ committer: verifier context-handoff (FULL) + builder context-handoff (SUMMARY) 수신
+verifier 완료 (PASS)
+  └─ Main Claude(인라인): verifier context-handoff (FULL) + builder context-handoff (SUMMARY) 수신
                 → result.md 작성에 필요한 정보만 보유
 ```
 
@@ -565,21 +532,21 @@ builder가 비정상 종료 대비를 위해 작업 상태를 파일로 실시�
 | 파일 변경 중 | `IN_PROGRESS` |
 | 완료 | `COMPLETED` |
 
-### committer Gate (3가지 조건)
+### Main Claude 인라인 커밋 Gate (3가지 조건)
 
 ```
-Gate 검사:
+Gate 검사 (Main Claude, verifier PASS 후 인라인 수행):
   1. progress.md 파일이 존재하는가?       → 없으면 FAIL
   2. Status = COMPLETED인가?             → 아니면 FAIL
   3. Files Changed 목록이 비어있지 않은가? → 비어있으면 FAIL
 
 Gate 실패:
-  → Committer가 FAIL 반환 (result.md 생성 및 commit 금지)
+  → Main Claude가 FAIL 처리 (result.md 생성 및 commit 금지)
   → Scheduler가 builder 재dispatch (최대 2회 재시도, 총 3회)
   → 3회 실패 → TASK FAILED 마킹, 파이프라인 중단
 
 Gate 통과:
-  → result.md 작성 → git commit → TaskCallback 전송
+  → Main Claude가 인라인으로 result.md 작성 → git commit → TaskCallback 전송
 ```
 
 ### Retry 시 재개 전략
@@ -638,7 +605,7 @@ log_work() {
 | `PLAN` | PLAN.md + TASK 파일 생성 완료 | Specifier / Planner |
 | `IMPL` | 코드 구현 시작 | Builder |
 | `BUILD` | self-check 통과 | Builder / Verifier |
-| `COMMIT` | git commit 완료 | Committer |
+| `COMMIT` | git commit 완료 | Main Claude(인라인) |
 | `DISPATCH` | pipeline/full dispatch | Specifier / Scheduler |
 
 ### 필수 기록 항목
@@ -657,7 +624,7 @@ log_work() {
 | 콜백 | 전송 시점 | 전송 주체 |
 |------|---------|---------|
 | **ProgressCallback** | builder 체크포인트마다 | builder (모든 모드) |
-| **TaskCallback** | git commit 완료 후 | committer (모든 모드) |
+| **TaskCallback** | git commit 완료 후 | Main Claude(인라인, 모든 모드) |
 | **Pipeline Stage Callback** | 각 단계 START/DONE | scheduler (full) |
 
 ### CLAUDE.md 설정
@@ -672,11 +639,11 @@ CallbackToken: <bearer-token>
 
 | execution-mode | TaskCallback | ProgressCallback |
 |:--------------:|:------------:|:----------------:|
-| `direct` | **Committer** | **Builder** |
-| `pipeline` | **Committer** | **Builder** |
-| `full` | **Committer** | **Builder** |
+| `direct` | **Main Claude(인라인)** | **Builder** |
+| `pipeline` | **Main Claude(인라인)** | **Builder** |
+| `full` | **Main Claude(인라인)** | **Builder** |
 
-- 모든 모드에서 COMMITTER DONE 콜백(TaskCallback) 전송은 **불변 보장**
+- 모든 모드에서 커밋 완료 콜백(TaskCallback) 전송은 **불변 보장**
 - 콜백 실패 시 경고 출력 후 계속 진행 (파이프라인 중단 금지)
 
 ---
@@ -691,11 +658,11 @@ CallbackToken: <bearer-token>
 | `PLAN.md` | § 1 | planner / specifier(direct) |
 | `TASK-XX.md` | § 2 | planner / specifier(direct) |
 | `TASK-XX_progress.md` | § 3 | planner(템플릿) / builder(갱신) |
-| `TASK-XX_result.md` (pipeline/full) | § 4 | committer |
-| `TASK-XX_result.md` (direct) | § 4 | committer |
+| `TASK-XX_result.md` (pipeline/full) | § 4 | Main Claude(인라인) |
+| `TASK-XX_result.md` (direct) | § 4 | Main Claude(인라인) |
 | `PROGRESS.md` | § 6 | scheduler |
 
-### result.md 구조 (committer 작성)
+### result.md 구조 (Main Claude 인라인 작성)
 
 ```markdown
 # TASK-XX Result
@@ -769,7 +736,7 @@ specifier (no ref-cache) → reads files → returns task-result with <ref-cache
   ↓ Main Claude copies <ref-cache>
 planner (ref-cache in) → skips file reads → returns with <ref-cache>
   ↓ Main Claude copies <ref-cache>
-builder → verifier → committer → ...
+builder → verifier → ...
 ```
 
 **규칙:**
@@ -791,7 +758,6 @@ Main Claude가 파이프라인 시작 시 참조 파일을 한 번 읽고, 에�
 | scheduler | §4,§8,§10 | §1,§6 | §1,§3,§4,§5 | full | full |
 | builder | §1,§2,§10,§12 | §2,§3 | §1,§2,§4 | Builder section | full |
 | verifier | §1,§2,§12 | — | §1,§2,§4 | Verifier section | full |
-| committer | §1,§2,§8,§10 | §3,§4,§5,§6,§7 | §1,§2,§4 | Committer+Retry | full |
 
 ### 16.3 Recognized Keys
 

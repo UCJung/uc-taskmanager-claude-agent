@@ -10,7 +10,6 @@ export const VERSION = pkg.version;
 export const AGENT_FILES = [
   'orchestrator.md',
   'builder.md',
-  'committer.md',
   'planner.md',
   'specifier.md',
   'verifier.md',
@@ -42,6 +41,7 @@ export function getReferencesSrcDir() {
  */
 export const OBSOLETE_PATHS = [
   'agents/scheduler.md',             // removed in 2.0.0 — orchestrator took over scheduling
+  'agents/committer.md',             // removed in 2.2.0 — commit is inline in orchestrator (was a deprecated stub since 2.0.0)
   'references/callback-protocol.md', // removed in 2.0.0 — external callback integration dropped
   'references/ref-cache-protocol.md',// removed in 2.0.1 — protocol folded into xml-schema.md § 4
   'skills/sdd-pipeline/references',  // removed in 1.5.0 — references moved to references/
@@ -158,6 +158,6 @@ export const REQUIRED_PERMISSIONS = [
   'Bash(ruff:*)',
   'Bash(make:*)',
 
-  // Git operations (committer)
+  // Git operations (inline commit in orchestrator)
   'Bash(git:*)',
 ];

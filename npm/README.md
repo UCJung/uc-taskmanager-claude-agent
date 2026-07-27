@@ -173,8 +173,7 @@ Every stage writes its output to disk — requirement spec, plan, per-TASK resul
 │   ├── specifier.md
 │   ├── planner.md
 │   ├── builder.md
-│   ├── verifier.md
-│   └── committer.md          # deprecated stub (commit is inline in orchestrator)
+│   └── verifier.md
 ├── references/   # shared rule/schema docs — read once by the orchestrator
 │   ├── agent-flow.md
 │   ├── context-policy.md
@@ -198,7 +197,6 @@ Every stage writes its output to disk — requirement spec, plan, per-TASK resul
 | `planner.md` | Turns requirements into design + TASK DAG (the How) |
 | `builder.md` | Implements a TASK's code + build self-check |
 | `verifier.md` | Independent read-only verification (build/lint/test/acceptance) |
-| `committer.md` | Deprecated stub — commit is now inline in the orchestrator; kept for packaging stability |
 
 **`references/` — shared rule/schema docs** (the orchestrator reads these once and distributes sections to children via ref-cache)
 
