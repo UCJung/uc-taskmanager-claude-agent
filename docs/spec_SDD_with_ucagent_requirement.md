@@ -148,13 +148,12 @@ uc-teamspace/
     └── runner.ts                   ← 핵심 실행 스크립트
 
 uc-taskmanager/                     ← 별도 레포
-├── agents/                         ← 에이전트 정의 (12개 파일)
+├── agents/                         ← 에이전트 정의 (11개 파일)
 │   ├── router.md                   ← 요청 라우터 (execution-mode 판정)
 │   ├── planner.md                  ← WORK 분해 플래너
 │   ├── scheduler.md                ← 파이프라인 오케스트레이터
 │   ├── builder.md                  ← 코드 구현 (Serena MCP)
 │   ├── verifier.md                 ← 검증 (읽기 전용)
-│   ├── committer.md                ← 커밋 & 보고
 │   ├── agent-flow.md               ← Main Claude 오케스트레이션 흐름
 │   ├── context-policy.md           ← 슬라이딩 윈도우 정책
 │   ├── xml-schema.md               ← XML 통신 스키마
@@ -187,7 +186,6 @@ uc-taskmanager/                     ← 별도 레포
 | **scheduler** | Haiku | Read, Write, Edit, Bash, Glob, Grep, **Task** | DAG 관리, 콜백 보고, 오케스트레이션 | PROGRESS.md |
 | **builder** | Sonnet | Read, Write, Edit, Bash, Glob, Grep, **mcp__serena__*** | 코드 구현, 빌드/린트 자가검증 | 소스코드 전체 + progress.md |
 | **verifier** | Haiku | Read, Bash, Glob, Grep | 7단계 검증 (빌드/린트/테스트/인수조건) | **없음** (읽기 전용) |
-| **committer** | Haiku | Read, Write, Edit, Bash, Glob, Grep | result.md 생성, git commit, 커밋 해시 백필 | TASK-result.md, PROGRESS.md, git |
 
 **도구 권한 설계 근거:**
 - Router는 Opus 모델로 승격 — execution-mode 판정 시 높은 추론 능력 필요. Serena MCP로 direct 모드에서 심볼 수준 코드 수정, sequential-thinking으로 복잡도 판정
@@ -198,17 +196,16 @@ uc-taskmanager/                     ← 별도 레포
 
 **Spawn 결합 구조 (v1.6.0 신규):**
 
-실행 효율을 위해 두 에이전트 쌍이 **단일 spawn**으로 결합 실행된다:
+실행 효율을 위해 specifier와 planner가 **단일 spawn**으로 결합 실행된다:
 
 | 결합 쌍 | 실행 방식 | 적용 모드 |
 |---------|----------|----------|
 | **Specifier + Planner** | 단일 spawn — specifier가 planner 역할까지 수행 (PLAN + TASK 파일 생성) | pipeline, full |
-| **Verifier + Committer** | 단일 spawn — verifier 검증 후 동일 spawn 내에서 committer 역할 수행 (result.md + git commit) | direct, pipeline, full |
 
-spawn 결합으로 총 spawn 수가 약 30% 감소한다:
-- **direct**: 3 spawns (builder → verifier+committer)
-- **pipeline**: 3 spawns (specifier+planner → builder → verifier+committer)
-- **full (N TASK)**: 2+2N spawns (specifier+planner + scheduler + [builder + verifier+committer]×N)
+verifier는 자체 spawn으로 실행되며, PASS 반환 직후 Router가 별도 서브에이전트 spawn 없이 인라인으로 result.md 작성 → git commit을 수행한다. spawn 결합으로 총 spawn 수가 약 30% 감소한다:
+- **direct**: 3 spawns (builder → verifier)
+- **pipeline**: 3 spawns (specifier+planner → builder → verifier)
+- **full (N TASK)**: 2+2N spawns (specifier+planner + scheduler + [builder + verifier]×N)
 
 에이전트 정의(프롬프트)는 개별 에이전트로 유지된다. spawn 결합은 실행 구조이지 에이전트 정의 변경이 아니다.
 
@@ -221,8 +218,8 @@ spawn 결합으로 총 spawn 수가 약 30% 감소한다:
 | Mode | 복잡도 기준 | 호출 에이전트 | Planner 호출 | Scheduler 호출 | Verifier 호출 |
 |------|------------|-------------|:---:|:---:|:---:|
 | `direct` | 빌드/테스트 불필요 (텍스트 수정, 설정 변경 등) | **Router 단독** (서브에이전트 없음) | 생략 | 생략 | 생략 |
-| `pipeline` | 빌드/테스트 필요 + 단일 도메인 + sequential DAG | Router → Builder → Verifier → Committer | 생략 | 생략 | 호출 |
-| `full` | 멀티도메인 / 복잡 DAG / 신규 모듈 / 5+ TASK | Router → Planner → Scheduler → [B→V→C]×N | 호출 | 호출 | 호출 |
+| `pipeline` | 빌드/테스트 필요 + 단일 도메인 + sequential DAG | Router → Builder → Verifier | 생략 | 생략 | 호출 |
+| `full` | 멀티도메인 / 복잡 DAG / 신규 모듈 / 5+ TASK | Router → Planner → Scheduler → [B→V]×N | 호출 | 호출 | 호출 |
 
 **판정 기준 외부화 (v1.4 — `.agent/router_rule_config.json`):**
 
@@ -233,7 +230,7 @@ Router는 프로젝트 루트의 `.agent/router_rule_config.json`에서 판정 �
 
 **핵심 설계 원칙 — 분리:**
 - **변동 영역 (파이프라인 깊이):** spawn 수로 토큰 절감. direct=3 spawns, pipeline=3 spawns, full=2+2N spawns (v1.6: spawn 결합으로 30% 감소)
-- **고정 영역 (산출물 구조):** 모든 경로에서 `works/WORK-NN/` + `PLAN.md` + `TASK-XX_result.md` + `COMMITTER DONE 콜백` 보장
+- **고정 영역 (산출물 구조):** 모든 경로에서 `works/WORK-NN/` + `PLAN.md` + `TASK-XX_result.md` + 커밋 완료 콜백(TaskCallback) 보장
 
 **Router의 PLAN.md 생성 (direct / pipeline 경로):**
 
@@ -289,7 +286,7 @@ v1.3부터 `tasks/simple-tasks/` 폴더, v1.4부터 `tasks/multi-tasks/` 경로�
    - WORK-LIST.md에 IN_PROGRESS 추가
    - execution-mode 판정:
      - direct: 서브에이전트 없이 Router 단독 수행 (v1.3)
-     - pipeline: Builder → Verifier → Committer dispatch (v1.3)
+     - pipeline: Builder → Verifier dispatch, verifier PASS 후 Router 인라인 커밋 (v1.3)
      - full: Planner 디스패치 (기존 동일)
       │
       ▼
@@ -314,8 +311,8 @@ v1.3부터 `tasks/simple-tasks/` 폴더, v1.4부터 `tasks/multi-tasks/` 경로�
    │       - 빌드/린트/테스트/인수조건 검증
    │       - FAIL 시 → Builder 재시도 (최대 3회)
    │
-   └─ 4c. Committer 디스패치
-           - progress.md Gate 검사 (Step 0) (v1.2)
+   └─ 4c. Scheduler 인라인 커밋 (verifier PASS 직후, 서브에이전트 spawn 없음)
+           - progress.md Gate 검사 (Step 0 상당) (v1.2)
            - TASK-XX_result.md 생성
            - PROGRESS.md 업데이트
            - git add -A && git commit
@@ -407,16 +404,16 @@ v1.3부터 `tasks/simple-tasks/` 폴더, v1.4부터 `tasks/multi-tasks/` 경로�
 | Dispatcher | Receiver | execution-mode | 흐름 | Spawn |
 |------------|----------|:--------------:|------|:-----:|
 | Main Claude | Builder | `direct` | TASK 구현 | 1 |
-| Main Claude | Verifier+Committer | `direct` | 검증+커밋 단일 spawn | 1 |
+| Main Claude | Verifier | `direct` | 검증 spawn, PASS 후 Main Claude 인라인 커밋 | 1 |
 | Main Claude | Specifier+Planner | `pipeline`만 | PLAN+TASK 생성 단일 spawn | 1 |
 | Specifier+Planner | Builder | `pipeline`만 | TASK 1개 구현 | 1 |
-| Main Claude | Verifier+Committer | `pipeline`만 | 검증+커밋 단일 spawn | 1 |
+| Main Claude | Verifier | `pipeline`만 | 검증 spawn, PASS 후 Main Claude 인라인 커밋 | 1 |
 | Main Claude | Specifier+Planner | `full`만 | PLAN+TASK 생성 + Scheduler dispatch | 1 |
 | Specifier+Planner | Scheduler | `full`만 | 계획된 WORK 실행 위임 | — |
 | Scheduler | Builder | `full` (상속) | TASK N개 순차 구현 | N |
-| Scheduler | Verifier+Committer | `full` (상속) | TASK N개 순차 검증+커밋 단일 spawn | N |
+| Scheduler | Verifier | `full` (상속) | TASK N개 순차 검증 spawn, PASS 후 Scheduler 인라인 커밋 | N |
 > **v1.2 대비 변경점:** `Router → Builder (stask="S-TASK-NNNNN")` 경로가 폐지되고, 모든 dispatch에 `work="WORK-NN"` + `execution-mode="{mode}"` 속성이 사용된다.
-> **v1.6 대비 변경점:** Verifier와 Committer가 단일 spawn으로 결합. Specifier와 Planner도 단일 spawn 결합. 총 spawn 수 30% 감소.
+> **v1.6 대비 변경점:** Specifier와 Planner가 단일 spawn 결합. 총 spawn 수 30% 감소.
 
 **`<cache-hint>` 토큰 절감 메커니즘:**
 
@@ -424,12 +421,12 @@ v1.3부터 `tasks/simple-tasks/` 폴더, v1.4부터 `tasks/multi-tasks/` 경로�
 
 | 섹션 | 적용 에이전트 | 내용 |
 |------|-------------|------|
-| output-language-rule | 6개 전체 | 언어 해석 우선순위 (PLAN.md → CLAUDE.md → en) |
+| output-language-rule | 5개 전체 | 언어 해석 우선순위 (PLAN.md → CLAUDE.md → en) |
 | build-commands | builder, verifier | 빌드/린트/테스트 표준 명령 |
-| file-path-patterns | 6개 전체 | WORK/TASK 파일 경로 규칙 |
+| file-path-patterns | 5개 전체 | WORK/TASK 파일 경로 규칙 |
 | fs-discovery | router, planner, scheduler | 파일시스템 탐색 bash 스크립트 |
-| task-result-xml | builder, verifier, committer | task-result XML 포맷 |
-| task-callbacks | builder, committer | 외부 콜백 설정/실행 패턴 |
+| task-result-xml | builder, verifier | task-result XML 포맷 |
+| task-callbacks | builder | 외부 콜백 설정/실행 패턴 |
 
 캐시 히트 시 해당 섹션의 토큰 비용이 90% 절감된다. 5개 이상 TASK가 있는 WORK에서 TASK당 200-500 토큰 절감.
 
@@ -497,9 +494,9 @@ v1.3부터 `tasks/simple-tasks/` 폴더, v1.4부터 `tasks/multi-tasks/` 경로�
 **파이프라인 내부 적용 (단일 TASK):**
 
 ```
-Builder → Verifier:   Builder context-handoff = FULL
-Builder → Committer:  Builder context-handoff = SUMMARY (2단계 떨어짐)
-Verifier → Committer: Verifier context-handoff = FULL (직전)
+Builder → Verifier: Builder context-handoff = FULL
+Builder → Router:   Builder context-handoff = SUMMARY (2단계 떨어짐)
+Verifier → Router:  Verifier context-handoff = FULL (직전, 서브에이전트 spawn 없이 인라인 전달)
 ```
 
 **TASK 간 의존성 적용:**
@@ -513,9 +510,9 @@ TASK-03 builder 입력:
   TASK-00 context-handoff: DROP   (3단계 이상)
 ```
 
-**Committer의 컨텍스트 종합:**
+**Router의 컨텍스트 종합:**
 
-Committer는 result.md 작성 시 두 출처를 종합한다:
+verifier PASS 후 Router는 서브에이전트 spawn 없이 result.md 작성 시 두 출처를 종합한다:
 - Builder context-handoff (SUMMARY) → result.md "Builder Context" 섹션
 - Verifier context-handoff (FULL) → result.md "Verifier Context" 섹션 (4필드 모두)
 
@@ -528,7 +525,7 @@ Committer는 result.md 작성 시 두 출처를 종합한다:
 **progress.md 생명주기:**
 
 ```
-Planner 생성                    Builder 갱신               Verifier/Committer 검증
+Planner 생성                    Builder 갱신               Verifier 검증 → Router 커밋
    │                              │                              │
    ▼                              ▼                              ▼
 TASK-XX_progress.md              Status: STARTED →              Gate 검사:
@@ -558,7 +555,7 @@ Planner가 TASK 파일을 생성할 때 반드시 동일 디렉토리에 progres
 | 파일 변경 후 | IN_PROGRESS | Files changed 목록 갱신 |
 | 작업 완료 | COMPLETED | 최종 타임스탬프 |
 
-**Gate 검사 (Verifier Step 0 + Committer Step 0):**
+**Gate 검사 (Verifier Step 0 + Router 인라인 Gate):**
 
 | Gate 조건 | 실패 시 동작 |
 |-----------|------------|
@@ -566,7 +563,7 @@ Planner가 TASK 파일을 생성할 때 반드시 동일 디렉토리에 progres
 | Status ≠ COMPLETED | CRITICAL FAIL — Builder 작업 미완료 |
 | Files changed 비어있음 | CRITICAL FAIL — 변경 없음 |
 
-Gate 실패 시 Verifier는 이후 검증 단계를 실행하지 않고 즉시 FAIL 반환. Committer도 동일하게 result.md를 생성하지 않고 FAIL 반환.
+Gate 실패 시 Verifier는 이후 검증 단계를 실행하지 않고 즉시 FAIL 반환. verifier PASS 후 Router가 인라인으로 수행하는 Gate 재확인도 동일한 조건에서 실패하면 result.md를 생성하지 않고 FAIL 처리한다.
 
 ### 3.8 3중 재시도 메커니즘 (v1.2 신규)
 
@@ -582,11 +579,11 @@ Gate 실패 시 Verifier는 이후 검증 단계를 실행하지 않고 즉시 F
 | 최대 횟수 | 3회 (초기 + 재시도 2회) |
 | 3회 실패 시 | 파이프라인 중단, 사용자에게 보고 |
 
-**Level 2: Committer FAIL → Builder 재디스패치 (progress.md 기반)**
+**Level 2: Router 인라인 Gate FAIL → Builder 재디스패치 (progress.md 기반)**
 
 | 항목 | 내용 |
 |------|------|
-| 트리거 | Committer Gate 검사 실패 (progress.md 미존재/미완료/빈 목록) |
+| 트리거 | verifier PASS 후 Router 인라인 Gate 검사 실패 (progress.md 미존재/미완료/빈 목록) |
 | 동작 | Scheduler가 기존 progress.md를 포함하여 Builder 재디스패치 |
 | Builder 행동 | progress.md에서 마지막 체크포인트 읽고 이어서 작업 |
 | 최대 횟수 | 총 3회 시도 (2회 추가) |
@@ -613,7 +610,7 @@ Gate 실패 시 Verifier는 이후 검증 단계를 실행하지 않고 즉시 F
 [Scheduler Level 1/2] — TASK 단위 재시도
    │
    ├─ Verifier FAIL → Builder 코드 수정 재시도
-   └─ Committer FAIL → Builder 체크포인트 이어쓰기
+   └─ Router 인라인 Gate FAIL → Builder 체크포인트 이어쓰기
 ```
 
 ### 3.9 모델 배치 전략 및 비용 최적화 (v1.2 신규)
@@ -626,7 +623,7 @@ Gate 실패 시 Verifier는 이후 검증 단계를 실행하지 않고 즉시 F
 |------|---------|-----------|-----------|
 | **Opus** (최고 지능) | Router, Planner | Router: 요청당 1회, Planner: WORK당 1회 | 복잡도 판정·TASK 분해는 최고 추론 능력 필요. Router는 execution-mode 판정 정확도가 전체 파이프라인 효율을 결정 |
 | **Sonnet** (균형) | Builder | TASK당 1-3회 | 코드 구현은 정확성과 속도의 균형 필요. Serena MCP 연동으로 심볼 수준 편집 |
-| **Haiku** (최저 비용) | Scheduler, Verifier, Committer | TASK당 각 1-3회 | 오케스트레이션·검증·커밋은 규칙 기반 작업. 추론보다 패턴 매칭이 핵심 |
+| **Haiku** (최저 비용) | Scheduler, Verifier | TASK당 각 1-3회 | 오케스트레이션·검증은 규칙 기반 작업. 추론보다 패턴 매칭이 핵심 |
 
 **비용 구조 (TASK 1개 기준 추정):**
 
@@ -635,9 +632,10 @@ Router (Opus)       : 1회 × 고비용   ≒ 전체의 ~20% (요청당 1회)
 Planner (Opus)      : 1회 × 고비용   ≒ 전체의 ~25% (WORK당 1회 분산)
 Builder (Sonnet)    : 1-3회 × 중비용 ≒ 전체의 ~35%
 Verifier (Haiku)    : 1-3회 × 저비용 ≒ 전체의 ~8%
-Committer (Haiku)   : 1회 × 저비용   ≒ 전체의 ~4%
 Scheduler (Haiku)   : N회 × 저비용   ≒ 전체의 ~8%
 ```
+
+> result.md 작성/git commit은 verifier PASS 후 Router(이미 열려 있는 세션)가 인라인으로 수행하며, 별도 spawn 비용이 발생하지 않는다(추가 세션 초기화 비용 0). 위 비율은 spawn당 비용 배분을 나타내며 합계가 100%에 못 미치는 것은 과거 별도 spawn으로 처리되던 커밋 비용분(~4%)이 인라인화되어 제거되었기 때문이다.
 
 **토큰 절감 전략 (cache_control + 슬라이딩 윈도우):**
 
@@ -657,7 +655,7 @@ Scheduler (Haiku)   : N회 × 저비용   ≒ 전체의 ~8%
 | 콜백 | 호출 에이전트 | 시점 | Payload 핵심 |
 |------|-------------|------|-------------|
 | **ProgressCallback** | Builder | 파일 변경 후 매 체크포인트 | workId, taskId, status, checklist, currentReasoning |
-| **TaskCallback** | Committer | git commit 완료 후 | workId, taskId, status, what/why/caution/incomplete, filesChanged, commitHash |
+| **TaskCallback** | Router (인라인) | git commit 완료 후 | workId, taskId, status, what/why/caution/incomplete, filesChanged, commitHash |
 
 **설정 (CLAUDE.md):**
 ```markdown
@@ -670,8 +668,8 @@ CallbackToken: <bearer-token>
 **조건부 실행:** URL이 설정되지 않으면 콜백 전송을 건너뛴다. curl 실패 시 경고만 출력하고 파이프라인은 계속 진행한다.
 
 **Stage 콜백과의 관계:**
-- Stage 콜백 (§5.4): Scheduler가 BUILDER/VERIFIER/COMMITTER START/DONE 보고 → Runner가 감지 → 백엔드 ExecutionStageLog
-- Task 콜백 (§3.10): Builder/Committer가 TASK 진행/완료를 외부 시스템에 직접 보고
+- Stage 콜백 (§5.4): Scheduler가 BUILDER/VERIFIER START/DONE 보고 → Runner가 감지 → 백엔드 ExecutionStageLog
+- Task 콜백 (§3.10): Builder가 TASK 진행 상황을, Router가 (인라인 커밋 완료 후) TASK 완료를 외부 시스템에 직접 보고
 
 두 콜백은 독립적으로 동작한다. Stage 콜백은 파이프라인 레벨, Task 콜백은 비즈니스 레벨 정보를 전달한다.
 
@@ -686,8 +684,8 @@ CallbackToken: <bearer-token>
 | `PLAN.md` | Planner (full) / Router (pipeline) | **Router** (PLAN.md) | Scheduler, Builder |
 | `PROGRESS.md` | Scheduler | — (direct에서 미사용) | — |
 | `TASK-XX.md` | Planner (full) / Router (pipeline) | **Router** | Builder, Verifier |
-| `TASK-XX_progress.md` | Planner(템플릿) → Builder(갱신) | **Router** (COMPLETED 즉시) | Verifier/Committer Gate |
-| `TASK-XX_result.md` | **Committer** | **Router** (최소 포맷) | Runner, 다음 TASK Builder |
+| `TASK-XX_progress.md` | Planner(템플릿) → Builder(갱신) | **Router** (COMPLETED 즉시) | Verifier Gate / Router 인라인 Gate |
+| `TASK-XX_result.md` | **Router** (인라인, verifier PASS 직후) | **Router** (최소 포맷) | Runner, 다음 TASK Builder |
 | 소스코드 | Builder | **Router** (직접 수정) | Verifier (읽기 전용) |
 | `WORK-LIST.md` | Router | Router | Scheduler (현황) |
 
@@ -716,11 +714,11 @@ PLAN.md의 `## Tasks` 섹션에 TASK 전체 내용(Files, Acceptance Criteria, V
 
 | Mode | Router 동작 |
 |------|------------|
-| `direct` | WORK dir + PLAN.md + TASK 1개 파일 + progress 템플릿 생성. **서브에이전트 dispatch 없이 Router 자신이 코드 수정 + self-check + result.md 생성 + git commit + 해시 백필 + COMMITTER DONE 콜백까지 직접 수행.** 세션 초기화 비용 0 |
-| `pipeline` | WORK dir + PLAN.md + TASK 1개 파일 + progress 템플릿 생성. Builder → Verifier → Committer 순차 dispatch. Stage 콜백 대행 (BUILDER/VERIFIER/COMMITTER START/DONE) |
+| `direct` | WORK dir + PLAN.md + TASK 1개 파일 + progress 템플릿 생성. **서브에이전트 dispatch 없이 Router 자신이 코드 수정 + self-check + result.md 생성 + git commit + 해시 백필 + 커밋 완료 콜백(TaskCallback)까지 직접 수행.** 세션 초기화 비용 0 |
+| `pipeline` | WORK dir + PLAN.md + TASK 1개 파일 + progress 템플릿 생성. Builder → Verifier 순차 dispatch. verifier PASS 후 Router가 서브에이전트 spawn 없이 인라인으로 result.md 생성 + git commit + 커밋 완료 콜백(TaskCallback) 수행. Stage 콜백 대행 (BUILDER/VERIFIER START/DONE) |
 | `full` | Planner에 dispatch (기존 동일). PLAN.md 생성은 Planner 책임 |
 
-> **direct에서 서브에이전트를 호출하지 않는 이유:** Committer를 Haiku로 dispatch하면 committer.md + xml-schema.md + context-policy.md 로딩만으로 입력 ~12,500 토큰이 소비된다. 1파일 5줄 수정의 result.md 출력은 ~120 토큰이므로, 세션 초기화 비용이 실제 작업의 100배에 달한다. Router 세션은 이미 열려 있으므로 Router가 직접 result.md를 생성하면 추가 세션 비용이 0이다.
+> **result.md 생성/커밋을 서브에이전트로 위임하지 않고 인라인으로 수행하는 이유:** 별도 에이전트를 Haiku로 dispatch하면 xml-schema.md + context-policy.md 로딩만으로 입력 ~12,500 토큰이 소비된다. 1파일 5줄 수정의 result.md 출력은 ~120 토큰이므로, 세션 초기화 비용이 실제 작업의 100배에 달한다. Router(또는 full의 Scheduler) 세션은 이미 열려 있으므로 직접 result.md를 생성하면 추가 세션 비용이 0이다.
 
 **Builder (pipeline/full에서만 서브에이전트로 호출):**
 
@@ -738,13 +736,13 @@ PLAN.md의 `## Tasks` 섹션에 TASK 전체 내용(Files, Acceptance Criteria, V
 | `pipeline` | 7단계 검증 전체 실행. context-handoff FULL 4필드 출력 |
 | `full` | 기존 동일 |
 
-**Committer (pipeline/full에서만 서브에이전트로 호출):**
+**Router/Scheduler의 인라인 result.md 생성 (모든 mode, 서브에이전트 spawn 없음):**
 
-| Mode | Committer 동작 변경 |
+| Mode | 인라인 커밋 동작 |
 |------|-------------------|
-| `direct` | **호출되지 않음** — Router가 직접 result.md 생성 + git commit + COMMITTER DONE 콜백 수행 |
-| `pipeline` | 정상 실행. result.md 전체 포맷 (Builder SUMMARY + Verifier FULL 종합). context-handoff 섹션 포함. **COMMITTER DONE 콜백 전송** |
-| `full` | 기존 동일. **COMMITTER DONE 콜백 전송** |
+| `direct` | Router가 self-check 직후 result.md 최소 포맷 생성 + git commit + 커밋 완료 콜백(TaskCallback) 수행 |
+| `pipeline` | verifier PASS 직후 Router가 result.md 전체 포맷 생성 (Builder SUMMARY + Verifier FULL 종합). context-handoff 섹션 포함. **커밋 완료 콜백(TaskCallback) 전송** |
+| `full` | verifier PASS 직후 Scheduler가 result.md 전체 포맷 생성 (Builder SUMMARY + Verifier FULL 종합). **커밋 완료 콜백(TaskCallback) 전송** |
 
 **direct 모드: Router가 직접 생성하는 result.md 최소 포맷:**
 
@@ -768,7 +766,7 @@ PLAN.md의 `## Tasks` 섹션에 TASK 전체 내용(Files, Acceptance Criteria, V
 - Lint: PASS (self-check)
 ```
 
-이 최소 포맷이라도 Runner의 `parseTaskFilename()`이 `WORK-NN-TASK-00-result.md`를 인식하고, `collectAndSaveWorkDocs()`가 WorkDoc/WorkTask DB에 등록할 수 있다. Router가 직접 생성하므로 Committer 세션 초기화 비용(~12,500 입력 토큰)이 발생하지 않는다.
+이 최소 포맷이라도 Runner의 `parseTaskFilename()`이 `WORK-NN-TASK-00-result.md`를 인식하고, `collectAndSaveWorkDocs()`가 WorkDoc/WorkTask DB에 등록할 수 있다. Router가 직접 생성하므로 별도 서브에이전트 세션 초기화 비용(~12,500 입력 토큰)이 발생하지 않는다.
 
 **Planner (full에서만 호출):**
 
@@ -782,7 +780,7 @@ PLAN.md의 `## Tasks` 섹션에 TASK 전체 내용(Files, Acceptance Criteria, V
 | Mode | Scheduler 동작 |
 |------|---------------|
 | `direct` / `pipeline` | 호출되지 않음 — Router가 직접 dispatch 오케스트레이션 |
-| `full` | 기존 동일. DAG 관리 + 콜백 + [B→V→C]×N |
+| `full` | 기존 동일. DAG 관리 + 콜백 + [B→V]×N (verifier PASS 직후 Scheduler 인라인 커밋) |
 
 **불변 보장 (모든 mode에서 반드시 수행 — 누가 하느냐만 다름):**
 
@@ -791,8 +789,8 @@ PLAN.md의 `## Tasks` 섹션에 TASK 전체 내용(Files, Acceptance Criteria, V
 | `works/WORK-NN/` 디렉토리 | Router | Router (direct/pipeline) / Planner (full) | Runner 탐색 대상 |
 | `PLAN.md` 파일 존재 | Router (PLAN.md) | Router (mini) / Planner (full) | Runner `parsePlanMd()` |
 | `TASK-XX.md` 파일명 패턴 | Router | Router / Planner | Runner `parseTaskFilename()` |
-| `TASK-XX_result.md` 생성 | **Router** | **Committer** | Runner WorkTask DB 등록 |
-| COMMITTER DONE 콜백 전송 | **Router** | **Committer** | REQ 상태 전이 |
+| `TASK-XX_result.md` 생성 | **Router** (인라인) | **Router** (pipeline) / **Scheduler** (full) — 인라인 | Runner WorkTask DB 등록 |
+| 커밋 완료 콜백(TaskCallback) 전송 | **Router** (인라인) | **Router** (pipeline) / **Scheduler** (full) — 인라인 | REQ 상태 전이 |
 | WORK-LIST.md IN_PROGRESS 추가 | Router | Router | 현황 관리 |
 
 ---
@@ -810,7 +808,7 @@ specifier (no ref-cache) → reads files → returns with <ref-cache>
   ↓ Main Claude copies <ref-cache>
 planner (ref-cache in) → skips file reads → returns with <ref-cache>
   ↓
-builder → verifier → committer → ...
+builder → verifier → (verifier PASS 후 Main Claude 인라인 커밋) → ...
 ```
 
 #### Phase 2 — 선택 전달 (Selective Section Delivery)
@@ -824,7 +822,6 @@ Main Claude가 파이프라인 시작 시 참조 파일을 한 번 읽고, 에�
 | scheduler | §4,§8,§10 | §1,§6 | §1,§3,§4,§5 | full | full |
 | builder | §1,§2,§10,§12 | §2,§3 | §1,§2,§4 | Builder section | full |
 | verifier | §1,§2,§12 | — | §1,§2,§4 | Verifier section | full |
-| committer | §1,§2,§8,§10 | §3,§4,§5,§6,§7 | §1,§2,§4 | Committer+Retry | full |
 
 #### 측정 결과
 
@@ -936,7 +933,7 @@ UTF-8 디코딩 시 replacement char(`\uFFFD`) 감지 → EUC-KR fallback.
 
 **[v1.1 신규] 보조 감지: 백엔드 Stage 폴링 (4초 간격)**
 
-sub-agent(scheduler가 builder/verifier/committer를 dispatch)의 콜백은 outer stream-json에 나타나지 않는 경우가 있다. 이 한계를 보완하기 위해 runner는 runClaude() 실행 중 별도의 async 루프로 백엔드 DB의 `currentStage`를 4초 간격으로 조회한다.
+sub-agent(scheduler가 builder/verifier를 dispatch)의 콜백은 outer stream-json에 나타나지 않는 경우가 있다. 이 한계를 보완하기 위해 runner는 runClaude() 실행 중 별도의 async 루프로 백엔드 DB의 `currentStage`를 4초 간격으로 조회한다.
 
 ```
 (async IIFE — runClaude 내부 백그라운드 루프)
@@ -953,7 +950,7 @@ sub-agent(scheduler가 builder/verifier/committer를 dispatch)의 콜백은 oute
 
 **스테이지 순서:**
 ```
-PLANNER → SCHEDULER → BUILDER → VERIFIER → COMMITTER → REVIEWER
+PLANNER → SCHEDULER → BUILDER → VERIFIER → REVIEWER
 ```
 
 ### 4.5 WorkDoc 자동 등록
@@ -1270,7 +1267,7 @@ GET    /:docId                → 단건 조회 (workTasks 포함)
 2. `ExecutionStageLog` 기록 (START: 시작, DONE: durationMs 계산)
 3. `CliExecution.currentStage` 업데이트
 4. PLANNER DONE 시: `handleWorkDocSave()` → PLAN.md 파싱 + WorkDoc 등록
-5. 최종 COMMITTER DONE: Requirement 상태 `IN_PROGRESS → REVIEWING` 전환
+5. 최종 커밋 완료 콜백(TaskCallback): Requirement 상태 `IN_PROGRESS → REVIEWING` 전환
 6. SSE 브로드캐스트
 
 ---
@@ -1296,7 +1293,7 @@ DRAFT ──► REVIEW ──► APPROVED ──► PENDING ──► IN_PROGRES
 | REVIEW | APPROVED | 리더/관리자 승인 |
 | APPROVED | PENDING | 실행 대기열 등록 |
 | PENDING | IN_PROGRESS | Runner 실행 시작 |
-| IN_PROGRESS | REVIEWING | COMMITTER DONE 콜백 |
+| IN_PROGRESS | REVIEWING | 커밋 완료 콜백(TaskCallback) |
 | REVIEWING | DONE | reviewApprove() |
 | REVIEWING | FAILED | reviewReject() |
 
@@ -1669,7 +1666,7 @@ ERROR → 오류만
 | 이벤트 | 담당 | 동작 |
 |--------|------|------|
 | WORK 생성 | router | `IN_PROGRESS` 추가 |
-| TASK 완료 | committer | **아무것도 안 함** |
+| TASK 완료 | Router/Scheduler (인라인 커밋) | **아무것도 안 함** |
 | "WORK 완료!" 선언 | scheduler | **아무것도 안 함** |
 | `git push` 요청 | Claude (수동) | `IN_PROGRESS → COMPLETED` 갱신 |
 | **[v1.1] push 실행** | **Runner (자동)** | **pollGitPush()로 git push 자동 처리** |
@@ -1781,7 +1778,7 @@ if (!existsSync(execution.projectRoot)) {
 - v1.4부터 TASK 파일명이 `TASK-XX.md` (프리픽스 없음, 언더스코어 구분)로 변경됨
 - WORK-12 이전의 레거시 파일(`WORK-NN-TASK-XX.md`, `WORK-NN-TASK-XX-result.md`)은 그대로 유지
 - Runner의 `parseTaskFilename()`은 레거시 패턴과 신규 패턴 모두를 인식해야 함
-- 에이전트 파일(planner.md, committer.md 등)은 신규 패턴만 생성하도록 업데이트 완료
+- 에이전트 파일(planner.md, builder.md 등)은 신규 패턴만 생성하도록 업데이트 완료
 
 ---
 
@@ -1811,17 +1808,17 @@ POST   /git-push-result          → [v1.1] Git Push 결과 보고
 
 | VIS ID | SDD 참조 섹션 | 시각화 내용 |
 |--------|-------------|-----------|
-| **VIS-01** | §2 아키텍처 전체 구조 | 3계층(TeamSpace, Runner, WORK-PIPELINE) + 6개 에이전트 배치도 |
+| **VIS-01** | §2 아키텍처 전체 구조 | 3계층(TeamSpace, Runner, WORK-PIPELINE) + 5개 에이전트 배치도 |
 | **VIS-02** | §3.1 에이전트 목록 | 에이전트별 모델·도구 권한·쓰기 권한 매트릭스 |
 | **VIS-03** | §3.2 세 가지 실행 경로 | execution-mode 3종(direct/pipeline/full) 파이프라인 비교 + 통일 산출물 |
 | **VIS-04** | §3.2 Router PLAN.md | Router가 Planner 대신 WORK 구조를 생성하는 6단계 흐름 |
 | **VIS-05** | §3.4 XML 스키마 | dispatch / task-result / context-handoff 3종 XML 중첩 관계 |
 | **VIS-06** | §3.4 속성 전파 체인 | execution-mode가 결정→저장→전달→소비되는 4단계 흐름 |
 | **VIS-07** | §3.5 파일 구조 & 명명 규칙 | PLAN.md 필수 메타데이터 + Runner 정규식 패턴 |
-| **VIS-08** | §3.6 슬라이딩 윈도우 (파이프라인) | 단일 TASK 내 Builder→Verifier→Committer FULL/SUMMARY 흐름 |
+| **VIS-08** | §3.6 슬라이딩 윈도우 (파이프라인) | 단일 TASK 내 Builder→Verifier→Router(인라인 커밋) FULL/SUMMARY 흐름 |
 | **VIS-09** | §3.6 슬라이딩 윈도우 (TASK 간) | TASK 의존성 체인에서 거리 기반 FULL/SUMMARY/DROP 비교 |
-| **VIS-10** | §3.7 progress.md Gate | PENDING→STARTED→COMPLETED 생명주기 + Verifier/Committer Gate 조건 |
-| **VIS-11** | §3.8 3중 재시도 | Level 1(Verifier FAIL) + Level 2(Committer FAIL) + Level 3(Runner 복구) |
+| **VIS-10** | §3.7 progress.md Gate | PENDING→STARTED→COMPLETED 생명주기 + Verifier Gate / Router 인라인 Gate 조건 |
+| **VIS-11** | §3.8 3중 재시도 | Level 1(Verifier FAIL) + Level 2(Router 인라인 Gate FAIL) + Level 3(Runner 복구) |
 | **VIS-12** | §3.9 모델 배치 · 비용 | TASK당 비용 비율 + 4대 토큰 절감 전략 |
 | **VIS-13** | §3.12 execution-mode 반응 | 에이전트 × mode 행동 매트릭스 + result.md 생성 주체 |
 | **VIS-14** | §4 Runner 동시성 | main() 2개 + runClaude() 4개 비동기 루프 구조 + 공유 상태 |

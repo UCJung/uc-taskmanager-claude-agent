@@ -61,7 +61,8 @@ works/가 없으면:
   "Bash(python:*)",
   "Bash(ruff:*)",
   "Bash(make:*)",
-  "Bash(git:*)"
+  "Bash(git:*)",
+  "mcp__ucpm-mcp__*"
 ]
 ```
 

@@ -31,8 +31,6 @@ These files are created in your project directory and are fully under your contr
 
 uc-taskmanager does not initiate any external network requests on its own.
 
-The only exception is the optional callback feature: if you explicitly configure `TaskCallback` or `ProgressCallback` URLs in your project's `CLAUDE.md`, the committer agent will POST task results to those URLs. This is entirely opt-in — if no callback URLs are configured, no external communication occurs.
-
 ## Third-Party Services
 
 - **Claude Code CLI**: uc-taskmanager operates as a plugin within Claude Code. Claude Code's own data handling is governed by [Anthropic's Privacy Policy](https://www.anthropic.com/privacy).

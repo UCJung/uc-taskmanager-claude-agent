@@ -63,12 +63,12 @@ README 업데이트 범위:
 
 자식별 섹션 목록이 `orchestrator.md`에 **2곳 중복 기재**되어 있다. 매트릭스를 바꾸면 반드시 함께 고친다.
 
-- **STEP 1-1** 의 "자식별 조립 결과 요약" 표 (5행)
-- **STEP A / STEP B / STEP C** 의 각 spawn 지시 라인 (specifier·planner·builder·verifier·committer 5곳)
+- **STEP 1-1** 의 "자식별 조립 결과 요약" 표 (4행)
+- **STEP A / STEP B / STEP C** 의 각 spawn 지시 라인 (specifier·planner·builder·verifier 4곳)
 
 ### 4. 자식 에이전트 정의
 
-자식(`specifier`/`planner`/`builder`/`verifier`/`committer`)의 STARTUP은 **`<ref-cache>`를 참조하여 작업을 수행한다** 한 줄뿐이다. 필요 섹션 목록을 자식 정의에 다시 적지 않는다 — 정본은 매트릭스 하나다.
+자식(`specifier`/`planner`/`builder`/`verifier`)의 STARTUP은 **`<ref-cache>`를 참조하여 작업을 수행한다** 한 줄뿐이다. 필요 섹션 목록을 자식 정의에 다시 적지 않는다 — 정본은 매트릭스 하나다.
 
 **자식 정의 본문에 `xxx.md § N` 참조를 새로 넣으면**, 그 § 가 매트릭스에서 해당 자식에게 배분돼 있어야 한다. 배분 없이 참조만 넣으면 자식이 볼 수 없는 내용을 가리키게 된다.
 

@@ -1,6 +1,6 @@
 # sdd-pipeline references
 
-파이프라인 에이전트(orchestrator, specifier, planner, builder, verifier)와 committer(deprecated 스텁, 비-spawn — 커밋은 orchestrator 인라인 수행)가 참조하는 규칙/스키마 문서 모음.
+파이프라인 에이전트(orchestrator, specifier, planner, builder, verifier)가 참조하는 규칙/스키마 문서 모음. 커밋은 orchestrator가 인라인으로 수행합니다.
 
 직접 사용자 호출용이 아니라 에이전트 내부 참조용입니다.
 
